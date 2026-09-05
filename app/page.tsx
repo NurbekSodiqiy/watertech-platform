@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ExternalLink, Clock, Sparkles, GraduationCap, LayoutGrid, Table2, FileSpreadsheet, MessageSquareText } from "lucide-react";
+import { ExternalLink, Clock, Sparkles, GraduationCap, LayoutGrid, Table2, FileSpreadsheet, MessageSquareText } from "lucide-react";
 import { changelogEntries } from "@/lib/mock-data/changelog";
 import { faqItems } from "@/lib/mock-data/faq";
 
@@ -39,16 +39,6 @@ export default function HomePage() {
         <p className="mt-1 text-[15px] text-text-secondary">
           Everything the sales team needs, in one place.
         </p>
-      </div>
-
-      <div className="relative">
-        <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" />
-        <input
-          type="text"
-          disabled
-          placeholder="Search products, scripts, objections, policies… (UI stub)"
-          className="w-full rounded-xl border border-border bg-surface-alt py-3.5 pl-11 pr-4 text-[15px] text-primary-dark placeholder:text-text-secondary shadow-softer focus:outline-none focus:ring-2 focus:ring-primary-light"
-        />
       </div>
 
       <div className="grid gap-2 sm:grid-cols-4">

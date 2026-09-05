@@ -25,8 +25,8 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         </span>
       </Link>
 
-      <div className="relative mx-auto flex min-w-0 max-w-xl flex-1 items-center">
-        <Search size={16} className="pointer-events-none absolute left-3 text-text-secondary" />
+      <div className="relative min-w-0 flex-1 sm:max-w-[440px] sm:flex-none">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
         <input
           type="text"
           placeholder="Search the knowledge base… (UI stub)"
@@ -35,17 +35,19 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         />
       </div>
 
-      <ThemeToggle />
+      <div className="ml-auto flex shrink-0 items-center gap-3">
+        <ThemeToggle />
 
-      <button
-        aria-label="Notifications"
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
-      >
-        <Bell size={16} />
-        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-status-outdated" />
-      </button>
+        <button
+          aria-label="Notifications"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
+        >
+          <Bell size={16} />
+          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-status-outdated" />
+        </button>
 
-      <AvatarMenu />
+        <AvatarMenu />
+      </div>
     </header>
   );
 }
