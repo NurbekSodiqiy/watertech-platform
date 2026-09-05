@@ -1,0 +1,367 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ChevronRight, ChevronLeft, Home, type LucideIcon } from "lucide-react";
+import { siteTree } from "@/lib/site-config";
+import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
+import type { NavNode } from "@/lib/types";
+import { faqItems } from "@/lib/mock-data/faq";
+import { changelogEntries } from "@/lib/mock-data/changelog";
+
+const COLLAPSE_KEY = "watertech-sidebar-collapsed";
+
+/** Small count badges next to nav rows — only where the mock data has a real
+ * number behind it (total FAQ entries, changelog items still pending
+ * acknowledgement). Never invented for items with no underlying count. */
+const NAV_BADGES: Record<string, { count: number; tone: "ok" | "warning" }> = {
+  "/faq": { count: faqItems.length, tone: "ok" },
+  "/changelog": {
+    count: changelogEntries.filter((c) => {
+      const [read, total] = c.readCount.split("/").map((n) => parseInt(n.trim(), 10));
+      return read < total;
+    }).length,
+    tone: "warning",
+  },
+};
+
+function NavCountBadge({ tone, count }: { tone: "ok" | "warning"; count: number }) {
+  return (
+    <span
+      className={`ml-auto flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+        tone === "ok" ? "bg-status-ok/15 text-status-ok" : "bg-status-warning/15 text-status-warning"
+      }`}
+    >
+      {count}
+    </span>
+  );
+}
+
+/** Purely visual clustering of the top-level sections — chunk sizes must sum
+ * to siteTree.length. Groups get extra margin between them so the sidebar
+ * reads as clusters, not one continuous list. */
+const NAV_GROUP_SIZES = [3, 2, 3, 2];
+
+function chunk<T>(items: T[], sizes: number[]): T[][] {
+  const groups: T[][] = [];
+  let i = 0;
+  for (const size of sizes) {
+    groups.push(items.slice(i, i + size));
+    i += size;
+  }
+  if (i < items.length) groups.push(items.slice(i));
+  return groups;
+}
+
+function ActivePill({ scope }: { scope: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      layoutId={`sidebar-active-pill-${scope}`}
+      className="absolute inset-0 rounded-2xl border border-border bg-surface shadow-soft"
+      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+    />
+  );
+}
+
+function IconBadge({
+  Icon,
+  active,
+  size = 36,
+  iconSize = 17,
+}: {
+  Icon: LucideIcon;
+  active: boolean;
+  size?: number;
+  iconSize?: number;
+}) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-xl border ${
+        active
+          ? "border-primary bg-primary text-surface shadow-softer"
+          : "border-border bg-surface text-text-secondary"
+      }`}
+      style={{ height: size, width: size }}
+    >
+      <Icon size={iconSize} />
+    </span>
+  );
+}
+
+/** Full-width row used in the expanded sidebar and the mobile drawer. */
+function NavItem({ node, depth, scope }: { node: NavNode; depth: number; scope: string }) {
+  const pathname = usePathname();
+  const isActive = pathname === node.path;
+  const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
+  const [open, setOpen] = useState(isAncestor);
+  const Icon = contentTypeIcons[node.contentType];
+  const hasChildren = !!node.children?.length;
+  const rowPaddingLeft = 16 + depth * 16;
+  const guideLeft = rowPaddingLeft + 8;
+
+  useEffect(() => {
+    if (isAncestor) setOpen(true);
+  }, [isAncestor]);
+
+  return (
+    <div className="w-full">
+      <div className="relative">
+        {isActive && <ActivePill scope={scope} />}
+        <div
+          className={`group relative z-10 flex w-full items-center gap-1 rounded-2xl py-3.5 pr-3 ${
+            isActive ? "" : "hover:bg-primary/5"
+          }`}
+          style={{ paddingLeft: `${rowPaddingLeft}px` }}
+        >
+          <Link
+            href={node.path}
+            className={`flex min-w-0 flex-1 items-center gap-3 text-[13.5px] ${
+              isActive ? "font-semibold text-primary-dark" : "text-text-secondary"
+            } group-hover:text-primary-dark`}
+          >
+            <IconBadge
+              Icon={Icon}
+              active={isActive}
+              size={depth === 0 ? 40 : 28}
+              iconSize={depth === 0 ? 18 : 14}
+            />
+            <span className="truncate">{node.title}</span>
+            {node.locked && <LockIcon size={11} className="ml-auto shrink-0 text-status-warning" />}
+            {NAV_BADGES[node.path] && (
+              <NavCountBadge tone={NAV_BADGES[node.path].tone} count={NAV_BADGES[node.path].count} />
+            )}
+          </Link>
+          {hasChildren && (
+            <button
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? "Collapse" : "Expand"}
+              className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-primary/10 hover:text-primary-dark"
+            >
+              <ChevronRight
+                size={14}
+                className={`transition-transform ${open ? "rotate-90" : ""}`}
+              />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {hasChildren && open && (
+        <div className="relative py-0.5">
+          <div
+            className="absolute bottom-2 top-0 bg-primary/40"
+            style={{ left: `${guideLeft}px`, width: "2px" }}
+            aria-hidden
+          />
+          <div className="space-y-0.5">
+            {node.children!.map((child) => (
+              <div key={child.path} className="relative">
+                <span
+                  className="absolute top-[26px] bg-primary/40"
+                  style={{ left: `${guideLeft}px`, width: `${16 + (depth + 1) * 16 - guideLeft}px`, height: "2px" }}
+                  aria-hidden
+                />
+                <NavItem node={child} depth={depth + 1} scope={scope} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Icon-only rail row used when the desktop sidebar is collapsed. Children
+ * appear in a floating flyout instead of an inline accordion. */
+function CollapsedNavItem({ node, scope }: { node: NavNode; scope: string }) {
+  const pathname = usePathname();
+  const isActive = pathname === node.path;
+  const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
+  const active = isActive || isAncestor;
+  const Icon = contentTypeIcons[node.contentType];
+  const hasChildren = !!node.children?.length;
+
+  return (
+    <div className="group relative flex justify-center">
+      {active && (
+        <motion.div
+          layoutId={`sidebar-active-pill-${scope}`}
+          className="absolute inset-0 mx-auto h-12 w-12 rounded-2xl border border-border bg-surface shadow-soft"
+          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+        />
+      )}
+      <Link
+        href={node.path}
+        title={node.title}
+        className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl hover:bg-primary/5"
+      >
+        <IconBadge Icon={Icon} active={active} size={40} iconSize={18} />
+        {node.locked && (
+          <LockIcon size={10} className="absolute right-1 top-1 text-status-warning" />
+        )}
+      </Link>
+
+      {hasChildren && (
+        <div className="invisible absolute left-full top-0 z-50 ml-3 w-56 rounded-2xl border border-border bg-surface p-2 opacity-0 shadow-soft transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+          <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+            {node.title}
+          </p>
+          <div className="relative">
+            <div className="absolute bottom-2 top-1 w-0.5 bg-primary/40" style={{ left: "10px" }} aria-hidden />
+            <div className="space-y-0.5">
+              {node.children!.map((child) => {
+                const childActive = pathname === child.path;
+                return (
+                  <div key={child.path} className="relative">
+                    <span
+                      className="absolute top-[18px] h-0.5 w-2.5 bg-primary/40"
+                      style={{ left: "10px" }}
+                      aria-hidden
+                    />
+                    <Link
+                      href={child.path}
+                      className={`flex items-center gap-2 rounded-xl py-2 pl-6 pr-2.5 text-[13px] ${
+                        childActive
+                          ? "bg-primary/10 font-semibold text-primary-dark"
+                          : "text-text-secondary hover:bg-primary/5 hover:text-primary-dark"
+                      }`}
+                    >
+                      {child.title}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SidebarNav({
+  scope = "desktop",
+  collapsed = false,
+}: {
+  scope?: string;
+  collapsed?: boolean;
+}) {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const groups = chunk(siteTree, NAV_GROUP_SIZES);
+
+  if (collapsed) {
+    return (
+      <nav className="flex-1 overflow-y-visible px-2.5 py-4">
+        <div className="group relative mb-5 flex justify-center">
+          {isHome && (
+            <motion.div
+              layoutId={`sidebar-active-pill-${scope}`}
+              className="absolute inset-0 mx-auto h-12 w-12 rounded-2xl border border-border bg-surface shadow-soft"
+              transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            />
+          )}
+          <Link href="/" title="Today" className="relative z-10 flex h-12 w-12 items-center justify-center">
+            <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
+          </Link>
+        </div>
+        {groups.map((group, gi) => (
+          <div key={gi} className="mb-5 space-y-1.5 last:mb-0">
+            {group.map((node) => (
+              <CollapsedNavItem key={node.path} node={node} scope={scope} />
+            ))}
+          </div>
+        ))}
+      </nav>
+    );
+  }
+
+  return (
+    <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="relative mb-6">
+        {isHome && <ActivePill scope={scope} />}
+        <Link
+          href="/"
+          className={`relative z-10 flex w-full items-center gap-3 rounded-2xl py-3.5 pr-3 pl-4 text-[13.5px] ${
+            isHome
+              ? "font-semibold text-primary-dark"
+              : "text-text-secondary hover:bg-primary/5 hover:text-primary-dark"
+          }`}
+        >
+          <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
+          Today
+        </Link>
+      </div>
+
+      {groups.map((group, gi) => (
+        <div key={gi} className="mb-6 space-y-1 last:mb-0">
+          {group.map((node) => (
+            <NavItem key={node.path} node={node} depth={0} scope={scope} />
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
+    } catch {
+      // ignore
+    }
+    setMounted(true);
+  }, []);
+
+  function toggle() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+    } catch {
+      // localStorage unavailable — preference just won't persist
+    }
+  }
+
+  return (
+    <motion.aside
+      initial={{ width: 256 }}
+      animate={{ width: collapsed ? 76 : 256 }}
+      transition={{ duration: mounted && !reduce ? 0.2 : 0, ease: "easeOut" }}
+      className="relative hidden shrink-0 border-r border-border bg-surface lg:flex lg:flex-col"
+    >
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-surface">
+          WT
+        </span>
+        {!collapsed && (
+          <span className="truncate text-sm font-bold text-primary-dark">WaterTech</span>
+        )}
+      </div>
+
+      <button
+        onClick={toggle}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="absolute -right-3 top-6 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-text-secondary shadow-soft hover:text-primary-dark"
+      >
+        <ChevronLeft size={13} className={collapsed ? "rotate-180" : ""} />
+      </button>
+
+      <SidebarNav collapsed={collapsed} />
+
+      {!collapsed && (
+        <div className="border-t border-border p-3 text-[11px] text-text-secondary">
+          WaterTech Sales KB · Skeleton build
+        </div>
+      )}
+    </motion.aside>
+  );
+}

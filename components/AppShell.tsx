@@ -1,0 +1,66 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { X } from "lucide-react";
+import { TopBar } from "./TopBar";
+import { Sidebar, SidebarNav } from "./Sidebar";
+import { PageTransition } from "./PageTransition";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <TopBar onMenuClick={() => setMobileOpen(true)} />
+      <div className="flex flex-1">
+        <Sidebar />
+
+        <AnimatePresence>
+          {mobileOpen && (
+            <div className="fixed inset-0 z-40 flex lg:hidden">
+              <motion.div
+                className="absolute inset-0 bg-primary-dark/30"
+                onClick={() => setMobileOpen(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reduce ? 0 : 0.15 }}
+              />
+              <motion.div
+                className="relative flex h-full w-72 max-w-[85vw] flex-col bg-surface shadow-soft"
+                initial={reduce ? undefined : { x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={reduce ? undefined : { x: "-100%" }}
+                transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
+              >
+                <div className="flex items-center justify-between border-b border-border px-3 py-3">
+                  <span className="text-sm font-semibold text-primary-dark">Navigation</span>
+                  <button
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg p-1 text-text-secondary hover:bg-primary/10"
+                    aria-label="Close navigation"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <SidebarNav scope="mobile" />
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <main className="min-w-0 flex-1 overflow-x-hidden">
+          <PageTransition>{children}</PageTransition>
+        </main>
+      </div>
+    </div>
+  );
+}

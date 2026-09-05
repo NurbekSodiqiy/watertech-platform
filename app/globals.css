@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Colors are stored as space-separated RGB channels (not hex) so Tailwind's
+ * opacity modifiers (bg-primary/10, etc.) can compose them via
+ * rgb(var(--x) / <alpha-value>) in tailwind.config.ts. Same visual colors as
+ * before — this is a storage-format fix, not a palette change.
+ */
+
+:root {
+  --bg: 237 243 249; /* #EDF3F9 */
+  --surface: 255 255 255; /* #FFFFFF */
+  --surface-alt: 248 251 254; /* #F8FBFE */
+  --border: 220 230 240; /* #DCE6F0 */
+  --text-primary: 30 58 95; /* #1E3A5F */
+  --text-secondary: 91 112 134; /* #5B7086 */
+  --accent: 61 90 128; /* #3D5A80 */
+  --accent-hover: 46 71 99; /* #2E4763 */
+  --accent-soft: 127 168 217; /* #7FA8D9 */
+  --status-ok: 76 154 106; /* #4C9A6A */
+  --status-warning: 217 164 65; /* #D9A441 */
+  --status-outdated: 201 105 91; /* #C9695B */
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.dark {
+  --bg: 18 28 48; /* #121C30 */
+  --surface: 27 39 64; /* #1B2740 */
+  --surface-alt: 32 46 75; /* #202E4B */
+  --border: 42 59 88; /* #2A3B58 */
+  --text-primary: 239 244 250; /* #EFF4FA */
+  --text-secondary: 159 178 204; /* #9FB2CC */
+  --accent: 127 168 217; /* #7FA8D9 */
+  --accent-hover: 157 190 230; /* #9DBEE6 */
+  --accent-soft: 93 127 174; /* #5D7FAE */
+  --status-ok: 107 191 140; /* #6BBF8C */
+  --status-warning: 230 189 106; /* #E6BD6A */
+  --status-outdated: 224 135 118; /* #E08776 */
+  --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: rgb(var(--bg));
+}
+
+::selection {
+  background-color: rgb(var(--accent-soft));
+  color: rgb(var(--surface));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  input,
+  select,
+  tr,
+  [role="button"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
