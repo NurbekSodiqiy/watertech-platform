@@ -22,7 +22,7 @@ export function SectionLanding({ node }: { node: NavNode }) {
               href={child.path}
               className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-soft hover:bg-primary/5"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Icon size={16} />
               </span>
               <span className="min-w-0 flex-1">

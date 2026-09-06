@@ -7,15 +7,31 @@ import { X } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
+import { CommandPalette } from "./CommandPalette";
+import { BookmarksPanel } from "./BookmarksPanel";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
   useEffect(() => {
     setMobileOpen(false);
+    setBookmarksOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -56,11 +72,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenuClick={() => setMobileOpen(true)} />
+        <TopBar
+          onMenuClick={() => setMobileOpen(true)}
+          onOpenSearch={() => setCommandOpen(true)}
+          onOpenBookmarks={() => setBookmarksOpen(true)}
+        />
         <main className="min-w-0 flex-1 overflow-x-hidden">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+
+      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      <BookmarksPanel open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
     </div>
   );
 }

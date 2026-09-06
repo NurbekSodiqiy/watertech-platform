@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Menu, Bell } from "lucide-react";
+import { Search, Menu, Bell, Bookmark } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { AvatarMenu } from "./AvatarMenu";
 
-export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
+export function TopBar({
+  onMenuClick,
+  onOpenSearch,
+  onOpenBookmarks,
+}: {
+  onMenuClick: () => void;
+  onOpenSearch: () => void;
+  onOpenBookmarks: () => void;
+}) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
       <button
@@ -27,16 +35,29 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
       <div className="relative min-w-0 flex-1 sm:max-w-[440px] sm:flex-none">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-        <input
-          type="text"
-          placeholder="Bilimlar bazasidan qidirish…"
-          className="w-full rounded-xl border border-border bg-surface-alt py-2 pl-9 pr-3 text-sm text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-          disabled
-        />
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          className="flex w-full items-center rounded-xl border border-border bg-surface-alt py-2 pl-9 pr-2 text-left text-sm text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+        >
+          <span className="min-w-0 flex-1 truncate">Bilimlar bazasidan qidirish…</span>
+          <span className="ml-2 hidden shrink-0 items-center rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-text-secondary sm:flex">
+            Ctrl K
+          </span>
+        </button>
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <ThemeToggle />
+
+        <button
+          onClick={onOpenBookmarks}
+          aria-label="Saqlanganlar"
+          title="Saqlanganlar"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
+        >
+          <Bookmark size={16} />
+        </button>
 
         <button
           aria-label="Bildirishnomalar"
