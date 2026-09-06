@@ -1,4 +1,6 @@
-"use client";
+﻿const fs = require('fs');
+
+const content = "use client";
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock } from "lucide-react";
@@ -38,9 +40,7 @@ export default function ScriptsPage() {
             setActiveScreenContext(null);
             setSelectedPackage(null);
           }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "objections" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
+          className={\lex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors \\}
         >
           E'tirozlar
         </button>
@@ -50,9 +50,7 @@ export default function ScriptsPage() {
             setActiveScreenContext(null);
             setSelectedPackage(null);
           }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
+          className={\lex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors \\}
         >
           Hamkorlik paketlari
         </button>
@@ -77,7 +75,7 @@ export default function ScriptsPage() {
                 O'ng paneldan kerakli paketni tanlang...
               </p>
             ) : (
-              <div className={`rounded-xl border ${selectedPackage.isFeatured ? 'border-primary' : 'border-border'} bg-surface p-6 shadow-sm flex flex-col`}>
+              <div className={\ounded-xl border \ bg-surface p-6 shadow-sm flex flex-col\}>
                 <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
                   <h2 className="text-2xl font-bold text-primary-dark flex items-center gap-2">
                     {selectedPackage.name}
@@ -186,18 +184,12 @@ export default function ScriptsPage() {
                   <button
                     key={pkg.id}
                     onClick={() => setSelectedPackage(pkg)}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-colors text-left font-medium ${
-                      selectedPackage?.id === pkg.id
-                        ? "bg-surface-alt border-primary text-primary-dark"
-                        : pkg.isFeatured 
-                          ? "bg-surface border-primary/40 hover:border-primary hover:bg-surface-alt text-primary-dark"
-                          : "bg-surface border-border hover:bg-surface-alt text-primary-dark"
-                    }`}
+                    className={\w-full flex items-center justify-between p-3.5 rounded-xl border transition-colors text-left font-medium \\}
                   >
                     <span className="flex items-center gap-2">
                       {pkg.name} {pkg.isFeatured && "⭐"}
                     </span>
-                    <ChevronRight className={`w-4 h-4 ${selectedPackage?.id === pkg.id ? 'text-primary' : 'text-text-secondary'}`} />
+                    <ChevronRight className={\w-4 h-4 \\} />
                   </button>
                 ))}
               </div>
@@ -208,3 +200,6 @@ export default function ScriptsPage() {
     </div>
   );
 }
+;
+
+fs.writeFileSync('D:\\Arxiv\\Desktop\\full\\app\\sales-process\\scripts\\page.tsx', content, 'utf8');
