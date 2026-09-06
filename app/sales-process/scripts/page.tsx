@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
+import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 
 // FAQ Data
 type FAQItem = {
@@ -90,7 +91,7 @@ const faqData: FAQCategory[] = [
 ];
 
 export default function ScriptsPage() {
-  const [activeTab, setActiveTab] = useState<"faq" | "packages">("faq");
+  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors">("faq");
   
   // Savol-javob state
   const [activeScreenContext, setActiveScreenContext] = useState<string | null>(null);
@@ -98,6 +99,9 @@ export default function ScriptsPage() {
 
   // Paketlar state
   const [selectedPackage, setSelectedPackage] = useState<PartnershipPackage | null>(null);
+
+  // Raqobatchilar state
+  const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -122,24 +126,39 @@ export default function ScriptsPage() {
             setActiveTab("faq");
             setActiveScreenContext(null);
             setSelectedPackage(null);
+            setSelectedCompetitor(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
-          Savol-javob
+          FAQ savollar
         </button>
         <button
           onClick={() => {
             setActiveTab("packages");
             setActiveScreenContext(null);
             setSelectedPackage(null);
+            setSelectedCompetitor(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
           Hamkorlik paketlari
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("competitors");
+            setActiveScreenContext(null);
+            setSelectedPackage(null);
+            setSelectedCompetitor(null);
+          }}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            activeTab === "competitors" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+          }`}
+        >
+          Raqobatchilar
         </button>
       </div>
 
@@ -156,7 +175,7 @@ export default function ScriptsPage() {
                 {activeScreenContext}
               </div>
             )
-          ) : (
+          ) : activeTab === "packages" ? (
             !selectedPackage ? (
               <p className="text-center text-text-secondary text-lg">
                 O&apos;ng paneldan kerakli paketni tanlang...
@@ -223,6 +242,150 @@ export default function ScriptsPage() {
                 </div>
               </div>
             )
+          ) : (
+            // activeTab === "competitors"
+            !selectedCompetitor ? (
+              <p className="text-center text-text-secondary text-lg">
+                O&apos;ng paneldan kerakli raqobatchini tanlang...
+              </p>
+            ) : (
+              <div className="rounded-xl border border-border bg-surface p-6 shadow-sm flex flex-col h-full overflow-y-auto">
+                <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-primary-dark">{selectedCompetitor.name}</h2>
+                    <span className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full border ${
+                      selectedCompetitor.threatLevel === "Yuqori"
+                        ? "border-primary/50 text-primary-dark bg-primary/5"
+                        : "border-border text-text-secondary bg-surface-alt"
+                    }`}>
+                      Raqobat: {selectedCompetitor.threatLevel}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Assortiment</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.assortment}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Baza chegirmasi</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.baseDiscount}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Obyom chegirmasi (1 fura)</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.volumeDiscount}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Retro-bonus (yillik)</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.retroBonus}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Jami maks. chegirma</div>
+                      <div className="text-[14px] font-bold text-primary-dark">{selectedCompetitor.maxDiscount}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Nasiya &amp; muddatli to&apos;lov shartlari</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.paymentTerms}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">To&apos;lov shakli</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.paymentMethod}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Yetkazish muddati</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.deliveryTime}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Truck size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Logistika &amp; MOQ shartlari</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.logistics}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <MapPin size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Dilerlik qamrovi</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.dealerCoverage}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Sertifikatlar &amp; garantiya</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.certificates}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-alt border border-border text-text-secondary">
+                      <Gift size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">Marketing &amp; ustalarga takliflar</div>
+                      <div className="text-[14px] font-medium text-primary-dark">{selectedCompetitor.marketingOffers}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
           )}
         </div>
 
@@ -262,7 +425,7 @@ export default function ScriptsPage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : activeTab === "packages" ? (
             partnershipPackagesData.map((group) => (
               <div key={group.id} className="flex flex-col space-y-2">
                 {group.packages.map((pkg) => (
@@ -285,6 +448,26 @@ export default function ScriptsPage() {
                 ))}
               </div>
             ))
+          ) : (
+            // activeTab === "competitors"
+            <div className="flex flex-col space-y-2">
+              {competitorsData.map((comp) => (
+                <button
+                  key={comp.id}
+                  onClick={() => setSelectedCompetitor(comp)}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-colors text-left font-medium ${
+                    selectedCompetitor?.id === comp.id
+                      ? "bg-surface-alt border-primary text-primary-dark"
+                      : "bg-surface border-border hover:bg-surface-alt text-primary-dark"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    {comp.name}
+                  </span>
+                  <ChevronRight className={`w-4 h-4 ${selectedCompetitor?.id === comp.id ? 'text-primary' : 'text-text-secondary'}`} />
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
