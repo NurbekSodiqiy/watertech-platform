@@ -265,9 +265,6 @@ export default function ScriptsPage() {
           ) : (
             partnershipPackagesData.map((group) => (
               <div key={group.id} className="flex flex-col space-y-2">
-                <div className="mb-2 px-2 text-[11px] font-semibold text-text-secondary uppercase tracking-wide leading-relaxed">
-                  {group.subtitle}
-                </div>
                 {group.packages.map((pkg) => (
                   <button
                     key={pkg.id}
