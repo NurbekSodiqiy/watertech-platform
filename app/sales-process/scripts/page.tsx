@@ -4,10 +4,95 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 
+// FAQ Data
+type FAQItem = {
+  question: string;
+  answer: string;
+};
+
+type FAQCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  questions: FAQItem[];
+};
+
+const faqData: FAQCategory[] = [
+  {
+    id: "product",
+    name: "Mahsulot haqida",
+    icon: "📦",
+    questions: [
+      {
+        question: "Polipropilen quvurlarning kafolat muddati qancha?",
+        answer: "WaterTech mahsulotlari uchun 10 yil muddat kafolat beriladi, foydalanish muddati 50 yil"
+      },
+      {
+        question: "Qaysi standartlarga javob beradi?",
+        answer: "WaterTech mahsulotlari ISO va GOST sertifikatlariga ega."
+      },
+      {
+        question: "Montaj qilish qiyin emasmi?",
+        answer: "Mahsulotlar tarkibi sifatli xomashyolardan (asl polipropilen) tashkil topgan, shu sababli foydalanishda ya'ni montaj jarayonlarni mijozga qiyinchilik tug'dirmaydi"
+      },
+      {
+        question: "Issiq suvga bardosh beradimi?",
+        answer: "Issiq suv uchun mo'ljallangan quvurlarimiz 80 gradus issiqlik darajasi uchun mo'ljallangan"
+      }
+    ]
+  },
+  {
+    id: "delivery",
+    name: "Yetkazish",
+    icon: "🚚",
+    questions: [
+      {
+        question: "Toshkentga yetkazib berish qancha vaqt oladi?",
+        answer: "24 soat ichida yetkazib beramiz"
+      },
+      {
+        question: "Minimal buyurtma hajmi bormi?",
+        answer: "Minimal buyurtma hajmi 15 mln"
+      },
+      {
+        question: "Yetkazish narxi qanday hisoblanadi?",
+        answer: "Yangi mijozlar uchun yetkazish xizmati kompaniya tomonidan qoplanadi"
+      },
+      {
+        question: "Viloyatlarga yetkazib beramizmi?",
+        answer: "12 ta viloyatga kelishuv asosida yetkazib beramiz."
+      }
+    ]
+  },
+  {
+    id: "payment",
+    name: "To'lov",
+    icon: "💳",
+    questions: [
+      {
+        question: "Qanday to'lov usullari mavjud?",
+        answer: "Istalgan to'lov usuli mavjud (naqd, click, perechisleniya)"
+      },
+      {
+        question: "Nasiyaga olish mumkinmi?",
+        answer: "Yuridik shartnoma va oldindan 50% to'lov asosida xarid qilish mumkin"
+      },
+      {
+        question: "Chegirmalar qachon beriladi?",
+        answer: "Mahsulotlarimiz turidan kelib chiqib 15% gacha chegirmalarimiz mavjud"
+      },
+      {
+        question: "Avans to'lash kerakmi?",
+        answer: "Yangi mijozlar uchun 50% avans to'lab xarid qilish mumkin."
+      }
+    ]
+  }
+];
+
 export default function ScriptsPage() {
-  const [activeTab, setActiveTab] = useState<"objections" | "packages">("objections");
+  const [activeTab, setActiveTab] = useState<"faq" | "packages">("faq");
   
-  // E'tirozlar state
+  // Savol-javob state
   const [activeScreenContext, setActiveScreenContext] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
@@ -27,22 +112,22 @@ export default function ScriptsPage() {
       <div>
         <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Jonli skriptlar va Yordamchi</h1>
         <p className="mt-2 text-[15px] leading-relaxed text-text-secondary">
-          O'ng paneldan kerakli e'tiroz yoki skriptni tanlang va ekranda o'qing.
+          O&apos;ng paneldan kerakli bo&apos;limni tanlang va ekranda javobni o&apos;qing.
         </p>
       </div>
 
       <div className="flex w-fit shrink-0 items-center gap-0.5 rounded-full border border-border bg-surface-alt p-1">
         <button
           onClick={() => {
-            setActiveTab("objections");
+            setActiveTab("faq");
             setActiveScreenContext(null);
             setSelectedPackage(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "objections" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
-          E'tirozlar
+          Savol-javob
         </button>
         <button
           onClick={() => {
@@ -61,10 +146,10 @@ export default function ScriptsPage() {
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* LEFT PANEL (The "TV Screen") */}
         <div className="col-span-12 md:col-span-8 bg-surface border border-border rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-sm">
-          {activeTab === "objections" ? (
+          {activeTab === "faq" ? (
             !activeScreenContext ? (
               <p className="text-center text-text-secondary text-lg">
-                O'ng paneldan kerakli e'tirozni yoki skriptni tanlang...
+                O&apos;ng paneldan kerakli savolni tanlang...
               </p>
             ) : (
               <div className="text-lg md:text-xl leading-relaxed text-primary-dark whitespace-pre-wrap">
@@ -74,7 +159,7 @@ export default function ScriptsPage() {
           ) : (
             !selectedPackage ? (
               <p className="text-center text-text-secondary text-lg">
-                O'ng paneldan kerakli paketni tanlang...
+                O&apos;ng paneldan kerakli paketni tanlang...
               </p>
             ) : (
               <div className={`rounded-xl border ${selectedPackage.isFeatured ? 'border-primary' : 'border-border'} bg-surface p-6 shadow-sm flex flex-col`}>
@@ -101,7 +186,7 @@ export default function ScriptsPage() {
                       <CreditCard size={20} />
                     </div>
                     <div>
-                      <div className="text-xs font-medium text-text-secondary mb-0.5">To'lov turi & sharti</div>
+                      <div className="text-xs font-medium text-text-secondary mb-0.5">To&apos;lov turi &amp; sharti</div>
                       <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.paymentTerms}</div>
                     </div>
                   </div>
@@ -143,38 +228,39 @@ export default function ScriptsPage() {
 
         {/* RIGHT PANEL (The "Remote Control") */}
         <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm">
-          {activeTab === "objections" ? (
+          {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
-              <button
-                onClick={() => toggleCategory("qimmat")}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-surface-alt transition-colors font-medium text-primary-dark"
-              >
-                <span className="flex items-center gap-2">
-                  💰 Qimmat
-                </span>
-                {expandedCategory === "qimmat" ? (
-                  <ChevronDown className="w-5 h-5 text-text-secondary" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-text-secondary" />
-                )}
-              </button>
-              
-              {expandedCategory === "qimmat" && (
-                <div className="bg-surface-alt border-t border-border flex flex-col p-2 space-y-1">
+              {faqData.map((category, index) => (
+                <div key={category.id} className={index !== 0 ? "border-t border-border" : ""}>
                   <button
-                    onClick={() => selectScript("TEST: Mijoz boshqa joyda arzonroq ekanligini aytdi. Bunga javob skripti shu yerda chiqadi.")}
-                    className="text-left w-full p-3 rounded-lg hover:bg-surface text-text-secondary hover:text-primary-dark text-sm transition-colors pl-6"
+                    onClick={() => toggleCategory(category.id)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-surface-alt transition-colors font-medium text-primary-dark"
                   >
-                    Boshqa joyda arzonroq
+                    <span className="flex items-center gap-2">
+                      {category.icon} {category.name}
+                    </span>
+                    {expandedCategory === category.id ? (
+                      <ChevronDown className="w-5 h-5 text-text-secondary" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-text-secondary" />
+                    )}
                   </button>
-                  <button
-                    onClick={() => selectScript("TEST: Mijoz byudjeti yo'qligini aytdi. Bunga javob skripti shu yerda chiqadi.")}
-                    className="text-left w-full p-3 rounded-lg hover:bg-surface text-text-secondary hover:text-primary-dark text-sm transition-colors pl-6"
-                  >
-                    Hozir byudjetimiz yo'q
-                  </button>
+                  
+                  {expandedCategory === category.id && (
+                    <div className="bg-surface-alt border-t border-border flex flex-col p-2 space-y-1">
+                      {category.questions.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => selectScript(item.answer)}
+                          className="text-left w-full p-3 rounded-lg hover:bg-surface text-text-secondary hover:text-primary-dark text-sm transition-colors pl-6"
+                        >
+                          {item.question}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           ) : (
             partnershipPackagesData.map((group) => (
