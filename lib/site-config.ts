@@ -57,7 +57,7 @@ export const siteTree: NavNode[] = [
       { title: "Voronka xaritasi", path: "/sales-process/funnel-map", contentType: "doc" },
       { title: "Lid manbalari", path: "/sales-process/lead-sources", contentType: "doc" },
       { title: "Lidlarni saralash", path: "/sales-process/lead-qualification", contentType: "doc" },
-      { title: "Skriptlar", path: "/sales-process/scripts", contentType: "database" },
+
       { title: "E'tirozlar", path: "/sales-process/objections", contentType: "database" },
       { title: "Raqobat kartalari", path: "/sales-process/battle-cards", contentType: "database" },
       { title: "Taklif va hisob-faktura", path: "/sales-process/proposal-invoice", contentType: "doc" },

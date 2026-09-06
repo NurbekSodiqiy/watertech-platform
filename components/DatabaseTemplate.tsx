@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpDown, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpDown, ChevronRight, Search } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 
 export interface DbColumn {
@@ -35,6 +36,7 @@ export function DatabaseTemplate({
   linkKey?: string;
   emptyTitle?: string;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
@@ -122,11 +124,16 @@ export function DatabaseTemplate({
                     )}
                   </th>
                 ))}
+                {linkBase && <th className="w-8 px-2 py-2.5" aria-hidden="true" />}
               </tr>
             </thead>
             <tbody>
               {filtered.map((row, i) => (
-                <tr key={row.id ?? row.slug ?? i} className="border-b border-border last:border-0 hover:bg-primary/5">
+                <tr
+                  key={row.id ?? row.slug ?? i}
+                  onClick={linkBase ? () => router.push(`${linkBase}/${row[linkKey]}`) : undefined}
+                  className={`border-b border-border last:border-0 hover:bg-primary/5 ${linkBase ? "cursor-pointer" : ""}`}
+                >
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-2.5 text-text-secondary">
                       {col.type === "stock" ? (
@@ -140,6 +147,7 @@ export function DatabaseTemplate({
                       ) : linkBase && col === columns[0] ? (
                         <Link
                           href={`${linkBase}/${row[linkKey]}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="font-medium text-primary hover:underline"
                         >
                           {row[col.key]}
@@ -149,6 +157,11 @@ export function DatabaseTemplate({
                       )}
                     </td>
                   ))}
+                  {linkBase && (
+                    <td className="px-2 py-2.5 text-right">
+                      <ChevronRight size={14} className="ml-auto text-text-secondary opacity-60" />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
