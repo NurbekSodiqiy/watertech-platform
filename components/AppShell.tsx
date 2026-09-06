@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onOpenSearch={() => setCommandOpen(true)}
           onOpenBookmarks={() => setBookmarksOpen(true)}
         />
-        <main className="min-w-0 flex-1 overflow-x-hidden">
+        <main className="min-w-0 flex-1">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

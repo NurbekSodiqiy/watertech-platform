@@ -390,7 +390,7 @@ export default function ScriptsPage() {
         </div>
 
         {/* RIGHT PANEL (The "Remote Control") */}
-        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm">
+        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto">
           {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
               {faqData.map((category, index) => (
