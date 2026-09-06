@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
+import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
 
 // FAQ Data
 type FAQItem = {
@@ -91,7 +92,7 @@ const faqData: FAQCategory[] = [
 ];
 
 export default function ScriptsPage() {
-  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors">("faq");
+  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">("faq");
   
   // Savol-javob state
   const [activeScreenContext, setActiveScreenContext] = useState<string | null>(null);
@@ -103,12 +104,65 @@ export default function ScriptsPage() {
   // Raqobatchilar state
   const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
 
+  // Sotuv skriptlari state
+  const [activeSalesScriptId, setActiveSalesScriptId] = useState<string>("target-leads");
+  const activeSalesScript = salesScriptsData.find(s => s.id === activeSalesScriptId) || salesScriptsData[0];
+  const [selectedScriptStage, setSelectedScriptStage] = useState<ScriptStage | null>(null);
+  const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
+  const [selectedScriptSubItem, setSelectedScriptSubItem] = useState<{ id: string; label: string; turns: ScriptTurn[] } | null>(null);
+
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
   };
 
   const selectScript = (text: string) => {
     setActiveScreenContext(text);
+  };
+
+  const toggleScriptStage = (stageId: string) => {
+    setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
+  };
+
+  const renderScriptTurns = (turns: ScriptTurn[]) => {
+    return (
+      <div className="space-y-4">
+        {turns.map((turn, idx) => {
+          if (turn.speaker === "note") {
+            return (
+              <div key={idx} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
+                <Info size={16} className="shrink-0 mt-0.5 opacity-70" />
+                <span>{turn.text}</span>
+              </div>
+            );
+          }
+          
+          const isOperator = turn.speaker === "operator";
+          
+          return (
+            <div key={idx} className={`flex flex-col gap-1.5 ${!isOperator ? 'pl-8' : ''}`}>
+              {turn.subStepHeader && (
+                <div className="mt-4 mb-2 text-sm font-bold uppercase tracking-wider text-primary border-b border-border pb-1 w-max">
+                  {turn.subStepHeader}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <div className={`flex shrink-0 h-8 w-8 items-center justify-center rounded-full border ${isOperator ? 'bg-surface border-border text-primary-dark' : 'bg-surface-alt border-primary/20 text-accent'}`}>
+                  {isOperator ? <Headset size={16} /> : <User size={16} />}
+                </div>
+                <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl ${isOperator ? 'bg-surface border border-border rounded-tl-sm' : 'bg-surface-alt border border-primary/10 rounded-tl-sm'}`}>
+                  <span className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${isOperator ? 'text-text-secondary' : 'text-accent'}`}>
+                    {isOperator ? 'Operator' : 'Mijoz'}
+                  </span>
+                  <div className="text-[14.5px] leading-relaxed text-primary-dark whitespace-pre-wrap">
+                    {turn.text}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -120,13 +174,11 @@ export default function ScriptsPage() {
         </p>
       </div>
 
-      <div className="flex w-fit shrink-0 items-center gap-0.5 rounded-full border border-border bg-surface-alt p-1">
+      <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
         <button
           onClick={() => {
             setActiveTab("faq");
             setActiveScreenContext(null);
-            setSelectedPackage(null);
-            setSelectedCompetitor(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
@@ -137,9 +189,7 @@ export default function ScriptsPage() {
         <button
           onClick={() => {
             setActiveTab("packages");
-            setActiveScreenContext(null);
             setSelectedPackage(null);
-            setSelectedCompetitor(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
@@ -150,8 +200,6 @@ export default function ScriptsPage() {
         <button
           onClick={() => {
             setActiveTab("competitors");
-            setActiveScreenContext(null);
-            setSelectedPackage(null);
             setSelectedCompetitor(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -159,6 +207,19 @@ export default function ScriptsPage() {
           }`}
         >
           Raqobatchilar
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("sales_scripts");
+            setSelectedScriptStage(null);
+            setSelectedScriptSubItem(null);
+            setExpandedScriptStageId(null);
+          }}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+          }`}
+        >
+          Sotuv skriptlari
         </button>
       </div>
 
@@ -242,8 +303,7 @@ export default function ScriptsPage() {
                 </div>
               </div>
             )
-          ) : (
-            // activeTab === "competitors"
+          ) : activeTab === "competitors" ? (
             !selectedCompetitor ? (
               <p className="text-center text-text-secondary text-lg">
                 O&apos;ng paneldan kerakli raqobatchini tanlang...
@@ -386,11 +446,31 @@ export default function ScriptsPage() {
                 </div>
               </div>
             )
+          ) : (
+            // activeTab === "sales_scripts"
+            (!selectedScriptStage && !selectedScriptSubItem) ? (
+              <p className="text-center text-text-secondary text-lg">
+                O&apos;ng paneldan skript bosqichini tanlang...
+              </p>
+            ) : (
+              <div className="flex flex-col h-full overflow-y-auto">
+                <div className="mb-8 flex items-center justify-between border-b border-border pb-4">
+                  <h2 className="text-2xl font-bold text-primary-dark">
+                    {selectedScriptSubItem?.label || selectedScriptStage?.label}
+                  </h2>
+                </div>
+                {selectedScriptSubItem ? (
+                  renderScriptTurns(selectedScriptSubItem.turns)
+                ) : selectedScriptStage?.turns ? (
+                  renderScriptTurns(selectedScriptStage.turns)
+                ) : null}
+              </div>
+            )
           )}
         </div>
 
         {/* RIGHT PANEL (The "Remote Control") */}
-        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto">
+        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
           {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
               {faqData.map((category, index) => (
@@ -448,8 +528,7 @@ export default function ScriptsPage() {
                 ))}
               </div>
             ))
-          ) : (
-            // activeTab === "competitors"
+          ) : activeTab === "competitors" ? (
             <div className="flex flex-col space-y-2">
               {competitorsData.map((comp) => (
                 <button
@@ -467,6 +546,87 @@ export default function ScriptsPage() {
                   <ChevronRight className={`w-4 h-4 ${selectedCompetitor?.id === comp.id ? 'text-primary' : 'text-text-secondary'}`} />
                 </button>
               ))}
+            </div>
+          ) : (
+            // activeTab === "sales_scripts"
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
+                {salesScriptsData.map((script) => (
+                  <button
+                    key={script.id}
+                    onClick={() => {
+                      setActiveSalesScriptId(script.id);
+                      setSelectedScriptStage(null);
+                      setSelectedScriptSubItem(null);
+                      setExpandedScriptStageId(null);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                      activeSalesScriptId === script.id
+                        ? "bg-primary text-surface"
+                        : "bg-surface-alt text-text-secondary hover:text-primary-dark border border-border"
+                    }`}
+                  >
+                    {script.name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-border overflow-hidden">
+                {activeSalesScript.stages.map((stage, index) => (
+                  <div key={stage.id} className={index !== 0 ? "border-t border-border" : ""}>
+                    <button
+                      onClick={() => {
+                        if (stage.type === 'direct') {
+                          setSelectedScriptStage(stage);
+                          setSelectedScriptSubItem(null);
+                          setExpandedScriptStageId(null);
+                        } else {
+                          toggleScriptStage(stage.id);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between p-4 text-left transition-colors font-medium text-primary-dark ${
+                        selectedScriptStage?.id === stage.id && stage.type === 'direct'
+                          ? "bg-surface-alt" 
+                          : "hover:bg-surface-alt"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {index + 1}. {stage.label}
+                      </span>
+                      {stage.type === 'accordion' ? (
+                        expandedScriptStageId === stage.id ? (
+                          <ChevronDown className="w-5 h-5 text-text-secondary" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-text-secondary" />
+                        )
+                      ) : (
+                        <ChevronRight className={`w-5 h-5 ${selectedScriptStage?.id === stage.id ? 'text-primary' : 'text-text-secondary'}`} />
+                      )}
+                    </button>
+                    
+                    {stage.type === 'accordion' && expandedScriptStageId === stage.id && stage.subItems && (
+                      <div className="bg-surface-alt border-t border-border flex flex-col p-2 space-y-1">
+                        {stage.subItems.map((subItem) => (
+                          <button
+                            key={subItem.id}
+                            onClick={() => {
+                              setSelectedScriptSubItem(subItem);
+                              setSelectedScriptStage(null);
+                            }}
+                            className={`text-left w-full p-3 rounded-lg hover:bg-surface text-sm transition-colors pl-6 font-medium ${
+                              selectedScriptSubItem?.id === subItem.id
+                                ? "text-primary bg-surface shadow-sm"
+                                : "text-text-secondary hover:text-primary-dark"
+                            }`}
+                          >
+                            {subItem.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
