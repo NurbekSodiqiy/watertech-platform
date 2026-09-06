@@ -40,11 +40,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
             >
               <div className="flex items-center justify-between border-b border-border px-3 py-3">
-                <span className="text-sm font-semibold text-primary-dark">Navigation</span>
+                <span className="text-sm font-semibold text-primary-dark">Navigatsiya</span>
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="rounded-lg p-1 text-text-secondary hover:bg-primary/10"
-                  aria-label="Close navigation"
+                  aria-label="Navigatsiyani yopish"
                 >
                   <X size={18} />
                 </button>

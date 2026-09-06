@@ -23,36 +23,36 @@ export function ProductCardTemplate({ product, meta }: { product: MockProduct; m
       <PageHeader
         path={`/products/${product.slug}`}
         title={product.name}
-        description={`SKU ${product.sku} · [One-line placeholder description of what this product is and who it's for.]`}
+        description={`SKU ${product.sku} · [Bir qatorli joy egallovchi tavsif — bu mahsulot nima va kim uchun.]`}
         meta={meta}
       />
 
-      <Section title="Overview">
+      <Section title="Umumiy ma'lumot">
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex h-32 w-full items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary sm:w-40">
             <Package size={28} />
           </div>
           <div className="flex-1 space-y-2 text-[13.5px] text-text-secondary">
-            <p>Category: <span className="text-primary-dark">{product.category}</span></p>
+            <p>Toifa: <span className="text-primary-dark">{product.category}</span></p>
             <p>Segment: <span className="text-primary-dark">{product.segment}</span></p>
             <p>
-              Stock status:{" "}
+              Ombordagi holati:{" "}
               <span className={product.inStock ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
-                {product.inStock ? "In stock" : "Out of stock"}
+                {product.inStock ? "Mavjud" : "Mavjud emas"}
               </span>
             </p>
           </div>
         </div>
       </Section>
 
-      <Section title="Technical Specifications">
+      <Section title="Texnik xususiyatlar">
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-[13px]">
             <tbody>
-              {["Dimension", "Material", "Pressure rating", "Temperature range", "Certification"].map((spec) => (
+              {["O'lcham", "Material", "Bosim darajasi", "Harorat oralig'i", "Sertifikat"].map((spec) => (
                 <tr key={spec} className="border-b border-border last:border-0">
                   <td className="w-1/3 bg-surface-alt/60 px-3 py-2 font-medium text-primary-dark">{spec}</td>
-                  <td className="px-3 py-2 text-text-secondary">[Placeholder value]</td>
+                  <td className="px-3 py-2 text-text-secondary">[Joy egallovchi qiymat]</td>
                 </tr>
               ))}
             </tbody>
@@ -60,52 +60,52 @@ export function ProductCardTemplate({ product, meta }: { product: MockProduct; m
         </div>
       </Section>
 
-      <Section title="Sales Arguments">
+      <Section title="Savdo argumentlari">
         <div className="grid gap-3 sm:grid-cols-3">
           {[1, 2, 3].map((n) => (
             <div key={n} className="rounded-lg border border-border bg-surface-alt p-3 text-[13px]">
-              <p className="font-semibold text-primary-dark">Feature {n} — [Placeholder]</p>
-              <p className="mt-1 text-text-secondary">Benefit: [Placeholder benefit statement]</p>
-              <p className="mt-1 font-medium text-primary">Proof: [+—% placeholder number]</p>
+              <p className="font-semibold text-primary-dark">{n}-xususiyat — [Joy egallovchi]</p>
+              <p className="mt-1 text-text-secondary">Foyda: [Joy egallovchi foyda bayoni]</p>
+              <p className="mt-1 font-medium text-primary">Isbot: [+—% joy egallovchi raqam]</p>
             </div>
           ))}
         </div>
       </Section>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Section title="Fits / Doesn't Fit by Segment">
+        <Section title="Segment bo'yicha mos/nomos">
           <ul className="space-y-1.5 text-[13.5px] text-text-secondary">
-            <li>✅ [Placeholder segment where this fits well]</li>
-            <li>✅ [Placeholder segment where this fits well]</li>
-            <li>🚫 [Placeholder segment where this is a poor fit]</li>
+            <li>✅ [Mos keladigan segment — joy egallovchi]</li>
+            <li>✅ [Mos keladigan segment — joy egallovchi]</li>
+            <li>🚫 [Mos kelmaydigan segment — joy egallovchi]</li>
           </ul>
         </Section>
-        <Section title="Vs. Our Other Products">
+        <Section title="Boshqa mahsulotlarimiz bilan solishtirganda">
           <p className="text-[13.5px] text-text-secondary">
-            [Placeholder — how this differs from adjacent product lines, and when to recommend one over the other.]
+            [Joy egallovchi — bu mahsulot yondosh turkumlardan nimasi bilan farq qiladi va qachon qaysi birini tavsiya qilish kerak.]
           </p>
         </Section>
       </div>
 
-      <Section title="Vs. Competitor">
+      <Section title="Raqobatchi bilan solishtirganda">
         <p className="text-[13.5px] text-text-secondary">
-          [Placeholder comparison summary.]{" "}
+          [Joy egallovchi — qisqacha taqqoslash.]{" "}
           <Link href="/sales-process/battle-cards" className="font-medium text-primary hover:underline">
-            View linked battle card →
+            Bog'langan raqobat kartasini ko'rish →
           </Link>
         </p>
       </Section>
 
-      <Section title="Price">
+      <Section title="Narx">
         <p className="text-[13.5px] text-text-secondary">
           {product.price} —{" "}
           <Link href="/products/price-sheet" className="font-medium text-primary hover:underline">
-            View full price sheet →
+            To'liq narxnomani ko'rish →
           </Link>
         </p>
       </Section>
 
-      <Section title="Top Objections & Answers">
+      <Section title="Eng ko'p uchraydigan e'tirozlar va javoblar">
         <div className="space-y-2">
           {sampleObjections.map((o) => (
             <div key={o.id} className="rounded-lg border border-border bg-surface-alt p-3 text-[13px]">
@@ -116,11 +116,11 @@ export function ProductCardTemplate({ product, meta }: { product: MockProduct; m
         </div>
       </Section>
 
-      <Section title="Top Technical FAQs">
+      <Section title="Eng ko'p so'raladigan texnik savollar">
         <ul className="space-y-1.5 text-[13.5px] text-text-secondary">
-          <li>[Placeholder technical FAQ question 1?]</li>
-          <li>[Placeholder technical FAQ question 2?]</li>
-          <li>[Placeholder technical FAQ question 3?]</li>
+          <li>[Joy egallovchi texnik savol 1?]</li>
+          <li>[Joy egallovchi texnik savol 2?]</li>
+          <li>[Joy egallovchi texnik savol 3?]</li>
         </ul>
       </Section>
 
@@ -130,7 +130,7 @@ export function ProductCardTemplate({ product, meta }: { product: MockProduct; m
             <PlayCircle size={28} />
           </div>
         </Section>
-        <Section title="Quiz">
+        <Section title="Test">
           <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary">
             <FlaskConical size={28} />
           </div>

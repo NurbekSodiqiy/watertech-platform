@@ -19,10 +19,10 @@ export default function CaseStudyPage({ params }: { params: { slug: string } }) 
       <PageHeader path={`/customers/case-studies/${params.slug}`} title={study.client} meta={meta} />
       <div className="space-y-4">
         {[
-          ["Problem", study.problem],
-          ["Solution", study.solution],
-          ["Result", study.resultNumber],
-          ["Used to counter objection", study.usedForObjection],
+          ["Muammo", study.problem],
+          ["Yechim", study.solution],
+          ["Natija", study.resultNumber],
+          ["Qaysi e'tirozga qarshi ishlatilgan", study.usedForObjection],
         ].map(([label, value]) => (
           <div key={label} className="rounded-2xl border border-border bg-surface p-5 shadow-soft">
             <h2 className="mb-1.5 text-[15px] font-semibold text-primary-dark">{label}</h2>

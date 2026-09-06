@@ -10,16 +10,16 @@ interface TechFaq {
 }
 
 const rows: TechFaq[] = [
-  { id: "tf-1", question: "[Placeholder technical question about tolerances?]", answer: "[Placeholder answer.]", relatedProduct: "[Product Line A]" },
-  { id: "tf-2", question: "[Placeholder technical question about certifications?]", answer: "[Placeholder answer.]", relatedProduct: "[Product Line B]" },
-  { id: "tf-3", question: "[Placeholder technical question about installation?]", answer: "[Placeholder answer.]", relatedProduct: "[Product Line C]" },
-  { id: "tf-4", question: "[Placeholder technical question about compatibility?]", answer: "[Placeholder answer.]", relatedProduct: "[Product Line D]" },
+  { id: "tf-1", question: "[Ruxsat etilgan chegaralar haqidagi joy egallovchi texnik savol?]", answer: "[Joy egallovchi javob.]", relatedProduct: "[A turkumi]" },
+  { id: "tf-2", question: "[Sertifikatlar haqidagi joy egallovchi texnik savol?]", answer: "[Joy egallovchi javob.]", relatedProduct: "[B turkumi]" },
+  { id: "tf-3", question: "[O'rnatish haqidagi joy egallovchi texnik savol?]", answer: "[Joy egallovchi javob.]", relatedProduct: "[C turkumi]" },
+  { id: "tf-4", question: "[Moslik haqidagi joy egallovchi texnik savol?]", answer: "[Joy egallovchi javob.]", relatedProduct: "[D turkumi]" },
 ];
 
 const columns: DbColumn[] = [
-  { key: "question", label: "Question" },
-  { key: "answer", label: "Answer" },
-  { key: "relatedProduct", label: "Related Product" },
+  { key: "question", label: "Savol" },
+  { key: "answer", label: "Javob" },
+  { key: "relatedProduct", label: "Bog'liq mahsulot" },
 ];
 
 export default function TechnicalFaqPage() {
@@ -28,8 +28,8 @@ export default function TechnicalFaqPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/products/technical-faq"
-        title="Technical FAQ"
-        description="Product-specific technical questions and answers."
+        title="Texnik savol-javob"
+        description="Mahsulotga oid texnik savol va javoblar."
         meta={meta}
       />
       <DatabaseTemplate columns={columns} rows={rows} />

@@ -74,7 +74,7 @@ export function DatabaseTemplate({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter rows…"
+            placeholder="Qatorlarni filtrlash…"
             className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
         </div>
@@ -87,7 +87,7 @@ export function DatabaseTemplate({
             }
             className="rounded-lg border border-border bg-surface-alt px-2.5 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
           >
-            <option value="">{f.label}: All</option>
+            <option value="">{f.label}: Barchasi</option>
             {f.options.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
@@ -99,8 +99,8 @@ export function DatabaseTemplate({
 
       {filtered.length === 0 ? (
         <EmptyState
-          title={emptyTitle ?? "No rows match"}
-          description="Try clearing filters, or add new rows once real content is available."
+          title={emptyTitle ?? "Mos qator topilmadi"}
+          description="Filtrlarni tozalab ko'ring yoki haqiqiy ma'lumot qo'shilgach qatorlar paydo bo'ladi."
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
@@ -131,7 +131,7 @@ export function DatabaseTemplate({
                     <td key={col.key} className="px-4 py-2.5 text-text-secondary">
                       {col.type === "stock" ? (
                         <span className={row[col.key] ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
-                          {row[col.key] ? "In stock" : "Out of stock"}
+                          {row[col.key] ? "Mavjud" : "Mavjud emas"}
                         </span>
                       ) : col.type === "link" ? (
                         <a href={row[col.key]} className="text-primary hover:underline">

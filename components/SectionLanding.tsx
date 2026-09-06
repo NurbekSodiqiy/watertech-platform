@@ -32,7 +32,7 @@ export function SectionLanding({ node }: { node: NavNode }) {
                 </span>
                 {child.children && (
                   <span className="block text-[12px] text-text-secondary">
-                    {child.children.length} sub-pages
+                    {child.children.length} ta quyi sahifa
                   </span>
                 )}
               </span>

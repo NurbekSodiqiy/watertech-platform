@@ -7,13 +7,13 @@ import { ThemeScript } from "@/components/ThemeScript";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "WaterTech Sales Knowledge Base",
-  description: "Internal sales knowledge base and wiki skeleton for WaterTech.",
+  title: "WaterTech Savdo Bilimlar Bazasi",
+  description: "WaterTech uchun ichki savdo bilimlar bazasi va wiki skeleti.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="uz" suppressHydrationWarning>
       <head>
         <ThemeScript />
       </head>

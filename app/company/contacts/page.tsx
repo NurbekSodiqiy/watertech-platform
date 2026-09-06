@@ -4,11 +4,11 @@ import { getMockMeta } from "@/lib/site-config";
 import { contacts } from "@/lib/mock-data/contacts";
 
 const columns: DbColumn[] = [
-  { key: "name", label: "Name", sortable: true },
-  { key: "role", label: "Role", sortable: true },
-  { key: "topic", label: "Topic" },
-  { key: "phone", label: "Phone" },
-  { key: "messenger", label: "Messenger" },
+  { key: "name", label: "Ism", sortable: true },
+  { key: "role", label: "Lavozim", sortable: true },
+  { key: "topic", label: "Mavzu" },
+  { key: "phone", label: "Telefon" },
+  { key: "messenger", label: "Messenjer" },
 ];
 
 export default function ContactsPage() {
@@ -19,14 +19,14 @@ export default function ContactsPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/company/contacts"
-        title="Internal Contacts"
-        description="Who to reach for what — internal escalation directory."
+        title="Ichki kontaktlar"
+        description="Qaysi masala bo'yicha kimga murojaat qilish — ichki eskalatsiya yo'nalgichi."
         meta={meta}
       />
       <DatabaseTemplate
         columns={columns}
         rows={contacts}
-        filters={[{ key: "role", label: "Role", options: roles }]}
+        filters={[{ key: "role", label: "Lavozim", options: roles }]}
       />
     </div>
   );

@@ -4,10 +4,10 @@ import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { getMockMeta } from "@/lib/site-config";
 
 const videos = [
-  { title: "[Placeholder — Great discovery call]", tag: "Discovery" },
-  { title: "[Placeholder — Objection handled well]", tag: "Objections" },
-  { title: "[Placeholder — Clean close]", tag: "Closing" },
-  { title: "[Placeholder — Upsell conversation]", tag: "Upsell" },
+  { title: "[Joy egallovchi — Ajoyib aniqlash qo'ng'irog'i]", tag: "Aniqlash" },
+  { title: "[Joy egallovchi — E'tiroz yaxshi hal qilingan]", tag: "E'tirozlar" },
+  { title: "[Joy egallovchi — Toza yakunlash]", tag: "Yakunlash" },
+  { title: "[Joy egallovchi — Qo'shimcha sotuv suhbati]", tag: "Qo'shimcha sotuv" },
 ];
 
 export default function BestCallsLibraryPage() {
@@ -16,8 +16,8 @@ export default function BestCallsLibraryPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/academy/best-calls-library"
-        title="Best Calls Library"
-        description="Real call recordings worth learning from."
+        title="Eng yaxshi qo'ng'iroqlar to'plami"
+        description="O'rganishga arziydigan haqiqiy qo'ng'iroq yozuvlari."
         meta={meta}
       />
       <div className="grid gap-4 sm:grid-cols-2">

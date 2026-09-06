@@ -4,12 +4,12 @@ import { getMockMeta } from "@/lib/site-config";
 import { products } from "@/lib/mock-data/products";
 
 const columns: DbColumn[] = [
-  { key: "name", label: "Product", sortable: true },
+  { key: "name", label: "Mahsulot", sortable: true },
   { key: "sku", label: "SKU" },
-  { key: "category", label: "Category", sortable: true },
+  { key: "category", label: "Toifa", sortable: true },
   { key: "segment", label: "Segment" },
-  { key: "price", label: "Price" },
-  { key: "inStock", label: "Stock", type: "stock" },
+  { key: "price", label: "Narx" },
+  { key: "inStock", label: "Ombor", type: "stock" },
 ];
 
 export default function ProductsPage() {
@@ -21,15 +21,15 @@ export default function ProductsPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/products"
-        title="Product Catalog"
-        description="Full product & pricing database. Filter by category, segment, or stock status."
+        title="Mahsulotlar katalogi"
+        description="To'liq mahsulot va narx bazasi. Toifa, segment yoki ombor holati bo'yicha filtrlang."
         meta={meta}
       />
       <DatabaseTemplate
         columns={columns}
         rows={products}
         filters={[
-          { key: "category", label: "Category", options: categories },
+          { key: "category", label: "Toifa", options: categories },
           { key: "segment", label: "Segment", options: segments },
         ]}
         linkBase="/products"

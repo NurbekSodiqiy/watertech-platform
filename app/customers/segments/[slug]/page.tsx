@@ -27,13 +27,13 @@ export default function SegmentPage({ params }: { params: { slug: string } }) {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader path={`/customers/segments/${params.slug}`} title={segment.name} meta={meta} />
       <dl className="rounded-2xl border border-border bg-surface p-5 shadow-soft">
-        <Row label="Pains" value={<ul className="list-disc space-y-1 pl-4">{segment.pains.map((p, i) => <li key={i}>{p}</li>)}</ul>} />
-        <Row label="Decision Makers" value={segment.decisionMakers} />
-        <Row label="Buying Cycle" value={segment.buyingCycle} />
-        <Row label="Avg. Deal Size" value={segment.avgDealSize} />
-        <Row label="Best Product" value={segment.bestProduct} />
-        <Row label="Best Argument" value={segment.bestArgument} />
-        <Row label="Common Objection" value={segment.commonObjection} />
+        <Row label="Muammolar" value={<ul className="list-disc space-y-1 pl-4">{segment.pains.map((p, i) => <li key={i}>{p}</li>)}</ul>} />
+        <Row label="Qaror qabul qiluvchilar" value={segment.decisionMakers} />
+        <Row label="Xarid davri" value={segment.buyingCycle} />
+        <Row label="O'rtacha bitim hajmi" value={segment.avgDealSize} />
+        <Row label="Eng mos mahsulot" value={segment.bestProduct} />
+        <Row label="Eng kuchli argument" value={segment.bestArgument} />
+        <Row label="Ko'p uchraydigan e'tiroz" value={segment.commonObjection} />
       </dl>
       <FeedbackWidget />
     </div>

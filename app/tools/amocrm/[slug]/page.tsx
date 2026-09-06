@@ -19,7 +19,7 @@ export default function AmoSopPage({ params }: { params: { slug: string } }) {
       <PageHeader
         path={`/tools/amocrm/${params.slug}`}
         title={sop.title}
-        description="Mini standard operating procedure"
+        description="Qisqa standart tartib-qoida"
         meta={meta}
       />
       <ol className="space-y-3">

@@ -3,9 +3,9 @@ import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { getMockMeta } from "@/lib/site-config";
 
 const steps = [
-  { period: "Days 1–30", title: "Foundations", items: ["[Placeholder — product fundamentals]", "[Placeholder — CRM basics]", "[Placeholder — shadow 3 calls]"], done: true },
-  { period: "Days 31–60", title: "Practice", items: ["[Placeholder — run first solo calls]", "[Placeholder — objection handling roleplay]", "[Placeholder — pass Bronze certification]"], done: true },
-  { period: "Days 61–90", title: "Independence", items: ["[Placeholder — own a full pipeline]", "[Placeholder — negotiate first deal]", "[Placeholder — pass Silver certification]"], done: false },
+  { period: "1–30-kunlar", title: "Asoslar", items: ["[Joy egallovchi — mahsulot asoslari]", "[Joy egallovchi — CRM asoslari]", "[Joy egallovchi — 3 ta qo'ng'iroqni kuzatib borish]"], done: true },
+  { period: "31–60-kunlar", title: "Amaliyot", items: ["[Joy egallovchi — birinchi mustaqil qo'ng'iroqlar]", "[Joy egallovchi — e'tirozlar bilan ishlash rolli o'yini]", "[Joy egallovchi — Bronza sertifikatidan o'tish]"], done: true },
+  { period: "61–90-kunlar", title: "Mustaqillik", items: ["[Joy egallovchi — to'liq voronkani boshqarish]", "[Joy egallovchi — birinchi bitimni muzokara qilish]", "[Joy egallovchi — Kumush sertifikatidan o'tish]"], done: false },
 ];
 
 export default function LearningPathsPage() {
@@ -14,8 +14,8 @@ export default function LearningPathsPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/academy/learning-paths"
-        title="Learning Paths"
-        description="The 30-60-90 day onboarding path."
+        title="O'quv yo'nalishlari"
+        description="30-60-90 kunlik moslashuv yo'li."
         meta={meta}
       />
       <div className="space-y-0">

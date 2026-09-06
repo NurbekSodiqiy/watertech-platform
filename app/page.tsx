@@ -6,15 +6,15 @@ import { faqItems } from "@/lib/mock-data/faq";
 const quickLinks = [
   { label: "CRM (amoCRM)", icon: LayoutGrid },
   { label: "Google Sheets", icon: FileSpreadsheet },
-  { label: "Proposal Template", icon: Table2 },
-  { label: "Sales Chat Bot", icon: MessageSquareText },
+  { label: "Taklif shabloni", icon: Table2 },
+  { label: "Savdo chat-boti", icon: MessageSquareText },
 ];
 
 const neededToday = [
-  "[Placeholder — review today's assigned leads in CRM]",
-  "[Placeholder — confirm delivery status for open orders]",
-  "[Placeholder — complete this week's training module]",
-  "[Placeholder — log yesterday's call outcomes]",
+  "[Joy egallovchi — CRM'dagi bugungi lidlarni ko'rib chiqish]",
+  "[Joy egallovchi — ochiq buyurtmalar yetkazib berish holatini tasdiqlash]",
+  "[Joy egallovchi — shu haftaning o'quv modulini yakunlash]",
+  "[Joy egallovchi — kechagi qo'ng'iroqlar natijasini qayd etish]",
 ];
 
 function Card({ title, children, icon: Icon }: { title: string; children: React.ReactNode; icon?: any }) {
@@ -35,9 +35,9 @@ export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <div>
-        <h1 className="text-[34px] font-extrabold tracking-tight text-primary-dark">Good to see you 👋</h1>
+        <h1 className="text-[34px] font-extrabold tracking-tight text-primary-dark">Xush kelibsiz 👋</h1>
         <p className="mt-1 text-[15px] text-text-secondary">
-          Everything the sales team needs, in one place.
+          Savdo jamoasiga kerak bo'lgan barcha narsa — bir joyda.
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export default function HomePage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          <Card title="Needed Today" icon={Sparkles}>
+          <Card title="Bugun kerak" icon={Sparkles}>
             <ul className="space-y-2">
               {neededToday.map((item, i) => (
                 <li key={i} className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3 py-2.5 text-[13.5px] text-text-secondary">
@@ -68,28 +68,28 @@ export default function HomePage() {
             </ul>
           </Card>
 
-          <Card title="Recent Changes" icon={Clock}>
+          <Card title="So'nggi o'zgarishlar" icon={Clock}>
             <ul className="divide-y divide-border">
               {changelogEntries.map((c) => (
                 <li key={c.id} className="flex items-center justify-between gap-3 py-2.5 text-[13.5px]">
                   <div>
                     <p className="text-primary-dark">{c.whatChanged}</p>
                     <p className="text-[12px] text-text-secondary">
-                      {c.date} · Approved by {c.approvedBy}
+                      {c.date} · Tasdiqlagan: {c.approvedBy}
                     </p>
                   </div>
                   <Link href={c.linkedPage} className="shrink-0 text-primary hover:underline">
-                    View →
+                    Ko'rish →
                   </Link>
                 </li>
               ))}
             </ul>
             <Link href="/changelog" className="mt-3 inline-block text-[13px] font-medium text-primary hover:underline">
-              View full changelog →
+              To'liq tarixni ko'rish →
             </Link>
           </Card>
 
-          <Card title="Top 10 Most-Asked Questions">
+          <Card title="Eng ko'p so'raladigan 10 ta savol">
             <ol className="space-y-2">
               {topQuestions.map((q, i) => (
                 <li key={q.id} className="flex items-start gap-2.5 text-[13.5px] text-text-secondary">
@@ -99,18 +99,18 @@ export default function HomePage() {
               ))}
             </ol>
             <Link href="/faq" className="mt-3 inline-block text-[13px] font-medium text-primary hover:underline">
-              View full FAQ →
+              To'liq savol-javobni ko'rish →
             </Link>
           </Card>
         </div>
 
         <div className="space-y-5">
-          <Card title="My Onboarding Progress" icon={GraduationCap}>
+          <Card title="Moslashuv jarayoni" icon={GraduationCap}>
             <div className="space-y-3">
               <div>
                 <div className="mb-1 flex items-center justify-between text-[12.5px] text-text-secondary">
-                  <span>Level: Bronze</span>
-                  <span>6 / 10 modules</span>
+                  <span>Daraja: Bronza</span>
+                  <span>6 / 10 modul</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-border">
                   <div className="h-full w-3/5 rounded-full bg-primary" />
@@ -120,17 +120,17 @@ export default function HomePage() {
                 href="/academy/learning-paths"
                 className="inline-block text-[13px] font-medium text-primary hover:underline"
               >
-                Continue learning path →
+                O'quv yo'nalishini davom ettirish →
               </Link>
             </div>
           </Card>
 
-          <Card title="Jump Back In">
+          <Card title="Davom eting">
             <ul className="space-y-2 text-[13.5px]">
-              <li><Link href="/sales-process/objections" className="text-primary hover:underline">Objections database</Link></li>
-              <li><Link href="/sales-process/battle-cards" className="text-primary hover:underline">Battle cards</Link></li>
-              <li><Link href="/products" className="text-primary hover:underline">Product catalog</Link></li>
-              <li><Link href="/company/contacts" className="text-primary hover:underline">Internal contacts</Link></li>
+              <li><Link href="/sales-process/objections" className="text-primary hover:underline">E'tirozlar bazasi</Link></li>
+              <li><Link href="/sales-process/battle-cards" className="text-primary hover:underline">Raqobat kartalari</Link></li>
+              <li><Link href="/products" className="text-primary hover:underline">Mahsulotlar katalogi</Link></li>
+              <li><Link href="/company/contacts" className="text-primary hover:underline">Ichki kontaktlar</Link></li>
             </ul>
           </Card>
         </div>

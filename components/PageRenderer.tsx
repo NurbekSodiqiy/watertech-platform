@@ -15,7 +15,7 @@ export function PageRenderer({ path }: { path: string }) {
             <PlayCircle size={32} />
           </div>
           <p className="text-center text-[13px] italic text-text-secondary">
-            [Video placeholder — embed the real recording here.]
+            [Video uchun joy egallovchi — bu yerga haqiqiy yozuvni joylashtiring.]
           </p>
         </div>
       </DocPageTemplate>
@@ -26,7 +26,7 @@ export function PageRenderer({ path }: { path: string }) {
     return (
       <DocPageTemplate path={path} title={title} description={node.description} meta={meta} locked={node.locked}>
         <ul className="space-y-2">
-          {["[Placeholder checklist item 1]", "[Placeholder checklist item 2]", "[Placeholder checklist item 3]", "[Placeholder checklist item 4]"].map(
+          {["[Joy egallovchi nazorat bandi 1]", "[Joy egallovchi nazorat bandi 2]", "[Joy egallovchi nazorat bandi 3]", "[Joy egallovchi nazorat bandi 4]"].map(
             (item, i) => (
               <li key={i} className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3 py-2.5 text-[13.5px] text-text-secondary">
                 <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary" disabled />

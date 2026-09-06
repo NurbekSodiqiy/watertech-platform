@@ -11,7 +11,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       <button
         onClick={onMenuClick}
         className="rounded-lg p-1.5 text-primary-dark hover:bg-primary/10 lg:hidden"
-        aria-label="Toggle navigation"
+        aria-label="Navigatsiyani ochish/yopish"
       >
         <Menu size={20} />
       </button>
@@ -21,7 +21,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           WT
         </span>
         <span className="hidden text-sm font-semibold text-primary-dark sm:inline">
-          Sales Knowledge Base
+          Savdo bilimlar bazasi
         </span>
       </Link>
 
@@ -29,7 +29,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
         <input
           type="text"
-          placeholder="Search the knowledge base… (UI stub)"
+          placeholder="Bilimlar bazasidan qidirish…"
           className="w-full rounded-xl border border-border bg-surface-alt py-2 pl-9 pr-3 text-sm text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
           disabled
         />
@@ -39,7 +39,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <ThemeToggle />
 
         <button
-          aria-label="Notifications"
+          aria-label="Bildirishnomalar"
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
         >
           <Bell size={16} />

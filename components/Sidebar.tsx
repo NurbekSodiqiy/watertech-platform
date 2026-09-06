@@ -137,7 +137,7 @@ function NavItem({ node, depth, scope }: { node: NavNode; depth: number; scope: 
           {hasChildren && (
             <button
               onClick={() => setOpen((v) => !v)}
-              aria-label={open ? "Collapse" : "Expand"}
+              aria-label={open ? "Yig'ish" : "Yoyish"}
               className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-primary/10 hover:text-primary-dark"
             >
               <ChevronRight
@@ -264,7 +264,7 @@ export function SidebarNav({
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             />
           )}
-          <Link href="/" title="Today" className="relative z-10 flex h-12 w-12 items-center justify-center">
+          <Link href="/" title="Bugun" className="relative z-10 flex h-12 w-12 items-center justify-center">
             <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
           </Link>
         </div>
@@ -292,7 +292,7 @@ export function SidebarNav({
           }`}
         >
           <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
-          Today
+          Bugun
         </Link>
       </div>
 
@@ -349,7 +349,7 @@ export function Sidebar() {
 
       <button
         onClick={toggle}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Yon panelni yoyish" : "Yon panelni yig'ish"}
         className="absolute -right-3 top-6 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-text-secondary shadow-soft hover:text-primary-dark"
       >
         <ChevronLeft size={13} className={collapsed ? "rotate-180" : ""} />
@@ -359,7 +359,7 @@ export function Sidebar() {
 
       {!collapsed && (
         <div className="border-t border-border p-3 text-[11px] text-text-secondary">
-          WaterTech Sales KB · Skeleton build
+          WaterTech Bilimlar Bazasi · Ishlanma versiya
         </div>
       )}
     </motion.aside>

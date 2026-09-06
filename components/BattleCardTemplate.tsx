@@ -4,6 +4,11 @@ import { StatusLockBadge } from "./StatusLockBadge";
 import type { BattleCard } from "@/lib/mock-data/battle-cards";
 import type { PageMeta } from "@/lib/types";
 
+const outcomeLabels: Record<BattleCard["wonLostDeals"][number]["outcome"], string> = {
+  Won: "Yutildi",
+  Lost: "Yutqazildi",
+};
+
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2 rounded-2xl border border-border bg-surface p-5 shadow-soft">
@@ -18,20 +23,20 @@ export function BattleCardTemplate({ card, meta }: { card: BattleCard; meta: Pag
     <div className="mx-auto max-w-4xl space-y-5 px-6 py-8">
       <PageHeader
         path={`/sales-process/battle-cards/${card.slug}`}
-        title={`vs. ${card.competitor}`}
-        description={`Strongest in: ${card.strongSegment}`}
+        title={`${card.competitor} bilan solishtirish`}
+        description={`Eng kuchli tomon: ${card.strongSegment}`}
         meta={meta}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Panel title={`Their Strengths`}>
+        <Panel title={`Ularning kuchli tomonlari`}>
           <ul className="list-disc space-y-1.5 pl-5 text-[13.5px] text-text-secondary">
             {card.theirStrengths.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ul>
         </Panel>
-        <Panel title="Our Strengths (with proof)">
+        <Panel title="Bizning kuchli tomonlarimiz (isbot bilan)">
           <ul className="space-y-2 text-[13.5px] text-text-secondary">
             {card.ourStrengths.map((s, i) => (
               <li key={i}>
@@ -44,7 +49,7 @@ export function BattleCardTemplate({ card, meta }: { card: BattleCard; meta: Pag
         </Panel>
       </div>
 
-      <Panel title="Objection / Response Pairs">
+      <Panel title="E'tiroz / Javob juftliklari">
         <div className="space-y-2">
           {card.objectionResponses.map((o, i) => (
             <div key={i} className="rounded-lg border border-border bg-surface-alt p-3 text-[13px]">
@@ -55,7 +60,7 @@ export function BattleCardTemplate({ card, meta }: { card: BattleCard; meta: Pag
         </div>
       </Panel>
 
-      <Panel title="What We Never Say">
+      <Panel title="Hech qachon aytmaymiz">
         <ul className="list-disc space-y-1.5 pl-5 text-[13.5px] text-status-outdated">
           {card.neverSay.map((n, i) => (
             <li key={i}>{n}</li>
@@ -63,16 +68,16 @@ export function BattleCardTemplate({ card, meta }: { card: BattleCard; meta: Pag
         </ul>
       </Panel>
 
-      <Panel title="Recent Won / Lost Deals">
+      <Panel title="So'nggi yutilgan / yutqazilgan bitimlar">
         <div className="mb-2">
-          <StatusLockBadge label="Manager-only" />
+          <StatusLockBadge label="Faqat menejerlar uchun" />
         </div>
         <div className="space-y-1.5">
           {card.wonLostDeals.map((d, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px]">
               <span className="text-primary-dark">{d.deal}</span>
               <span className={d.outcome === "Won" ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
-                {d.outcome}
+                {outcomeLabels[d.outcome]}
               </span>
             </div>
           ))}

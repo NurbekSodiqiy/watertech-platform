@@ -3,9 +3,9 @@ import type { LucideIcon } from "lucide-react";
 
 export function EmptyState({
   icon: Icon = Inbox,
-  title = "No content yet",
-  description = "This section is a placeholder. Add real content here to replace this message.",
-  actionLabel = "+ Add content",
+  title = "Hozircha kontent yo'q",
+  description = "Bu bo'lim joy egallovchi sifatida qo'yilgan. Haqiqiy kontent bilan almashtiring.",
+  actionLabel = "+ Kontent qo'shish",
 }: {
   icon?: LucideIcon;
   title?: string;

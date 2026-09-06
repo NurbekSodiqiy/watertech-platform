@@ -5,10 +5,10 @@ import { segments } from "@/lib/mock-data/segments";
 
 const columns: DbColumn[] = [
   { key: "name", label: "Segment", sortable: true },
-  { key: "decisionMakers", label: "Decision Makers" },
-  { key: "buyingCycle", label: "Buying Cycle" },
-  { key: "avgDealSize", label: "Avg. Deal Size" },
-  { key: "bestProduct", label: "Best Product" },
+  { key: "decisionMakers", label: "Qaror qabul qiluvchilar" },
+  { key: "buyingCycle", label: "Xarid davri" },
+  { key: "avgDealSize", label: "O'rtacha bitim hajmi" },
+  { key: "bestProduct", label: "Eng mos mahsulot" },
 ];
 
 export default function SegmentsPage() {
@@ -17,8 +17,8 @@ export default function SegmentsPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/customers/segments"
-        title="Customer Segments"
-        description="Who we sell to, broken down by buying behavior."
+        title="Mijoz segmentlari"
+        description="Kimga sotamiz — xarid xatti-harakati bo'yicha taqsimlangan."
         meta={meta}
       />
       <DatabaseTemplate columns={columns} rows={segments} linkBase="/customers/segments" linkKey="slug" />

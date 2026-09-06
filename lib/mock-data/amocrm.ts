@@ -13,51 +13,51 @@ export interface AmoSop {
 export const amoSops: AmoSop[] = [
   {
     slug: "lead-creation",
-    title: "Lead Creation",
+    title: "Lid yaratish",
     steps: [
-      { step: 1, action: "[Placeholder step — where the lead should be created.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — required fields to fill in.]", note: "[Note placeholder]" },
-      { step: 3, action: "[Placeholder step — tagging convention.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — lid qayerda yaratilishi kerak.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — to'ldirilishi shart bo'lgan maydonlar.]", note: "[Izoh — joy egallovchi]" },
+      { step: 3, action: "[Joy egallovchi qadam — teglash tartibi.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
   {
     slug: "stage-transition",
-    title: "Stage Transition",
+    title: "Bosqichni almashtirish",
     steps: [
-      { step: 1, action: "[Placeholder step — condition to move a lead forward.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — who can move a lead backward.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — lidni oldinga siljitish sharti.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — lidni orqaga qaytarish huquqi kimda.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
   {
     slug: "task-setting",
-    title: "Task Setting",
+    title: "Vazifa belgilash",
     steps: [
-      { step: 1, action: "[Placeholder step — when a follow-up task is required.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — default task due windows.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — qachon kuzatuv vazifasi kerak bo'ladi.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — vazifa uchun standart muddat oynasi.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
   {
     slug: "card-standard",
-    title: "Card Standard",
+    title: "Karta standarti",
     steps: [
-      { step: 1, action: "[Placeholder step — naming convention for cards.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — mandatory attachments.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — kartalarni nomlash tartibi.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — majburiy ilovalar.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
   {
     slug: "loss-reasons",
-    title: "Loss Reasons",
+    title: "Yo'qotish sabablari",
     steps: [
-      { step: 1, action: "[Placeholder step — selecting the correct loss reason.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — required comment on loss.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — to'g'ri yo'qotish sababini tanlash.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — yo'qotish bo'yicha majburiy izoh.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
   {
     slug: "reports",
-    title: "Reports",
+    title: "Hisobotlar",
     steps: [
-      { step: 1, action: "[Placeholder step — which report to run weekly.]", note: "[Note placeholder]" },
-      { step: 2, action: "[Placeholder step — who reviews the report.]", note: "[Note placeholder]" },
+      { step: 1, action: "[Joy egallovchi qadam — har hafta qaysi hisobotni yuritish kerak.]", note: "[Izoh — joy egallovchi]" },
+      { step: 2, action: "[Joy egallovchi qadam — hisobotni kim ko'rib chiqadi.]", note: "[Izoh — joy egallovchi]" },
     ],
   },
 ];

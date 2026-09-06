@@ -8,8 +8,8 @@ export default function ChangelogPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/changelog"
-        title="Changelog"
-        description="What changed, when, who approved it, and who has read it."
+        title="O'zgarishlar tarixi"
+        description="Nima o'zgardi, qachon o'zgardi, kim tasdiqladi va kim o'qib chiqdi."
         meta={meta}
       />
       <div className="space-y-0">
@@ -26,13 +26,13 @@ export default function ChangelogPage() {
                 <a href={c.linkedPage} className="text-primary hover:underline">
                   {c.linkedPage}
                 </a>
-                <span>· Approved by {c.approvedBy}</span>
+                <span>· Tasdiqlagan: {c.approvedBy}</span>
                 <span className="rounded-full border border-border bg-surface-alt px-2 py-0.5">
-                  Acknowledged: {c.readCount}
+                  O'qildi: {c.readCount}
                 </span>
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" className="h-3.5 w-3.5 rounded border-border accent-primary" disabled />
-                  I've read this
+                  O'qidim
                 </label>
               </div>
             </div>

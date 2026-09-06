@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Compass, CreditCard, UserPlus, LogOut } from "lucide-react";
 
 const menuItems = [
-  { icon: Compass, label: "Explore Resources" },
-  { icon: CreditCard, label: "Account Settings" },
-  { icon: UserPlus, label: "Invite a Teammate" },
+  { icon: Compass, label: "Resurslarni ko'rish" },
+  { icon: CreditCard, label: "Hisob sozlamalari" },
+  { icon: UserPlus, label: "Hamkasbni taklif qilish" },
 ];
 
 export function AvatarMenu() {
@@ -25,7 +25,7 @@ export function AvatarMenu() {
     <div className="relative shrink-0" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Account menu"
+        aria-label="Hisob menyusi"
         className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-surface shadow-softer"
       >
         JD
@@ -35,10 +35,10 @@ export function AvatarMenu() {
         <div className="absolute right-0 top-full z-40 mt-2 w-64 rounded-2xl border border-border bg-surface p-2 shadow-soft">
           <div className="px-3 pb-2 pt-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-              Profile settings
+              Profil sozlamalari
             </p>
             <a href="#" className="mt-0.5 block text-[15px] font-bold text-primary-dark hover:text-primary">
-              View profile
+              Profilni ko'rish
             </a>
           </div>
 
@@ -64,7 +64,7 @@ export function AvatarMenu() {
             className="mt-1.5 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-status-outdated hover:bg-status-outdated/10"
           >
             <LogOut size={15} />
-            Log out
+            Chiqish
           </a>
         </div>
       )}

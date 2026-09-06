@@ -4,13 +4,13 @@ import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { getMockMeta } from "@/lib/site-config";
 
 const leaderboard = [
-  { rank: 1, name: "[Placeholder Name]", points: 1240 },
-  { rank: 2, name: "[Placeholder Name]", points: 1105 },
-  { rank: 3, name: "[Placeholder Name]", points: 980 },
-  { rank: 4, name: "[Placeholder Name]", points: 860 },
+  { rank: 1, name: "[Ism — joy egallovchi]", points: 1240 },
+  { rank: 2, name: "[Ism — joy egallovchi]", points: 1105 },
+  { rank: 3, name: "[Ism — joy egallovchi]", points: 980 },
+  { rank: 4, name: "[Ism — joy egallovchi]", points: 860 },
 ];
 
-const badges = ["First Deal", "Objection Master", "5-Star Feedback", "Fast Responder", "Top Closer", "Mentor"];
+const badges = ["Birinchi bitim", "E'tirozlar ustasi", "5 yulduzli baho", "Tez javob beruvchi", "Eng yaxshi yakunlovchi", "Ustoz"];
 
 export default function LeaderboardBadgesPage() {
   const meta = getMockMeta("/academy/leaderboard-badges");
@@ -18,8 +18,8 @@ export default function LeaderboardBadgesPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/academy/leaderboard-badges"
-        title="Leaderboard & Badges"
-        description="Recognition for performance and milestones."
+        title="Reyting va nishonlar"
+        description="Natijalar va yutuqlar uchun taqdirlash."
         meta={meta}
       />
 
@@ -27,9 +27,9 @@ export default function LeaderboardBadgesPage() {
         <table className="w-full min-w-[420px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border bg-surface-alt/60">
-              <th className="px-4 py-2.5 font-semibold text-primary-dark">Rank</th>
-              <th className="px-4 py-2.5 font-semibold text-primary-dark">Name</th>
-              <th className="px-4 py-2.5 font-semibold text-primary-dark">Points</th>
+              <th className="px-4 py-2.5 font-semibold text-primary-dark">O'rin</th>
+              <th className="px-4 py-2.5 font-semibold text-primary-dark">Ism</th>
+              <th className="px-4 py-2.5 font-semibold text-primary-dark">Ball</th>
             </tr>
           </thead>
           <tbody>
@@ -45,7 +45,7 @@ export default function LeaderboardBadgesPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-[15px] font-semibold text-primary-dark">Badges</h2>
+        <h2 className="mb-2 text-[15px] font-semibold text-primary-dark">Nishonlar</h2>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {badges.map((b) => (
             <div key={b} className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center shadow-softer">

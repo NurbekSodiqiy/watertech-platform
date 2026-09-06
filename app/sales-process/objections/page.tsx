@@ -4,12 +4,12 @@ import { getMockMeta } from "@/lib/site-config";
 import { objections } from "@/lib/mock-data/objections";
 
 const columns: DbColumn[] = [
-  { key: "objection", label: "Objection", sortable: true },
-  { key: "realMeaning", label: "What They Really Mean" },
-  { key: "answer1", label: "Answer 1" },
-  { key: "answer2", label: "Answer 2" },
-  { key: "badAnswer", label: "Bad Answer Example" },
-  { key: "linkedCase", label: "Linked Case" },
+  { key: "objection", label: "E'tiroz", sortable: true },
+  { key: "realMeaning", label: "Aslida nimani anglatadi" },
+  { key: "answer1", label: "1-javob" },
+  { key: "answer2", label: "2-javob" },
+  { key: "badAnswer", label: "Noto'g'ri javob namunasi" },
+  { key: "linkedCase", label: "Bog'langan holat" },
 ];
 
 export default function ObjectionsPage() {
@@ -18,8 +18,8 @@ export default function ObjectionsPage() {
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/objections"
-        title="Objections"
-        description="The full objection-handling database — what's said, what it means, and how to respond."
+        title="E'tirozlar"
+        description="To'liq e'tirozlar bilan ishlash bazasi — nima deyiladi, bu nimani anglatadi va qanday javob berish kerak."
         meta={meta}
       />
       <DatabaseTemplate columns={columns} rows={objections} />

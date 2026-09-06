@@ -4,8 +4,8 @@ import { getMockMeta } from "@/lib/site-config";
 import { scripts } from "@/lib/mock-data/scripts";
 
 const columns: DbColumn[] = [
-  { key: "title", label: "Script", sortable: true },
-  { key: "goal", label: "Goal" },
+  { key: "title", label: "Skript", sortable: true },
+  { key: "goal", label: "Maqsad" },
 ];
 
 export default function ScriptsPage() {
@@ -14,8 +14,8 @@ export default function ScriptsPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/scripts"
-        title="Scripts"
-        description="SPIN-based call scripts for each stage of the funnel."
+        title="Skriptlar"
+        description="Voronkaning har bir bosqichi uchun SPIN uslubidagi qo'ng'iroq skriptlari."
         meta={meta}
       />
       <DatabaseTemplate columns={columns} rows={scripts} linkBase="/sales-process/scripts" linkKey="slug" />
