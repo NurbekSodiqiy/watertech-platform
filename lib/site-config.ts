@@ -137,6 +137,7 @@ export const siteTree: NavNode[] = [
       { title: "Rolli o'yin yozuvlari", path: "/academy/roleplay-recordings", contentType: "video" },
       { title: "Tavsiya etilgan adabiyotlar", path: "/academy/recommended-reading", contentType: "doc" },
       { title: "Reyting va nishonlar", path: "/academy/leaderboard-badges", contentType: "doc" },
+      { title: "Bilim testi", path: "/academy/quiz", contentType: "quiz" },
     ],
   },
   {

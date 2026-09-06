@@ -110,7 +110,7 @@ export function ProductCardTemplate({ product, meta }: { product: MockProduct; m
           {sampleObjections.map((o) => (
             <div key={o.id} className="rounded-lg border border-border bg-surface-alt p-3 text-[13px]">
               <p className="font-medium text-primary-dark">{o.objection}</p>
-              <p className="mt-1 text-text-secondary">{o.answer1}</p>
+              <p className="mt-1 text-text-secondary">{o.response}</p>
             </div>
           ))}
         </div>

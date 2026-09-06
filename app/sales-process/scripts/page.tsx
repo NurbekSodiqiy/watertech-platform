@@ -5,7 +5,7 @@ import { scripts } from "@/lib/mock-data/scripts";
 
 const columns: DbColumn[] = [
   { key: "title", label: "Skript", sortable: true },
-  { key: "goal", label: "Maqsad" },
+  { key: "cheatSheet", label: "Qisqacha" },
 ];
 
 export default function ScriptsPage() {
@@ -15,7 +15,7 @@ export default function ScriptsPage() {
       <PageHeader
         path="/sales-process/scripts"
         title="Skriptlar"
-        description="Voronkaning har bir bosqichi uchun SPIN uslubidagi qo'ng'iroq skriptlari."
+        description="Qo'ng'iroqlar uchun tayyor skriptlar — qisqacha xulosa va to'liq dialog bilan."
         meta={meta}
       />
       <DatabaseTemplate columns={columns} rows={scripts} linkBase="/sales-process/scripts" linkKey="slug" />
