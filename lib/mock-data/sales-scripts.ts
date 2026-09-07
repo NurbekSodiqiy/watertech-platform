@@ -140,7 +140,8 @@ export const salesScriptsData: SalesScript[] = [
           {
             speaker: "operator",
             subStepHeader: "3. Foyda (B)",
-            text: "Bu siz uchun bevosita IKKI NARSAni anglatadi:\n- Yo'qotilgan obro'ni tiklash: Ustalar va mijozlaringiz sizning do'koningizni eng ishonchli materiallar nuqtasi sifatida tavsiya qiladi (chunki muammo bo'lmaydi).\n- Xavfsiz oborot: Bizning 10 yillik yaroqlilik muddati // ?? DIQQAT: Manbada '0 yillik' yozilgan, ehtimol '10 yillik' bo'lishi kerak. Foydalanuvchi tasdiqlamaguncha o'zgartirilmasin. va ISO/GOST sertifikatlari sizning mijozlaringizga uzoq muddatli kafolat beradi."
+            // ?? DIQQAT: Manbada '0 yillik' yozilgan, ehtimol '10 yillik' bo'lishi kerak. Foydalanuvchi tasdiqlamaguncha o'zgartirilmasin.
+            text: "Bu siz uchun bevosita IKKI NARSAni anglatadi:\n- Yo'qotilgan obro'ni tiklash: Ustalar va mijozlaringiz sizning do'koningizni eng ishonchli materiallar nuqtasi sifatida tavsiya qiladi (chunki muammo bo'lmaydi).\n- Xavfsiz oborot: Bizning 10 yillik yaroqlilik muddati va ISO/GOST sertifikatlari sizning mijozlaringizga uzoq muddatli kafolat beradi."
           },
           {
             speaker: "operator",
@@ -361,7 +362,8 @@ export const salesScriptsData: SalesScript[] = [
           {
             speaker: "operator",
             subStepHeader: "3. Foyda (B)",
-            text: "\"Bu siz uchun bevosita IKKI NARSAni anglatadi:\n- Yo'qotilgan Obro'ni Tiklash: Ustalar va mijozlaringiz sizning do'koningizni eng ishonchli materiallar nuqtasi sifatida tavsiya qiladi (Chunki muammo bo'lmaydi).\n- Xavfsiz Oborot: Bizning 0 yillik yaroqlilik muddati // ?? DIQQAT: Manbada '0 yillik' yozilgan, ehtimol '10 yillik' bo'lishi kerak. Foydalanuvchi tasdiqlamaguncha o'zgartirilmasin. va ISO/GOST sertifikatlari sizning mijozlaringizga uzoq muddatli kafolat beradi.\""
+            // ?? DIQQAT: Manbada '0 yillik' yozilgan, ehtimol '10 yillik' bo'lishi kerak. Foydalanuvchi tasdiqlamaguncha o'zgartirilmasin.
+            text: "\"Bu siz uchun bevosita IKKI NARSAni anglatadi:\n- Yo'qotilgan Obro'ni Tiklash: Ustalar va mijozlaringiz sizning do'koningizni eng ishonchli materiallar nuqtasi sifatida tavsiya qiladi (Chunki muammo bo'lmaydi).\n- Xavfsiz Oborot: Bizning 0 yillik yaroqlilik muddati va ISO/GOST sertifikatlari sizning mijozlaringizga uzoq muddatli kafolat beradi.\""
           },
           {
             speaker: "operator",
