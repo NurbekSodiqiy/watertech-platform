@@ -1,3 +1,4 @@
+import { DailyTimeline } from "@/components/DailyTimeline";
 import Link from "next/link";
 import { Headphones, Package } from "lucide-react";
 
@@ -57,6 +58,8 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      <DailyTimeline />
     </div>
   );
 }

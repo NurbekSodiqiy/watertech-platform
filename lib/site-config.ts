@@ -115,6 +115,7 @@ export const siteTree: NavNode[] = [
     children: [
       { title: "Kunlik nazorat ro'yxati", path: "/standards/daily-checklist", contentType: "checklist" },
       { title: "Haftalik / Oylik nazorat ro'yxati", path: "/standards/weekly-monthly-checklist", contentType: "checklist" },
+      { title: "Call Operator", path: "/standards/call-operator", contentType: "doc" },
       { title: "Muloqot standartlari", path: "/standards/communication-standards", contentType: "doc" },
       { title: "Rollar va mas'uliyatlar", path: "/standards/roles-responsibilities", contentType: "doc" },
       { title: "Qisqa qo'llanma", path: "/standards/onepager-guide", contentType: "doc" },
