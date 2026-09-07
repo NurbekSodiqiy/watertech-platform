@@ -9,7 +9,7 @@ export const siteTree: NavNode[] = [
     children: [
       { title: "Kompaniya haqida", path: "/company/about", contentType: "doc" },
       { title: "Missiya va qadriyatlar", path: "/company/mission-values", contentType: "doc" },
-      { title: "Tashkiliy tuzilma", path: "/company/org-chart", contentType: "doc" },
+      { title: "Onboarding", path: "/company/onboarding", contentType: "doc" },
       { title: "Kontaktlar", path: "/company/contacts", contentType: "database" },
       { title: "Ichki qoidalar", path: "/company/internal-rules", contentType: "doc" },
       { title: "Ishlab chiqarish ma'lumotlari", path: "/company/production-facts", contentType: "doc" },
