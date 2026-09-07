@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Menu, Bell, Bookmark } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { AvatarMenu } from "./AvatarMenu";
+import { Logo } from "@/components/Logo";
 
 export function TopBar({
   onMenuClick,
@@ -25,7 +26,7 @@ export function TopBar({
       </button>
 
       <Link href="/" className="flex shrink-0 items-center gap-2 lg:hidden">
-        <img src="/logo.svg" alt="WaterTech" className="h-7 w-7 shrink-0 object-contain" />
+        <Logo className="h-7 w-7 shrink-0" />
         <span className="hidden text-sm font-semibold text-primary-dark sm:inline">
           Savdo bilimlar bazasi
         </span>

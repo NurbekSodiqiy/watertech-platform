@@ -10,6 +10,7 @@ import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
 import type { NavNode } from "@/lib/types";
 import { faqItems } from "@/lib/mock-data/faq";
 import { changelogEntries } from "@/lib/mock-data/changelog";
+import { Logo } from "@/components/Logo";
 
 const COLLAPSE_KEY = "watertech-sidebar-collapsed";
 
@@ -339,7 +340,7 @@ export function Sidebar() {
       className="relative hidden shrink-0 border-r border-border bg-surface lg:flex lg:flex-col"
     >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-        <img src="/logo.svg" alt="WaterTech" className="h-8 w-8 shrink-0 object-contain" />
+        <Logo className="h-8 w-8 shrink-0" />
         {!collapsed && (
           <span className="truncate text-sm font-bold text-primary-dark">WaterTech</span>
         )}
