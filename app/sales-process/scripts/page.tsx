@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, Compass, type LucideIcon } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
@@ -185,22 +185,27 @@ export default function ScriptsPage() {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <div>
         <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Jonli skriptlar va Yordamchi</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-text-secondary">
-          O&apos;ng paneldan kerakli bo&apos;limni tanlang va ekranda javobni o&apos;qing.
-        </p>
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-border border-l-[3px] border-l-primary bg-primary-light/10 px-4 py-3">
+          <Compass size={18} className="mt-0.5 shrink-0 text-accent" />
+          <p className="text-sm leading-relaxed text-text-secondary">
+            Maqsadimiz naxt savdoga ko&apos;proq urg&apos;u berish, eng so&apos;ngi chora nasiya bo&apos;lishi kerak. Mijoz naxt berishga puli yo&apos;q emas, aynan bizga berishga puli yo&apos;q deb qabul qilishimiz kerak.
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
         <button
           onClick={() => {
-            setActiveTab("faq");
-            setSelectedFaqItem(null);
+            setActiveTab("sales_scripts");
+            setSelectedScriptStage(null);
+            setSelectedScriptSubItem(null);
+            setExpandedScriptStageId(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
-          FAQ savollar
+          Sotuv skriptlari
         </button>
         <button
           onClick={() => {
@@ -226,22 +231,20 @@ export default function ScriptsPage() {
         </button>
         <button
           onClick={() => {
-            setActiveTab("sales_scripts");
-            setSelectedScriptStage(null);
-            setSelectedScriptSubItem(null);
-            setExpandedScriptStageId(null);
+            setActiveTab("faq");
+            setSelectedFaqItem(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
-          Sotuv skriptlari
+          FAQ savollar
         </button>
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* LEFT PANEL (The "TV Screen") */}
-        <div className="col-span-12 md:col-span-8 bg-surface border border-border rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-sm">
+        <div className="col-span-12 md:col-span-8 bg-surface border border-border rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-soft">
           {activeTab === "faq" ? (
             !selectedFaqItem ? (
               <p className="text-center text-text-secondary text-lg">
@@ -492,7 +495,7 @@ export default function ScriptsPage() {
         </div>
 
         {/* RIGHT PANEL (The "Remote Control") */}
-        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
+        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-soft sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
           {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
               {faqData.map((category, index) => {
