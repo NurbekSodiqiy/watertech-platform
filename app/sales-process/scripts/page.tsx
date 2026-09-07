@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, Compass, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, type LucideIcon } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
@@ -29,6 +29,13 @@ const salesScriptIcons: Record<string, LucideIcon> = {
   "sovuq-qongiroq": Phone,
   "ustalar-uchun": Wrench,
   "qayta-aloqa": RotateCcw,
+};
+
+const CLIENT_NAME_PLACEHOLDER = /_{2,}\s*aka\b/g;
+
+const withClientName = (text: string, clientName: string) => {
+  if (!clientName) return text;
+  return text.replace(CLIENT_NAME_PLACEHOLDER, `${clientName} aka`);
 };
 
 const faqData: FAQCategory[] = [
@@ -121,6 +128,11 @@ export default function ScriptsPage() {
   const [selectedScriptSubItem, setSelectedScriptSubItem] = useState<{ id: string; label: string; turns: ScriptTurn[] } | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
 
+  // Mijoz ismi (sotuv skriptlari uchun global auto-fill)
+  const [clientName, setClientName] = useState("");
+  const [clientNameDraft, setClientNameDraft] = useState("");
+  const confirmClientName = () => setClientName(clientNameDraft.trim());
+
   // Reset window scroll on content change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -147,7 +159,7 @@ export default function ScriptsPage() {
             return (
               <div key={idx} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
                 <Info size={16} className="shrink-0 mt-0.5 opacity-70" />
-                <span>{turn.text}</span>
+                <span>{withClientName(turn.text, clientName)}</span>
               </div>
             );
           }
@@ -170,7 +182,7 @@ export default function ScriptsPage() {
                     {isOperator ? 'Operator' : 'Mijoz'}
                   </span>
                   <div className="text-base leading-relaxed text-primary-dark whitespace-pre-wrap">
-                    {turn.text}
+                    {withClientName(turn.text, clientName)}
                   </div>
                 </div>
               </div>
@@ -193,58 +205,87 @@ export default function ScriptsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
-        <button
-          onClick={() => {
-            setActiveTab("sales_scripts");
-            setSelectedScriptStage(null);
-            setSelectedScriptSubItem(null);
-            setExpandedScriptStageId(null);
-          }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
-        >
-          Sotuv skriptlari
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("packages");
-            setSelectedPackage(null);
-          }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
-        >
-          Hamkorlik paketlari
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("competitors");
-            setSelectedCompetitor(null);
-          }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "competitors" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
-        >
-          Raqobatchilar
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("faq");
-            setSelectedFaqItem(null);
-          }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
-          }`}
-        >
-          FAQ savollar
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
+          <button
+            onClick={() => {
+              setActiveTab("sales_scripts");
+              setSelectedScriptStage(null);
+              setSelectedScriptSubItem(null);
+              setExpandedScriptStageId(null);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            }`}
+          >
+            Sotuv skriptlari
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("packages");
+              setSelectedPackage(null);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            }`}
+          >
+            Hamkorlik paketlari
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("competitors");
+              setSelectedCompetitor(null);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "competitors" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            }`}
+          >
+            Raqobatchilar
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("faq");
+              setSelectedFaqItem(null);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            }`}
+          >
+            FAQ savollar
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="client-name-input" className="text-sm font-medium text-text-secondary whitespace-nowrap">
+            Mijoz ismi:
+          </label>
+          <div className="flex items-center gap-1.5">
+            <input
+              id="client-name-input"
+              type="text"
+              autoComplete="off"
+              value={clientNameDraft}
+              onChange={(e) => setClientNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmClientName();
+              }}
+              placeholder="Masalan: Aziz"
+              className="w-32 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+            />
+            <button
+              onClick={confirmClientName}
+              aria-label="Ismni tasdiqlash"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
+            >
+              <Check size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* LEFT PANEL (The "TV Screen") */}
-        <div className="col-span-12 md:col-span-8 bg-surface border border-border rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-soft">
+        <div className="col-span-12 md:col-span-8 bg-surface border border-primary-light/50 rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-soft">
           {activeTab === "faq" ? (
             !selectedFaqItem ? (
               <p className="text-center text-text-secondary text-lg">
@@ -271,7 +312,9 @@ export default function ScriptsPage() {
                 <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
                   <h2 className="text-2xl font-bold text-primary-dark flex items-center gap-2">
                     {selectedPackage.name}
-                    {selectedPackage.isFeatured && <span title="Tavsiya etiladi">⭐</span>}
+                    {selectedPackage.isFeatured && (
+                      <Star size={20} className="text-accent" fill="currentColor" aria-label="Tavsiya etiladi" />
+                    )}
                   </h2>
                 </div>
                 
@@ -495,7 +538,7 @@ export default function ScriptsPage() {
         </div>
 
         {/* RIGHT PANEL (The "Remote Control") */}
-        <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-soft sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
+        <div className="col-span-12 md:col-span-4 bg-surface border border-primary-light/50 rounded-2xl p-4 space-y-2 shadow-soft sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
           {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
               {faqData.map((category, index) => {
@@ -554,7 +597,10 @@ export default function ScriptsPage() {
                     }`}
                   >
                     <span className="flex items-center gap-2">
-                      {pkg.name} {pkg.isFeatured && "⭐"}
+                      {pkg.name}
+                      {pkg.isFeatured && (
+                        <Star size={16} className="text-accent shrink-0" fill="currentColor" aria-label="Tavsiya etiladi" />
+                      )}
                     </span>
                     <ChevronRight className={`w-4 h-4 ${selectedPackage?.id === pkg.id ? 'text-primary' : 'text-text-secondary'}`} />
                   </button>
