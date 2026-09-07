@@ -339,9 +339,7 @@ export function Sidebar() {
       className="relative hidden shrink-0 border-r border-border bg-surface lg:flex lg:flex-col"
     >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-surface">
-          WT
-        </span>
+        <img src="/logo.svg" alt="WaterTech" className="h-8 w-8 shrink-0 object-contain" />
         {!collapsed && (
           <span className="truncate text-sm font-bold text-primary-dark">WaterTech</span>
         )}

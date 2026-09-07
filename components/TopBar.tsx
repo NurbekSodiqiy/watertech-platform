@@ -25,9 +25,7 @@ export function TopBar({
       </button>
 
       <Link href="/" className="flex shrink-0 items-center gap-2 lg:hidden">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-surface">
-          WT
-        </span>
+        <img src="/logo.svg" alt="WaterTech" className="h-7 w-7 shrink-0 object-contain" />
         <span className="hidden text-sm font-semibold text-primary-dark sm:inline">
           Savdo bilimlar bazasi
         </span>
