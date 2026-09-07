@@ -12,7 +12,6 @@ export const siteTree: NavNode[] = [
       { title: "Onboarding", path: "/company/onboarding", contentType: "doc" },
       { title: "Kontaktlar", path: "/company/contacts", contentType: "database" },
       { title: "Ichki qoidalar", path: "/company/internal-rules", contentType: "doc" },
-      { title: "Ishlab chiqarish ma'lumotlari", path: "/company/production-facts", contentType: "doc" },
       { title: "Zavod bo'ylab sayohat", path: "/company/factory-tour", contentType: "video" },
     ],
   },

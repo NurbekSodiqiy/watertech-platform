@@ -7,14 +7,15 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
+  // 'popLayout' prevents the layout from breaking/freezing during exit animations
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence mode="popLayout" initial={false}>
       <motion.div
         key={pathname}
-        initial={reduce ? undefined : { opacity: 0, y: 10 }}
+        initial={{ opacity: reduce ? 1 : 0, y: reduce ? 0 : 6 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={reduce ? undefined : { opacity: 0, y: -6 }}
-        transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
+        exit={{ opacity: reduce ? 1 : 0, y: reduce ? 0 : -4 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
       >
         {children}
       </motion.div>

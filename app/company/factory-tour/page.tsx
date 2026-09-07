@@ -1,5 +1,18 @@
-import { PageRenderer } from "@/components/PageRenderer";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ComingSoon } from "@/components/ComingSoon";
 
-export default function Page() {
-  return <PageRenderer path="/company/factory-tour" />;
+export default function FactoryTourPage() {
+  return (
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+      <div className="space-y-4">
+        <Breadcrumbs path="/company/factory-tour" />
+        <div>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">
+            Zavod bo'ylab sayohat
+          </h1>
+        </div>
+      </div>
+      <ComingSoon />
+    </div>
+  );
 }
