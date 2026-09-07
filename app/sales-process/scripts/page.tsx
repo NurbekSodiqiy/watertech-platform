@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, type LucideIcon } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
@@ -22,6 +22,13 @@ const faqCategoryIcons: Record<string, LucideIcon> = {
   product: Package,
   delivery: Truck,
   payment: CreditCard,
+};
+
+const salesScriptIcons: Record<string, LucideIcon> = {
+  "target-leads": Target,
+  "sovuq-qongiroq": Phone,
+  "ustalar-uchun": Wrench,
+  "qayta-aloqa": RotateCcw,
 };
 
 const faqData: FAQCategory[] = [
@@ -97,7 +104,7 @@ export default function ScriptsPage() {
   const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">("faq");
   
   // Savol-javob state
-  const [activeScreenContext, setActiveScreenContext] = useState<string | null>(null);
+  const [selectedFaqItem, setSelectedFaqItem] = useState<FAQItem | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // Paketlar state
@@ -117,15 +124,15 @@ export default function ScriptsPage() {
   // Reset window scroll on content change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [activeTab, activeScreenContext, selectedPackage, selectedCompetitor, activeSalesScriptId, selectedScriptStage, selectedScriptSubItem]);
+  }, [activeTab, selectedFaqItem, selectedPackage, selectedCompetitor, activeSalesScriptId, selectedScriptStage, selectedScriptSubItem]);
 
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
   };
 
-  const selectScript = (text: string) => {
-    setActiveScreenContext(text);
+  const selectFaqItem = (item: FAQItem) => {
+    setSelectedFaqItem(item);
   };
 
   const toggleScriptStage = (stageId: string) => {
@@ -158,11 +165,11 @@ export default function ScriptsPage() {
                 <div className={`flex shrink-0 h-8 w-8 items-center justify-center rounded-full border ${isOperator ? 'bg-surface border-border text-text-secondary' : 'bg-surface-alt border-primary/20 text-accent'}`}>
                   {isOperator ? <Headset size={16} /> : <User size={16} />}
                 </div>
-                <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl rounded-tl-sm border ${isOperator ? 'bg-surface border-border border-l-[3px] border-l-primary' : 'bg-primary-light/10 border-primary/10'}`}>
+                <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl rounded-tl-sm border ${isOperator ? 'bg-surface border-border border-l-[3px] border-l-primary' : 'bg-primary-light/25 border-primary/20'}`}>
                   <span className="text-[11px] font-bold uppercase tracking-widest mb-1 text-text-secondary">
                     {isOperator ? 'Operator' : 'Mijoz'}
                   </span>
-                  <div className="text-[14.5px] leading-relaxed text-primary-dark whitespace-pre-wrap">
+                  <div className="text-base leading-relaxed text-primary-dark whitespace-pre-wrap">
                     {turn.text}
                   </div>
                 </div>
@@ -187,7 +194,7 @@ export default function ScriptsPage() {
         <button
           onClick={() => {
             setActiveTab("faq");
-            setActiveScreenContext(null);
+            setSelectedFaqItem(null);
           }}
           className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
@@ -236,13 +243,19 @@ export default function ScriptsPage() {
         {/* LEFT PANEL (The "TV Screen") */}
         <div className="col-span-12 md:col-span-8 bg-surface border border-border rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-sm">
           {activeTab === "faq" ? (
-            !activeScreenContext ? (
+            !selectedFaqItem ? (
               <p className="text-center text-text-secondary text-lg">
                 O&apos;ng paneldan kerakli savolni tanlang...
               </p>
             ) : (
-              <div className="text-lg md:text-xl leading-relaxed text-primary-dark whitespace-pre-wrap">
-                {activeScreenContext}
+              <div className="flex flex-col gap-5">
+                <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
+                <div className="relative rounded-2xl rounded-tl-sm border border-primary/20 border-l-[3px] border-l-primary bg-primary-light/25 px-6 py-5">
+                  <span aria-hidden className="absolute left-4 top-2 text-5xl leading-none text-accent/25 select-none">&#8220;</span>
+                  <p className="relative pl-4 text-base leading-relaxed text-primary-dark whitespace-pre-wrap">
+                    {selectedFaqItem.answer}
+                  </p>
+                </div>
               </div>
             )
           ) : activeTab === "packages" ? (
@@ -506,8 +519,12 @@ export default function ScriptsPage() {
                       {category.questions.map((item, idx) => (
                         <button
                           key={idx}
-                          onClick={() => selectScript(item.answer)}
-                          className="text-left w-full p-3 rounded-lg hover:bg-surface text-text-secondary hover:text-primary-dark text-sm transition-colors pl-6"
+                          onClick={() => selectFaqItem(item)}
+                          className={`text-left w-full p-3 rounded-lg text-sm transition-colors pl-6 ${
+                            selectedFaqItem?.question === item.question
+                              ? "bg-surface text-primary-dark font-medium shadow-sm"
+                              : "text-text-secondary hover:bg-surface hover:text-primary-dark"
+                          }`}
                         >
                           {item.question}
                         </button>
@@ -566,33 +583,45 @@ export default function ScriptsPage() {
               <div className="relative pb-2 border-b border-border z-20">
                 <button
                   onClick={() => setIsScriptDropdownOpen(!isScriptDropdownOpen)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-border bg-surface text-primary-dark font-medium transition-colors hover:bg-surface-alt shadow-sm"
+                  className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg border border-border bg-surface text-primary-dark font-medium transition-colors hover:bg-surface-alt shadow-sm"
                 >
-                  <span className="text-[14.5px]">Skript: <span className="font-bold text-accent">{activeSalesScript.name}</span></span>
-                  <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${isScriptDropdownOpen ? 'rotate-180' : ''}`} />
+                  <span className="flex items-center gap-2 text-[14.5px] min-w-0">
+                    {(() => {
+                      const ActiveScriptIcon = salesScriptIcons[activeSalesScript.id] ?? Target;
+                      return <ActiveScriptIcon size={16} className="shrink-0 text-accent" />;
+                    })()}
+                    <span>Skript: <span className="font-bold text-accent">{activeSalesScript.name}</span></span>
+                  </span>
+                  <ChevronDown className={`w-5 h-5 shrink-0 text-text-secondary transition-transform ${isScriptDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {isScriptDropdownOpen && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30 animate-fade-slide-down">
-                    {salesScriptsData.map((script) => (
-                      <button
-                        key={script.id}
-                        onClick={() => {
-                          setActiveSalesScriptId(script.id);
-                          setSelectedScriptStage(null);
-                          setSelectedScriptSubItem(null);
-                          setExpandedScriptStageId(null);
-                          setIsScriptDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3.5 text-[14px] transition-colors ${
-                          activeSalesScriptId === script.id
-                            ? "bg-surface-alt font-bold text-primary-dark"
-                            : "text-text-secondary hover:bg-surface-alt hover:text-primary-dark font-medium"
-                        }`}
-                      >
-                        {script.name}
-                      </button>
-                    ))}
+                    {salesScriptsData.map((script, idx) => {
+                      const ItemIcon = salesScriptIcons[script.id] ?? Target;
+                      const isActive = activeSalesScriptId === script.id;
+                      return (
+                        <button
+                          key={script.id}
+                          onClick={() => {
+                            setActiveSalesScriptId(script.id);
+                            setSelectedScriptStage(null);
+                            setSelectedScriptSubItem(null);
+                            setExpandedScriptStageId(null);
+                            setIsScriptDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 text-left pl-3 pr-4 py-3.5 text-[14px] border-l-[3px] transition-colors ${idx !== 0 ? 'border-t border-t-border' : ''} ${
+                            isActive
+                              ? "bg-primary-light/25 border-l-primary font-bold text-primary-dark"
+                              : "border-l-transparent text-text-secondary hover:bg-surface-alt hover:text-primary-dark font-medium"
+                          }`}
+                        >
+                          <ItemIcon size={16} className={`shrink-0 ${isActive ? 'text-accent' : 'text-text-secondary'}`} />
+                          <span className="flex-1">{script.name}</span>
+                          {isActive && <Check size={16} className="shrink-0 text-accent" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
