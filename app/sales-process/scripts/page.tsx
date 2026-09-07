@@ -110,6 +110,7 @@ export default function ScriptsPage() {
   const [selectedScriptStage, setSelectedScriptStage] = useState<ScriptStage | null>(null);
   const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
   const [selectedScriptSubItem, setSelectedScriptSubItem] = useState<{ id: string; label: string; turns: ScriptTurn[] } | null>(null);
+  const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -550,25 +551,38 @@ export default function ScriptsPage() {
           ) : (
             // activeTab === "sales_scripts"
             <div className="flex flex-col space-y-4">
-              <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
-                {salesScriptsData.map((script) => (
-                  <button
-                    key={script.id}
-                    onClick={() => {
-                      setActiveSalesScriptId(script.id);
-                      setSelectedScriptStage(null);
-                      setSelectedScriptSubItem(null);
-                      setExpandedScriptStageId(null);
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                      activeSalesScriptId === script.id
-                        ? "bg-primary text-surface"
-                        : "bg-surface-alt text-text-secondary hover:text-primary-dark border border-border"
-                    }`}
-                  >
-                    {script.name}
-                  </button>
-                ))}
+              <div className="relative pb-2 border-b border-border z-20">
+                <button
+                  onClick={() => setIsScriptDropdownOpen(!isScriptDropdownOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-border bg-surface text-primary-dark font-medium transition-colors hover:bg-surface-alt shadow-sm"
+                >
+                  <span className="text-[14.5px]">Skript: <span className="font-bold text-accent">{activeSalesScript.name}</span></span>
+                  <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${isScriptDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isScriptDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30">
+                    {salesScriptsData.map((script) => (
+                      <button
+                        key={script.id}
+                        onClick={() => {
+                          setActiveSalesScriptId(script.id);
+                          setSelectedScriptStage(null);
+                          setSelectedScriptSubItem(null);
+                          setExpandedScriptStageId(null);
+                          setIsScriptDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3.5 text-[14px] transition-colors ${
+                          activeSalesScriptId === script.id
+                            ? "bg-surface-alt font-bold text-primary-dark"
+                            : "text-text-secondary hover:bg-surface-alt hover:text-primary-dark font-medium"
+                        }`}
+                      >
+                        {script.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-border overflow-hidden">
