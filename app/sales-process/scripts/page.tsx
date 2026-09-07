@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, type LucideIcon } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
@@ -15,15 +15,19 @@ type FAQItem = {
 type FAQCategory = {
   id: string;
   name: string;
-  icon: string;
   questions: FAQItem[];
+};
+
+const faqCategoryIcons: Record<string, LucideIcon> = {
+  product: Package,
+  delivery: Truck,
+  payment: CreditCard,
 };
 
 const faqData: FAQCategory[] = [
   {
     id: "product",
     name: "Mahsulot haqida",
-    icon: "📦",
     questions: [
       {
         question: "Polipropilen quvurlarning kafolat muddati qancha?",
@@ -46,7 +50,6 @@ const faqData: FAQCategory[] = [
   {
     id: "delivery",
     name: "Yetkazish",
-    icon: "🚚",
     questions: [
       {
         question: "Toshkentga yetkazib berish qancha vaqt oladi?",
@@ -69,7 +72,6 @@ const faqData: FAQCategory[] = [
   {
     id: "payment",
     name: "To'lov",
-    icon: "💳",
     questions: [
       {
         question: "Qanday to'lov usullari mavjud?",
@@ -144,20 +146,20 @@ export default function ScriptsPage() {
           }
           
           const isOperator = turn.speaker === "operator";
-          
+
           return (
             <div key={idx} className={`flex flex-col gap-1.5 ${!isOperator ? 'pl-8' : ''}`}>
               {turn.subStepHeader && (
-                <div className="mt-4 mb-2 text-sm font-bold uppercase tracking-wider text-primary border-b border-border pb-1 w-max">
+                <div className={`${idx === 0 ? 'mt-0' : 'mt-8'} mb-3 text-sm font-bold uppercase tracking-wider text-primary border-b border-border pb-1 w-max`}>
                   {turn.subStepHeader}
                 </div>
               )}
               <div className="flex gap-3">
-                <div className={`flex shrink-0 h-8 w-8 items-center justify-center rounded-full border ${isOperator ? 'bg-surface border-border text-primary-dark' : 'bg-surface-alt border-primary/20 text-accent'}`}>
+                <div className={`flex shrink-0 h-8 w-8 items-center justify-center rounded-full border ${isOperator ? 'bg-surface border-border text-text-secondary' : 'bg-surface-alt border-primary/20 text-accent'}`}>
                   {isOperator ? <Headset size={16} /> : <User size={16} />}
                 </div>
-                <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl ${isOperator ? 'bg-surface border border-border rounded-tl-sm' : 'bg-surface-alt border border-primary/10 rounded-tl-sm'}`}>
-                  <span className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${isOperator ? 'text-text-secondary' : 'text-accent'}`}>
+                <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl rounded-tl-sm border ${isOperator ? 'bg-surface border-border border-l-[3px] border-l-primary' : 'bg-primary-light/10 border-primary/10'}`}>
+                  <span className="text-[11px] font-bold uppercase tracking-widest mb-1 text-text-secondary">
                     {isOperator ? 'Operator' : 'Mijoz'}
                   </span>
                   <div className="text-[14.5px] leading-relaxed text-primary-dark whitespace-pre-wrap">
@@ -480,14 +482,17 @@ export default function ScriptsPage() {
         <div className="col-span-12 md:col-span-4 bg-surface border border-border rounded-2xl p-4 space-y-2 shadow-sm sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
           {activeTab === "faq" ? (
             <div className="rounded-xl border border-border overflow-hidden">
-              {faqData.map((category, index) => (
+              {faqData.map((category, index) => {
+                const CategoryIcon = faqCategoryIcons[category.id] ?? Package;
+                return (
                 <div key={category.id} className={index !== 0 ? "border-t border-border" : ""}>
                   <button
                     onClick={() => toggleCategory(category.id)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-surface-alt transition-colors font-medium text-primary-dark"
                   >
                     <span className="flex items-center gap-2">
-                      {category.icon} {category.name}
+                      <CategoryIcon size={18} strokeWidth={2} className="shrink-0 text-text-secondary" />
+                      {category.name}
                     </span>
                     {expandedCategory === category.id ? (
                       <ChevronDown className="w-5 h-5 text-text-secondary" />
@@ -510,7 +515,8 @@ export default function ScriptsPage() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : activeTab === "packages" ? (
             partnershipPackagesData.map((group) => (
@@ -567,7 +573,7 @@ export default function ScriptsPage() {
                 </button>
                 
                 {isScriptDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30 animate-fade-slide-down">
                     {salesScriptsData.map((script) => (
                       <button
                         key={script.id}
