@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
@@ -111,6 +111,12 @@ export default function ScriptsPage() {
   const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
   const [selectedScriptSubItem, setSelectedScriptSubItem] = useState<{ id: string; label: string; turns: ScriptTurn[] } | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+
+  // Reset window scroll on content change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab, activeScreenContext, selectedPackage, selectedCompetitor, activeSalesScriptId, selectedScriptStage, selectedScriptSubItem]);
+
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
