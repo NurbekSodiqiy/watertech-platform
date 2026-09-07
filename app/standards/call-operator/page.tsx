@@ -1,4 +1,5 @@
 import { DocPageTemplate } from "@/components/DocPageTemplate";
+import { getMockMeta } from "@/lib/site-config";
 
 const rules = [
   {
@@ -60,12 +61,14 @@ const rules = [
 ];
 
 export default function CallOperatorPage() {
+  const meta = getMockMeta("/standards/call-operator");
+
   return (
     <DocPageTemplate 
       path="/standards/call-operator" 
       title="Call Operator" 
       description="Call operator vazifalar va qoidalar ro'yxati."
-      meta={{ lastUpdated: "Bugun", author: "Admin", readingTime: 5 }}
+      meta={meta}
     >
       <div className="space-y-4">
         {rules.map((rule, i) => (
