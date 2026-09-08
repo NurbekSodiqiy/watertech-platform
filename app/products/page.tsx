@@ -156,8 +156,8 @@ export default function ProductsPage() {
                       <div className="text-[12px] font-medium text-text-secondary uppercase tracking-wider mb-1">
                         O'lchamlar
                       </div>
-                      <div className="text-[13px] text-primary-dark leading-relaxed">
-                        {product.sizes.join(", ")}
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {product.sizes.map((size, i) => (<span key={i} className="px-2 py-0.5 bg-surface-alt border border-border text-primary-dark text-[12px] font-medium rounded-md">{size}</span>))}
                       </div>
                     </div>
                   )}
