@@ -43,9 +43,13 @@ export default function MissionValuesPage() {
             0
           );
 
-          // Parallax: the visual element drifts at a different rate than the text
+          // Parallax: the visual element drifts at a different rate than the text.
+          // Small icon badges can safely drift ±30% of their own height; a real
+          // image sitting in an overflow-hidden frame needs a much smaller range
+          // (set via data-parallax) so it never drifts past its own frame edges.
           if (visual) {
-            tl.fromTo(visual, { yPercent: -30 }, { yPercent: 30, ease: "none" }, 0);
+            const range = Number(visual.dataset.parallax) || 30;
+            tl.fromTo(visual, { yPercent: -range }, { yPercent: range, ease: "none" }, 0);
           }
         });
 
@@ -78,11 +82,12 @@ export default function MissionValuesPage() {
           );
 
           if (visual) {
+            const range = Math.min(12, Number(visual.dataset.parallax) || 12);
             gsap.fromTo(
               visual,
-              { yPercent: -12 },
+              { yPercent: -range },
               {
-                yPercent: 12,
+                yPercent: range,
                 ease: "none",
                 scrollTrigger: {
                   trigger: block,
@@ -123,18 +128,30 @@ export default function MissionValuesPage() {
 
         {/* Mission Section */}
         <section>
-          <div className="mv-reveal will-change-[clip-path] text-center rounded-2xl border border-border bg-surface-alt p-8 shadow-sm">
-            <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
-            {/* mv-visual: image slot placeholder for a future mission photo/illustration */}
-            <div className="mv-visual mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border bg-surface text-text-secondary">
-              <Target size={22} />
+          <div className="mv-reveal will-change-[clip-path] grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-8 shadow-sm md:grid-cols-2">
+            {/* Left column (top on mobile): image frame. overflow-hidden clips the
+                parallax drift to this frame so it can never slide over the text column. */}
+            {/* TEMPORARY test image (public/products/truba-ppr.jpg) to preview the
+                mask-reveal + parallax effect — revert to the dashed placeholder once reviewed */}
+            <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-border bg-surface md:h-72">
+              <img
+                src="/products/truba-ppr.jpg"
+                alt=""
+                data-parallax="10"
+                className="mv-visual absolute inset-x-0 top-[-20%] h-[140%] w-full object-cover"
+              />
             </div>
-            <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
-              "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
-            </p>
-            <p className="text-[15px] italic text-text-secondary">
-              Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
-            </p>
+
+            {/* Right column (bottom on mobile): text, never touched by the image's motion */}
+            <div className="text-center md:text-left">
+              <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
+              <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
+                "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
+              </p>
+              <p className="text-[15px] italic text-text-secondary">
+                Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
+              </p>
+            </div>
           </div>
         </section>
 
