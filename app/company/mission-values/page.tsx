@@ -55,7 +55,12 @@ export default function MissionValuesPage() {
               },
             });
 
-            tl.fromTo(block, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, ease: "none" }, 0);
+            // Entrance offset is deliberately kept smaller than the gap between
+            // blocks (see space-y values in the JSX below) — otherwise a block
+            // still mid-entrance visually intrudes into the block after it,
+            // which (since every block currently shows the same test image)
+            // reads as the image appearing twice, slightly offset.
+            tl.fromTo(block, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, ease: "none" }, 0);
 
             // The visual settles into place at a different rate than the
             // text around it, so the two never move in lockstep.
@@ -100,7 +105,7 @@ export default function MissionValuesPage() {
         </div>
       </div>
 
-      <div className="space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-soft">
+      <div className="space-y-12 rounded-2xl border border-border bg-surface p-6 shadow-soft">
 
         {/* Mission Section — image left, text right */}
         <section>
@@ -129,7 +134,7 @@ export default function MissionValuesPage() {
         </section>
 
         {/* Vision Section */}
-        <section className="space-y-4">
+        <section className="space-y-8">
           <h2 className="text-[20px] font-bold text-primary-dark">Vizyon 2030</h2>
 
           {/* "2030" — text left, image right */}
@@ -170,7 +175,7 @@ export default function MissionValuesPage() {
         </section>
 
         {/* Values Section */}
-        <section className="space-y-4">
+        <section className="space-y-8">
           <h2 className="text-[20px] font-bold text-primary-dark">Qadriyatlarimiz</h2>
 
           {/* Sifat — text left, image right */}
