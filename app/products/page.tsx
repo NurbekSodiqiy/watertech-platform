@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import manifest from "../../public/products/manifest.json";
-import { Search, ImageOff } from "lucide-react";
+import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { getMockMeta } from "@/lib/site-config";
 
@@ -23,6 +24,18 @@ export default function ProductsPage() {
 
   // Xato bo'lgan rasmlarni kuzatib borish (fallback uchun)
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+
+  // Kattalashtirilgan rasm ko'rinishi (lightbox)
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightbox(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lightbox]);
 
   const filteredProducts = manifest.filter((product) => {
     // 1. Line filtri
@@ -123,19 +136,35 @@ export default function ProductsPage() {
                 className="flex flex-col rounded-2xl border border-border bg-surface overflow-hidden shadow-sm"
               >
                 {/* Rasm qismi */}
-                <div className="relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border">
+                <button
+                  type="button"
+                  onClick={() =>
+                    !imgErrors[product.filename] &&
+                    setLightbox({ src: `/products/${product.filename}`, alt: product.name_ru })
+                  }
+                  disabled={imgErrors[product.filename]}
+                  className="group relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border cursor-zoom-in disabled:cursor-default"
+                  aria-label={`${product.name_ru} rasmini kattalashtirish`}
+                >
                   {imgErrors[product.filename] ? (
                     <div className="flex flex-col items-center justify-center text-text-secondary gap-2">
                       <ImageOff className="w-8 h-8 opacity-50" />
                       <span className="text-xs">Rasm topilmadi</span>
                     </div>
                   ) : (
-                    <img
-                      src={`/products/${product.filename}`}
-                      alt={product.name_ru}
-                      className="object-contain w-full h-full"
-                      onError={() => setImgErrors(prev => ({ ...prev, [product.filename]: true }))}
-                    />
+                    <>
+                      <img
+                        src={`/products/${product.filename}`}
+                        alt={product.name_ru}
+                        className="object-contain w-full h-full"
+                        onError={() => setImgErrors(prev => ({ ...prev, [product.filename]: true }))}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary-dark/0 group-hover:bg-primary-dark/10 transition-none">
+                        <span className="rounded-full bg-surface/90 border border-border p-2 opacity-0 group-hover:opacity-100 shadow-sm">
+                          <ZoomIn className="w-4 h-4 text-primary-dark" />
+                        </span>
+                      </div>
+                    </>
                   )}
                   {/* Latun belgisi */}
                   {product.material === "latun" && (
@@ -143,30 +172,62 @@ export default function ProductsPage() {
                       Latun
                     </div>
                   )}
-                </div>
+                </button>
 
                 {/* Ma'lumot qismi */}
                 <div className="p-4 flex flex-col flex-1 gap-2">
                   <h3 className="text-[15px] font-semibold text-primary-dark leading-snug">
                     {product.name_ru}
                   </h3>
-                  
-                  {product.sizes && product.sizes.length > 0 && (
-                    <div className="mt-auto pt-2">
-                      <div className="text-[12px] font-medium text-text-secondary uppercase tracking-wider mb-1">
-                        O'lchamlar
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {product.sizes.map((size, i) => (<span key={i} className="px-2 py-0.5 bg-surface-alt border border-border text-primary-dark text-[12px] font-medium rounded-md">{size}</span>))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Kattalashtirilgan rasm modali */}
+      <AnimatePresence>
+        {lightbox && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setLightbox(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            />
+            <motion.div
+              className="relative max-h-[85vh] max-w-3xl overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <h3 className="text-[15px] font-semibold text-primary-dark leading-snug pr-4">
+                  {lightbox.alt}
+                </h3>
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="shrink-0 rounded-lg p-1 text-text-secondary hover:bg-primary/10"
+                  aria-label="Yopish"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex items-center justify-center bg-surface-alt p-4">
+                <img
+                  src={lightbox.src}
+                  alt={lightbox.alt}
+                  className="max-h-[70vh] w-auto object-contain"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

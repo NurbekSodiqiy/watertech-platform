@@ -1,6 +1,6 @@
 [
   {
-    "filename": "truba-ppr.png",
+    "filename": "truba-ppr.jpg",
     "name_ru": "Труба ППР",
     "sizes": [
       "Ø20",
@@ -14,7 +14,7 @@
     "category": "truba"
   },
   {
-    "filename": "rakor-naruzhnoy-rezboy.png",
+    "filename": "rakor-naruzhnoy-rezboy.jpg",
     "name_ru": "Ракор с наружной резьбой",
     "sizes": [
       "Ø20 1/2",
@@ -30,7 +30,7 @@
     "category": "fiting"
   },
   {
-    "filename": "truba-kanalizatsionnaya-premium-comfort.png",
+    "filename": "truba-kanalizatsionnaya-premium-comfort.jpg",
     "name_ru": "Труба канализационная тип 3х слойный PREMIUM и COMFORT",
     "sizes": [
       "Ø50/250",
@@ -43,7 +43,7 @@
     "category": "truba"
   },
   {
-    "filename": "truba-ppr-armirovannaya-steklovoloknom.png",
+    "filename": "truba-ppr-armirovannaya-steklovoloknom.jpg",
     "name_ru": "Труба ППР армированная стекловолокном",
     "sizes": [
       "Ø20",
@@ -57,7 +57,7 @@
     "category": "truba"
   },
   {
-    "filename": "adapter-vnutrenney-rezboy.png",
+    "filename": "adapter-vnutrenney-rezboy.jpg",
     "name_ru": "Адаптер с внутренней резьбой",
     "sizes": [
       "Ø20 1/2",
@@ -73,7 +73,7 @@
     "category": "fiting"
   },
   {
-    "filename": "truba-kanalizatsionnaya-premium-luxury.png",
+    "filename": "truba-kanalizatsionnaya-premium-luxury.jpg",
     "name_ru": "Труба канализационная тип 3х слойный PREMIUM и LUXURY",
     "sizes": [
       "Ø50/250",
@@ -86,7 +86,7 @@
     "category": "truba"
   },
   {
-    "filename": "perehodnik-ppr.png",
+    "filename": "perehodnik-ppr.jpg",
     "name_ru": "Переходник",
     "sizes": [
       "Ø25/20",
@@ -105,7 +105,7 @@
     "category": "fiting"
   },
   {
-    "filename": "adapter-naruzhnoy-rezboy.png",
+    "filename": "adapter-naruzhnoy-rezboy.jpg",
     "name_ru": "Адаптер с наружной резьбой",
     "sizes": [
       "Ø20,5",
@@ -121,7 +121,7 @@
     "category": "fiting"
   },
   {
-    "filename": "mufta.png",
+    "filename": "mufta.jpg",
     "name_ru": "Муфта",
     "sizes": [
       "Ø50",
@@ -133,7 +133,7 @@
     "category": "fiting"
   },
   {
-    "filename": "poluotvod-45-ppr.png",
+    "filename": "poluotvod-45-ppr.jpg",
     "name_ru": "Полуотвод 45 градусов",
     "sizes": [
       "Ø20",
@@ -147,14 +147,14 @@
     "category": "fiting"
   },
   {
-    "filename": "otvod-vneshney-rezboy.png",
+    "filename": "otvod-vneshney-rezboy.jpg",
     "name_ru": "Отвод с внешней резьбой",
     "sizes": [],
     "line": "ppr",
     "category": "fiting"
   },
   {
-    "filename": "perehodnik-kanalizatsiya.png",
+    "filename": "perehodnik-kanalizatsiya.jpg",
     "name_ru": "Переходник",
     "sizes": [
       "Ø75x50",
@@ -166,7 +166,7 @@
     "category": "fiting"
   },
   {
-    "filename": "otvod-90.png",
+    "filename": "otvod-90.jpg",
     "name_ru": "Отвод 90 градусов",
     "sizes": [
       "Ø20",
@@ -180,7 +180,7 @@
     "category": "fiting"
   },
   {
-    "filename": "vintel-ppr.png",
+    "filename": "vintel-ppr.jpg",
     "name_ru": "Винтель ППР (Кранбукса ЛАТУН поршневая)",
     "sizes": [
       "Ø20",
@@ -192,7 +192,7 @@
     "category": "kran"
   },
   {
-    "filename": "poluotvod-45-kanalizatsiya.png",
+    "filename": "poluotvod-45-kanalizatsiya.jpg",
     "name_ru": "Полуотвод 45°",
     "sizes": [
       "Ø50",
@@ -204,7 +204,7 @@
     "category": "fiting"
   },
   {
-    "filename": "troynik.png",
+    "filename": "troynik.jpg",
     "name_ru": "Тройник",
     "sizes": [
       "Ø20",
@@ -218,7 +218,7 @@
     "category": "fiting"
   },
   {
-    "filename": "ushastik-vnutrenney-rezboy.png",
+    "filename": "ushastik-vnutrenney-rezboy.jpg",
     "name_ru": "Ушастик с внутренней резьбой",
     "sizes": [
       "Ø20",
@@ -228,7 +228,7 @@
     "category": "fiting"
   },
   {
-    "filename": "troynik-45.png",
+    "filename": "troynik-45.jpg",
     "name_ru": "Тройник 45°",
     "sizes": [
       "Ø50x50",
@@ -244,7 +244,7 @@
     "category": "fiting"
   },
   {
-    "filename": "latunnyy-sharovoy-kran.png",
+    "filename": "latunnyy-sharovoy-kran.jpg",
     "name_ru": "Латунный Шаровой кран",
     "sizes": [
       "Ø20",
@@ -259,7 +259,7 @@
     "material": "latun"
   },
   {
-    "filename": "filtr-setchatyy.png",
+    "filename": "filtr-setchatyy.jpg",
     "name_ru": "Фильтр сетчатый",
     "sizes": [
       "Ø20",
@@ -273,7 +273,7 @@
     "category": "aksessuar"
   },
   {
-    "filename": "krestovina-90.png",
+    "filename": "krestovina-90.jpg",
     "name_ru": "Крестовина 90°",
     "sizes": [
       "Ø50x50x50",
@@ -285,7 +285,7 @@
     "category": "fiting"
   },
   {
-    "filename": "obvod.png",
+    "filename": "obvod.jpg",
     "name_ru": "Обвод",
     "sizes": [
       "Ø20",
@@ -296,7 +296,7 @@
     "category": "fiting"
   },
   {
-    "filename": "ushastik-dvoynoy-s-krep.png",
+    "filename": "ushastik-dvoynoy-s-krep.jpg",
     "name_ru": "Ушастик двойной с креп",
     "sizes": [
       "Ø20 1/2",
@@ -306,7 +306,7 @@
     "category": "fiting"
   },
   {
-    "filename": "krestovina-45.png",
+    "filename": "krestovina-45.jpg",
     "name_ru": "Крестовина 45°",
     "sizes": [
       "Ø50x50x50",
@@ -318,7 +318,7 @@
     "category": "fiting"
   },
   {
-    "filename": "klipsa-s-brasletom.png",
+    "filename": "klipsa-s-brasletom.jpg",
     "name_ru": "Клипса с браслетом",
     "sizes": [
       "Ø20",
@@ -332,7 +332,7 @@
     "category": "aksessuar"
   },
   {
-    "filename": "sifon.png",
+    "filename": "sifon.jpg",
     "name_ru": "Сифон",
     "sizes": [
       "Ø100"
@@ -341,7 +341,7 @@
     "category": "aksessuar"
   },
   {
-    "filename": "zaglushka-dlya-ppr-trub.png",
+    "filename": "zaglushka-dlya-ppr-trub.jpg",
     "name_ru": "Заглушка для ППР труб",
     "sizes": [
       "Ø20",
@@ -355,7 +355,7 @@
     "category": "fiting"
   },
   {
-    "filename": "reviziya.png",
+    "filename": "reviziya.jpg",
     "name_ru": "Ревизия",
     "sizes": [
       "Ø50",
