@@ -11,11 +11,24 @@ if (typeof window !== "undefined") {
 
 export default function MissionValuesPage() {
   const pageRef = useRef<HTMLDivElement>(null);
+  // This page is unusually tall (6 large blocks with generous spacing) —
+  // taller than the shared AppShell sidebar's own nav content. Since the
+  // sidebar isn't independently sticky, letting this page grow the shared
+  // document height (like a normal page would) stretches the sidebar's
+  // <aside> to match via the layout's default flex align-items:stretch,
+  // leaving a big blank strip once you scroll past the sidebar's real
+  // (much shorter) content. Scrolling is contained to this local element
+  // instead, so the page's height never leaks into that shared layout —
+  // no changes needed to Sidebar/AppShell themselves.
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const scrollerEl: HTMLDivElement = scroller;
+
     const ctx = gsap.context(() => {
       const blocks = gsap.utils.toArray<HTMLElement>(".mv-reveal");
-      const mm = gsap.matchMedia();
 
       // No pin anywhere: each block fades/parallaxes in as it crosses one
       // bounded entrance window ("top 85%" -> "top 45%"), then sits at rest
@@ -24,56 +37,63 @@ export default function MissionValuesPage() {
       // trigger) means the animation never needs scroll room *after* the
       // element — so the last block on the page completes correctly too,
       // without a trailing spacer.
-      mm.add(
-        {
-          isMobile: "(max-width: 767px)",
-        },
-        (context) => {
-          const { isMobile } = (context.conditions || {}) as { isMobile: boolean };
+      function buildTimelines(rangeFor: (base: number) => number) {
+        const triggers: ScrollTrigger[] = [];
 
-          blocks.forEach((block) => {
-            const visual = block.querySelector<HTMLElement>(".mv-visual");
-            const baseRange = Number(visual?.dataset.parallax) || 10;
-            const range = isMobile ? Math.min(6, baseRange) : baseRange;
+        blocks.forEach((block) => {
+          const visual = block.querySelector<HTMLElement>(".mv-visual");
+          const range = rangeFor(Number(visual?.dataset.parallax) || 10);
 
-            const tl = gsap.timeline({
-              scrollTrigger: {
-                trigger: block,
-                start: "top 85%",
-                // Clamp to the page's real max scroll: a block near the
-                // bottom of the page has no follow-content to provide the
-                // scroll room "top 45%" would otherwise need, which would
-                // leave its animation stuck short of complete.
-                end: () => {
-                  const rect = block.getBoundingClientRect();
-                  const scrollY = window.scrollY || window.pageYOffset;
-                  const naturalEnd = scrollY + rect.top - window.innerHeight * 0.45;
-                  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-                  return Math.min(naturalEnd, maxScroll);
-                },
-                scrub: true,
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: block,
+              scroller: scrollerEl,
+              start: "top 85%",
+              // Clamp to the scroller's real max scroll: a block near the
+              // bottom has no follow-content to provide the scroll room
+              // "top 45%" would otherwise need, which would leave its
+              // animation stuck short of complete.
+              end: () => {
+                const rect = block.getBoundingClientRect();
+                const scrollerRect = scrollerEl.getBoundingClientRect();
+                const relativeTop = rect.top - scrollerRect.top + scrollerEl.scrollTop;
+                const naturalEnd = relativeTop - scrollerEl.clientHeight * 0.45;
+                const maxScroll = scrollerEl.scrollHeight - scrollerEl.clientHeight;
+                return Math.min(naturalEnd, maxScroll);
               },
-            });
-
-            // Entrance offset is deliberately kept smaller than the gap between
-            // blocks (see space-y values in the JSX below) — otherwise a block
-            // still mid-entrance visually intrudes into the block after it,
-            // which (since every block currently shows the same test image)
-            // reads as the image appearing twice, slightly offset.
-            tl.fromTo(block, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, ease: "none" }, 0);
-
-            // The visual settles into place at a different rate than the
-            // text around it, so the two never move in lockstep.
-            if (visual) {
-              tl.fromTo(visual, { yPercent: -range }, { yPercent: 0, ease: "none" }, 0);
-            }
+              scrub: true,
+            },
           });
 
-          return () => {
-            blocks.forEach((block) => gsap.set(block, { clearProps: "all" }));
-          };
-        }
-      );
+          // Entrance offset is deliberately kept smaller than the gap between
+          // blocks (see space-y values in the JSX below) — otherwise a block
+          // still mid-entrance visually intrudes into the block after it,
+          // which (since every block currently shows the same test image)
+          // reads as the image appearing twice, slightly offset.
+          tl.fromTo(block, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, ease: "none" }, 0);
+
+          // The visual settles into place at a different rate than the
+          // text around it, so the two never move in lockstep.
+          if (visual) {
+            tl.fromTo(visual, { yPercent: -range }, { yPercent: 0, ease: "none" }, 0);
+          }
+
+          if (tl.scrollTrigger) triggers.push(tl.scrollTrigger);
+        });
+
+        return () => {
+          triggers.forEach((st) => st.kill());
+          blocks.forEach((block) => gsap.set(block, { clearProps: "all" }));
+        };
+      }
+
+      // Two separate string-query calls (not one object-conditions call) —
+      // matchMedia only invokes an object-conditions callback when at least
+      // one of its named queries currently matches, so a single call keyed
+      // only on "isMobile" silently never fires on desktop widths at all.
+      const mm = gsap.matchMedia();
+      mm.add("(min-width: 768px)", () => buildTimelines((base) => base));
+      mm.add("(max-width: 767px)", () => buildTimelines((base) => Math.min(6, base)));
 
       ScrollTrigger.refresh();
 
@@ -96,6 +116,7 @@ export default function MissionValuesPage() {
   }, []);
 
   return (
+    <div ref={scrollerRef} className="h-[calc(100vh-3.5rem)] overflow-y-auto">
     <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
@@ -234,6 +255,7 @@ export default function MissionValuesPage() {
         </section>
 
       </div>
+    </div>
     </div>
   );
 }
