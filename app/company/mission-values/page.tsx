@@ -1,9 +1,116 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ShieldCheck, Lightbulb, Lock, Target, TrendingUp } from "lucide-react";
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
 export default function MissionValuesPage() {
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
+
+      // Desktop/tablet: pinned mask-reveal + parallax, scrubbed to scroll speed
+      mm.add("(min-width: 768px)", () => {
+        const blocks = gsap.utils.toArray<HTMLElement>(".mv-reveal");
+
+        blocks.forEach((block) => {
+          const visual = block.querySelector<HTMLElement>(".mv-visual");
+
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: block,
+              start: "center center",
+              end: () => "+=" + Math.round(window.innerHeight * 0.6),
+              scrub: true,
+              pin: true,
+              pinSpacing: true,
+            },
+          });
+
+          // Mask reveal: opens from the bottom edge upward
+          tl.fromTo(
+            block,
+            { clipPath: "inset(100% 0% 0% 0%)" },
+            { clipPath: "inset(0% 0% 0% 0%)", ease: "none" },
+            0
+          );
+
+          // Parallax: the visual element drifts at a different rate than the text
+          if (visual) {
+            tl.fromTo(visual, { yPercent: -30 }, { yPercent: 30, ease: "none" }, 0);
+          }
+        });
+
+        return () => {
+          blocks.forEach((block) => gsap.set(block, { clearProps: "clipPath" }));
+        };
+      });
+
+      // Mobile: lighter fade + parallax only, no pin (avoids janky pinned scroll on small screens)
+      mm.add("(max-width: 767px)", () => {
+        const blocks = gsap.utils.toArray<HTMLElement>(".mv-reveal");
+
+        blocks.forEach((block) => {
+          const visual = block.querySelector<HTMLElement>(".mv-visual");
+
+          gsap.fromTo(
+            block,
+            { autoAlpha: 0, y: 32 },
+            {
+              autoAlpha: 1,
+              y: 0,
+              ease: "none",
+              scrollTrigger: {
+                trigger: block,
+                start: "top 92%",
+                end: "top 55%",
+                scrub: true,
+              },
+            }
+          );
+
+          if (visual) {
+            gsap.fromTo(
+              visual,
+              { yPercent: -12 },
+              {
+                yPercent: 12,
+                ease: "none",
+                scrollTrigger: {
+                  trigger: block,
+                  start: "top bottom",
+                  end: "bottom top",
+                  scrub: true,
+                },
+              }
+            );
+          }
+        });
+
+        return () => {
+          blocks.forEach((block) => gsap.set(block, { clearProps: "all" }));
+        };
+      });
+
+      // Sequential pinned triggers each add a spacer that shifts every later
+      // trigger's position; refresh once after all 6 are registered so the
+      // last block's pin/scrub range is measured against final layout.
+      ScrollTrigger.refresh();
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
         <Breadcrumbs path="/company/mission-values" />
@@ -13,24 +120,30 @@ export default function MissionValuesPage() {
       </div>
 
       <div className="space-y-8 rounded-2xl border border-border bg-surface p-6 shadow-soft">
-        
+
         {/* Mission Section */}
-        <section className="text-center rounded-2xl border border-border bg-surface-alt p-8 shadow-sm">
-          <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
-          <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
-            "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
-          </p>
-          <p className="text-[15px] italic text-text-secondary">
-            Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
-          </p>
+        <section>
+          <div className="mv-reveal will-change-[clip-path] text-center rounded-2xl border border-border bg-surface-alt p-8 shadow-sm">
+            <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
+            {/* mv-visual: image slot placeholder for a future mission photo/illustration */}
+            <div className="mv-visual mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border bg-surface text-text-secondary">
+              <Target size={22} />
+            </div>
+            <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
+              "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
+            </p>
+            <p className="text-[15px] italic text-text-secondary">
+              Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
+            </p>
+          </div>
         </section>
 
         {/* Vision Section */}
         <section>
           <h2 className="mb-5 text-[20px] font-bold text-primary-dark">Vizyon 2030</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-alt p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex flex-col gap-4">
+            <div className="mv-reveal will-change-[clip-path] flex items-start gap-4 rounded-xl border border-border bg-surface-alt p-5">
+              <div className="mv-visual flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-dashed border-border bg-surface text-text-secondary">
                 <Target size={24} />
               </div>
               <div>
@@ -40,9 +153,9 @@ export default function MissionValuesPage() {
                 </p>
               </div>
             </div>
-            
-            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-alt p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+
+            <div className="mv-reveal will-change-[clip-path] flex items-start gap-4 rounded-xl border border-border bg-surface-alt p-5">
+              <div className="mv-visual flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-dashed border-border bg-surface text-text-secondary">
                 <TrendingUp size={24} />
               </div>
               <div>
@@ -60,10 +173,10 @@ export default function MissionValuesPage() {
         {/* Values Section */}
         <section>
           <h2 className="mb-5 text-[20px] font-bold text-primary-dark">Qadriyatlarimiz</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {/* Value 1 */}
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mv-reveal will-change-[clip-path] flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div className="mv-visual flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary">
                 <ShieldCheck size={20} />
               </div>
               <div>
@@ -75,8 +188,8 @@ export default function MissionValuesPage() {
             </div>
 
             {/* Value 2 */}
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mv-reveal will-change-[clip-path] flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div className="mv-visual flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary">
                 <Lightbulb size={20} />
               </div>
               <div>
@@ -88,8 +201,8 @@ export default function MissionValuesPage() {
             </div>
 
             {/* Value 3 */}
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mv-reveal will-change-[clip-path] flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div className="mv-visual flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary">
                 <Lock size={20} />
               </div>
               <div>
@@ -103,6 +216,11 @@ export default function MissionValuesPage() {
         </section>
 
       </div>
+
+      {/* Trailing buffer (desktop only): the last pinned block needs scroll
+          room past it to finish its scrub — without this, the page's natural
+          bottom is reached before the final reveal/parallax completes. */}
+      <div className="hidden md:block md:h-[60vh]" aria-hidden="true" />
     </div>
   );
 }
