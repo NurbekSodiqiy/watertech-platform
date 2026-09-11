@@ -1,12 +1,6 @@
-import { DailyTimeline } from "@/components/DailyTimeline";
+import { DailyTimeline, DailyDateLabel } from "@/components/DailyTimeline";
 import Link from "next/link";
 import { Headphones, Package } from "lucide-react";
-
-const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
-const UZ_MONTHS_FULL = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-];
 
 const quickAccess = [
   {
@@ -23,17 +17,12 @@ const quickAccess = [
   },
 ];
 
-export const dynamic = "force-dynamic";
-
 export default function HomePage() {
-  const now = new Date();
-  const dateLabel = `${now.getDate()}-${UZ_MONTHS_FULL[now.getMonth()]}, ${UZ_WEEKDAYS[now.getDay()]}`;
-
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-[32px] font-extrabold tracking-tight text-primary-dark">Salom, Operator</h1>
-        <span className="text-[14px] text-text-secondary">{dateLabel}</span>
+        <DailyDateLabel />
       </div>
 
       <div>

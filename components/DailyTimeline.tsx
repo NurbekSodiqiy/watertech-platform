@@ -3,6 +3,25 @@
 import { useEffect, useState } from "react";
 import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2 } from "lucide-react";
 
+const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+const UZ_MONTHS_FULL = [
+  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
+];
+
+// Computed client-side (like the timeline's own currentMinutes below) so the
+// date always reflects the viewer's own clock/timezone instead of whatever
+// the server happened to render at — the page that hosts this no longer
+// needs to force per-request dynamic rendering just for this label.
+export function DailyDateLabel() {
+  const [dateLabel] = useState(() => {
+    const now = new Date();
+    return `${now.getDate()}-${UZ_MONTHS_FULL[now.getMonth()]}, ${UZ_WEEKDAYS[now.getDay()]}`;
+  });
+
+  return <span className="text-[14px] text-text-secondary">{dateLabel}</span>;
+}
+
 type TimelineItem = {
   id: number;
   start: string;
