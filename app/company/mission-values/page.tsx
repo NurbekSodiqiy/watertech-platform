@@ -11,9 +11,8 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// Source SVGs live in /public/icons/mission/ (stroke="currentColor", from the
-// provided watertech-mission-icons set). Inlined here rather than referenced
-// via <img src>, because currentColor in an externally-loaded SVG resolves
+// Icons are inlined (stroke="currentColor") rather than referenced via
+// <img src>, because currentColor in an externally-loaded SVG resolves
 // inside that SVG's own isolated document — it can't see this page's CSS —
 // so <img> would just render black in both themes. Inlining lets `text-accent`
 // on the wrapping badge flow into the stroke via normal color inheritance.

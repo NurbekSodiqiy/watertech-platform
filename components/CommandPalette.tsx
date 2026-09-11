@@ -27,13 +27,7 @@ const SEARCH_INDEX = buildIndex(siteTree);
 
 /** Curated stand-ins for "recently viewed" — one from each of a few
  * different top-level sections — until real view-history tracking exists. */
-const RECENT_PATHS = [
-  "/standards/daily-checklist",
-  "/products/price-sheet",
-  "/logistics/delivery-terms",
-  "/tools/software-list",
-  "/company/about",
-];
+const RECENT_PATHS = ["/tools/software-list", "/company/about"];
 
 const RECENT_ITEMS = RECENT_PATHS.map((p) => SEARCH_INDEX.find((i) => i.path === p)).filter(
   (i): i is SearchItem => !!i
