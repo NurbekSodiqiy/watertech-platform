@@ -9,6 +9,88 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+// Source SVGs live in /public/icons/mission/ (stroke="currentColor", from the
+// provided watertech-mission-icons set). Inlined here rather than referenced
+// via <img src>, because currentColor in an externally-loaded SVG resolves
+// inside that SVG's own isolated document — it can't see this page's CSS —
+// so <img> would just render black in both themes. Inlining lets `text-accent`
+// on the wrapping badge flow into the stroke via normal color inheritance.
+function MissiyaIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M24,4 C14,17 6,28 6,37 A18,18 0 1,0 42,37 C42,28 34,17 24,4 Z" />
+        <path d="M13,33 Q19,29 24,33 Q29,37 35,33" />
+        <path d="M13,39 Q19,35 24,39 Q29,43 35,39" />
+      </g>
+    </svg>
+  );
+}
+
+function Vizyon2030Icon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="26" width="10" height="18" rx="2" />
+        <rect x="19" y="12" width="10" height="32" rx="2" />
+        <rect x="34" y="0" width="10" height="44" rx="2" />
+        <circle cx="39" cy="14" r="7" />
+      </g>
+    </svg>
+  );
+}
+
+function No1Icon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="26" width="12" height="18" rx="2" />
+        <rect x="18" y="6" width="12" height="38" rx="2" />
+        <rect x="34" y="30" width="12" height="14" rx="2" />
+      </g>
+    </svg>
+  );
+}
+
+function SifatIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M24,3 L4,12 L4,24 Q4,38 24,45 Q44,38 44,24 L44,12 Z" />
+        <path d="M14,24 L21,31 L35,15" />
+      </g>
+    </svg>
+  );
+}
+
+function InnovatsiyaIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="24" cy="20" r="15" />
+        <path d="M17,34 L17,40 Q24,45 31,40 L31,34" />
+        <path d="M20,44 L28,44" />
+        <path d="M24,4 L24,0" />
+        <path d="M40,20 L44,20" />
+        <path d="M4,20 L8,20" />
+      </g>
+    </svg>
+  );
+}
+
+function XavfsizlikIcon({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="10" y="22" width="28" height="22" rx="4" />
+        <path d="M14,22 L14,14 A10,10 0 0,1 34,14 L34,22" />
+        <circle cx="24" cy="30" r="3" />
+        <path d="M24,33 L24,38" />
+      </g>
+    </svg>
+  );
+}
+
 export default function MissionValuesPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   // This page is unusually tall (6 large blocks with generous spacing) —
@@ -96,20 +178,6 @@ export default function MissionValuesPage() {
       mm.add("(max-width: 767px)", () => buildTimelines((base) => Math.min(6, base)));
 
       ScrollTrigger.refresh();
-
-      // Images finish loading after ScrollTrigger's first measurement, which
-      // shifts each block's position slightly — refresh again once every
-      // image has settled so the scrub ranges match final layout.
-      const images = Array.from(pageRef.current?.querySelectorAll("img") ?? []);
-      Promise.all(
-        images.map(
-          (img) =>
-            new Promise<void>((resolve) => {
-              if (img.complete) resolve();
-              else img.addEventListener("load", () => resolve(), { once: true });
-            })
-        )
-      ).then(() => ScrollTrigger.refresh());
     }, pageRef);
 
     return () => ctx.revert();
@@ -139,16 +207,10 @@ export default function MissionValuesPage() {
         {/* Mission Section — image left, text right */}
         <section>
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            {/* TEMPORARY test image (public/products/truba-ppr.jpg) used across all
-                6 blocks to preview mask-reveal + parallax — real per-block images
-                come later, the frame/parallax mechanism stays the same */}
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <MissiyaIcon size={40} />
+              </div>
             </div>
             <div className="text-center md:text-left">
               <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
@@ -174,25 +236,19 @@ export default function MissionValuesPage() {
                 2030-yilga kelib O'zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o'rnatilgan bo'lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
             </div>
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <Vizyon2030Icon size={40} />
+              </div>
             </div>
           </div>
 
           {/* "№1" — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <No1Icon size={40} />
+              </div>
             </div>
             <div className="text-center md:text-left">
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-primary-dark">№1</span>
@@ -215,25 +271,19 @@ export default function MissionValuesPage() {
                 Quvur devorlarining ichida nima borligini mijoz ko'rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
             </div>
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <SifatIcon size={40} />
+              </div>
             </div>
           </div>
 
           {/* Innovatsiya — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <InnovatsiyaIcon size={40} />
+              </div>
             </div>
             <div className="text-center md:text-left">
               <h3 className="mb-2 text-[16px] font-bold text-primary-dark">Innovatsiya</h3>
@@ -251,13 +301,10 @@ export default function MissionValuesPage() {
                 Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak.
               </p>
             </div>
-            <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <img
-                src="/products/truba-ppr.jpg"
-                alt=""
-                data-parallax="10"
-                className="mv-visual absolute inset-x-0 top-[-15%] h-[130%] w-full object-cover"
-              />
+            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
+              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                <XavfsizlikIcon size={40} />
+              </div>
             </div>
           </div>
         </section>
