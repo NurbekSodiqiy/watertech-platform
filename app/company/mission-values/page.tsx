@@ -228,7 +228,7 @@ export default function MissionValuesPage() {
 
           {/* "2030" — text left, image right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <AccentTextPanel watermark="2030" className="md:order-1">
+            <AccentTextPanel className="md:order-1">
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
               <p className="text-[14px] leading-relaxed text-white/80">
@@ -241,7 +241,7 @@ export default function MissionValuesPage() {
           {/* "№1" — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
             <AccentIconVisual icon={No1Icon} visualClassName="mv-visual" dataParallax={10} />
-            <AccentTextPanel watermark="№1">
+            <AccentTextPanel>
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">№1</span>
               <p className="text-[14px] leading-relaxed text-white/80">
