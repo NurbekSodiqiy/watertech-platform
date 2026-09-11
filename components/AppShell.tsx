@@ -8,18 +8,15 @@ import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
 import { CommandPalette } from "./CommandPalette";
-import { BookmarksPanel } from "./BookmarksPanel";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
   useEffect(() => {
     setMobileOpen(false);
-    setBookmarksOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -75,7 +72,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar
           onMenuClick={() => setMobileOpen(true)}
           onOpenSearch={() => setCommandOpen(true)}
-          onOpenBookmarks={() => setBookmarksOpen(true)}
         />
         <main className="min-w-0 flex-1">
           <PageTransition>{children}</PageTransition>
@@ -83,7 +79,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
-      <BookmarksPanel open={bookmarksOpen} onClose={() => setBookmarksOpen(false)} />
     </div>
   );
 }

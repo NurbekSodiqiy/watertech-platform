@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Menu, Bell, Bookmark } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { AvatarMenu } from "./AvatarMenu";
 import { Logo } from "@/components/Logo";
@@ -9,11 +9,9 @@ import { Logo } from "@/components/Logo";
 export function TopBar({
   onMenuClick,
   onOpenSearch,
-  onOpenBookmarks,
 }: {
   onMenuClick: () => void;
   onOpenSearch: () => void;
-  onOpenBookmarks: () => void;
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
@@ -49,22 +47,9 @@ export function TopBar({
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <ThemeToggle />
 
-        <button
-          onClick={onOpenBookmarks}
-          aria-label="Saqlanganlar"
-          title="Saqlanganlar"
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
-        >
-          <Bookmark size={16} />
-        </button>
-
-        <button
-          aria-label="Bildirishnomalar"
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary shadow-softer hover:bg-primary/5 hover:text-primary-dark"
-        >
-          <Bell size={16} />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-status-outdated" />
-        </button>
+        {/* TODO: bildirishnomalar funksiyasi qo'shilganda bu yerga qaytariladi —
+            avval saqlash (bookmarks) va bildirishnoma tugmalari hech qanday
+            real funksiyaga ega emas edi, shu sabab olib tashlandi. */}
 
         <AvatarMenu />
       </div>
