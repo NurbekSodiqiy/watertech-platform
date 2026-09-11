@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import manifest from "../../public/products/manifest.json";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
-import { getMockMeta } from "@/lib/site-config";
 
 // Turlari va ularning yorliqlari
 const CATEGORIES = [
@@ -17,7 +16,6 @@ const CATEGORIES = [
 ];
 
 export default function ProductsPage() {
-  const meta = getMockMeta("/products");
   const [activeLine, setActiveLine] = useState<"ppr" | "kanalizatsiya">("ppr");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -62,7 +60,6 @@ export default function ProductsPage() {
         path="/products"
         title="Mahsulotlar katalogi"
         description="To'liq mahsulot bazasi. PPR va Kanalizatsiya liniyalari bo'yicha turkum, nom va o'lchamlar."
-        meta={meta}
       />
 
       <div className="space-y-6">

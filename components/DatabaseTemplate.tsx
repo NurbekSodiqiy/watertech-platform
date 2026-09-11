@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowUpDown, ChevronRight, Search } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 
-export interface DbColumn {
-  key: string;
+export interface DbColumn<T> {
+  key: keyof T & string;
   label: string;
   sortable?: boolean;
   /** Declarative cell renderer — kept data-only so columns stay serializable
@@ -21,25 +21,26 @@ export interface DbFilter {
   options: string[];
 }
 
-export function DatabaseTemplate({
+export function DatabaseTemplate<T extends { id: string }>({
   columns,
   rows,
   filters = [],
   linkBase,
-  linkKey = "slug",
+  linkKey,
   emptyTitle,
 }: {
-  columns: DbColumn[];
-  rows: Record<string, any>[];
+  columns: DbColumn<T>[];
+  rows: T[];
   filters?: DbFilter[];
   linkBase?: string;
-  linkKey?: string;
+  linkKey?: keyof T & string;
   emptyTitle?: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
-  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
+  const linkKeyField = linkKey ?? ("id" as keyof T & string);
 
   const filtered = useMemo(() => {
     let out = rows.filter((row) =>
@@ -50,7 +51,7 @@ export function DatabaseTemplate({
         : true
     );
     for (const [key, value] of Object.entries(activeFilters)) {
-      if (value) out = out.filter((row) => String(row[key]) === value);
+      if (value) out = out.filter((row) => String(row[key as keyof T]) === value);
     }
     if (sort) {
       out = [...out].sort((a, b) => {
@@ -62,7 +63,7 @@ export function DatabaseTemplate({
     return out;
   }, [rows, query, activeFilters, sort]);
 
-  function toggleSort(key: string) {
+  function toggleSort(key: keyof T & string) {
     setSort((prev) =>
       prev?.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }
     );
@@ -128,10 +129,10 @@ export function DatabaseTemplate({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((row, i) => (
+              {filtered.map((row) => (
                 <tr
-                  key={row.id ?? row.slug ?? i}
-                  onClick={linkBase ? () => router.push(`${linkBase}/${row[linkKey]}`) : undefined}
+                  key={row.id}
+                  onClick={linkBase ? () => router.push(`${linkBase}/${row[linkKeyField]}`) : undefined}
                   className={`border-b border-border last:border-0 hover:bg-primary/5 ${linkBase ? "cursor-pointer" : ""}`}
                 >
                   {columns.map((col) => (
@@ -142,19 +143,19 @@ export function DatabaseTemplate({
                         </span>
                       ) : col.type === "link" ? (
                         row[col.key] ? (
-                          <a href={row[col.key]} className="text-primary hover:underline">
-                            {row[col.key]}
+                          <a href={String(row[col.key])} className="text-primary hover:underline">
+                            {String(row[col.key])}
                           </a>
                         ) : (
                           <span className="text-text-secondary/50">—</span>
                         )
                       ) : linkBase && col === columns[0] ? (
                         <Link
-                          href={`${linkBase}/${row[linkKey]}`}
+                          href={`${linkBase}/${row[linkKeyField]}`}
                           onClick={(e) => e.stopPropagation()}
                           className="font-medium text-primary hover:underline"
                         >
-                          {row[col.key]}
+                          {String(row[col.key])}
                         </Link>
                       ) : (
                         String(row[col.key] ?? "—")

@@ -1,15 +1,14 @@
 import { PlayCircle } from "lucide-react";
 import { DocPageTemplate } from "./DocPageTemplate";
-import { findNode, getMockMeta } from "@/lib/site-config";
+import { findNode } from "@/lib/site-config";
 
 export function PageRenderer({ path }: { path: string }) {
   const node = findNode(path);
   const title = node?.title ?? path;
-  const meta = getMockMeta(path);
 
   if (node?.contentType === "video") {
     return (
-      <DocPageTemplate path={path} title={title} description={node.description} meta={meta} locked={node.locked}>
+      <DocPageTemplate path={path} title={title} description={node.description} locked={node.locked}>
         <div className="space-y-4">
           <div className="flex h-56 items-center justify-center rounded-lg border border-dashed border-border bg-surface-alt text-text-secondary">
             <PlayCircle size={32} />
@@ -24,7 +23,7 @@ export function PageRenderer({ path }: { path: string }) {
 
   if (node?.contentType === "checklist") {
     return (
-      <DocPageTemplate path={path} title={title} description={node.description} meta={meta} locked={node.locked}>
+      <DocPageTemplate path={path} title={title} description={node.description} locked={node.locked}>
         <ul className="space-y-2">
           {["[Joy egallovchi nazorat bandi 1]", "[Joy egallovchi nazorat bandi 2]", "[Joy egallovchi nazorat bandi 3]", "[Joy egallovchi nazorat bandi 4]"].map(
             (item, i) => (
@@ -40,6 +39,6 @@ export function PageRenderer({ path }: { path: string }) {
   }
 
   return (
-    <DocPageTemplate path={path} title={title} description={node?.description} meta={meta} locked={node?.locked} />
+    <DocPageTemplate path={path} title={title} description={node?.description} locked={node?.locked} />
   );
 }

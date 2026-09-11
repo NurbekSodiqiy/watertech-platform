@@ -1,20 +1,19 @@
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { getMockMeta } from "@/lib/site-config";
-import { faqItems } from "@/lib/mock-data/faq";
+import { faqs } from "@/lib/content/faq";
+import type { Faq } from "@/lib/content/types";
 import { contacts } from "@/lib/mock-data/contacts";
 import { MessageCircle } from "lucide-react";
 
-const columns: DbColumn[] = [
+const columns: DbColumn<Faq>[] = [
+  { key: "category", label: "Bo'lim", sortable: true },
   { key: "question", label: "Savol", sortable: true },
   { key: "answer", label: "Javob" },
-  { key: "sourcePage", label: "Manba sahifa", type: "link" },
-  { key: "timesAsked", label: "So'ralgan soni", sortable: true },
-  { key: "lastUpdated", label: "Yangilangan" },
 ];
 
+const categories = Array.from(new Set(faqs.map((f) => f.category)));
+
 export default function FaqPage() {
-  const meta = getMockMeta("/faq");
   // Closest-matching contact for knowledge-base questions (topic explicitly
   // mentions "bilimlar bazasi bo'yicha so'rovlar") — read live from the
   // Kontaktlar page's own data rather than a hardcoded value.
@@ -27,9 +26,12 @@ export default function FaqPage() {
         path="/faq"
         title="Savol-javob"
         description="Butun bilimlar bazasi bo'yicha ko'p beriladigan savollar."
-        meta={meta}
       />
-      <DatabaseTemplate columns={columns} rows={faqItems} />
+      <DatabaseTemplate
+        columns={columns}
+        rows={faqs}
+        filters={[{ key: "category", label: "Bo'lim", options: categories }]}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-surface p-5">
         <div>

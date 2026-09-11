@@ -1,4 +1,4 @@
-import type { NavNode, PageMeta } from "./types";
+import type { NavNode } from "./types";
 
 export const siteTree: NavNode[] = [
   {
@@ -106,9 +106,9 @@ export const siteTree: NavNode[] = [
  * `faqItems.length` and the unread count in `changelogEntries`) instead of
  * importing those mock-data arrays into the client sidebar bundle just to
  * read two integers off them. Update these if the underlying mock data in
- * lib/mock-data/faq.ts or lib/mock-data/changelog.ts changes. */
+ * lib/content/faq.ts or lib/mock-data/changelog.ts changes. */
 export const NAV_BADGES: Record<string, { count: number; tone: "ok" | "warning" }> = {
-  "/faq": { count: 8, tone: "ok" },
+  "/faq": { count: 12, tone: "ok" },
   "/changelog": { count: 3, tone: "warning" },
 };
 
@@ -137,36 +137,4 @@ export function getBreadcrumbs(path: string): NavNode[] {
   return crumbs;
 }
 
-const OWNERS = ["Savdoni qo'llab-quvvatlash", "Savdo bo'limi boshlig'i", "Mahsulot marketingi", "Operatsiyalar rahbari"];
-const APPROVERS = ["A. Kessler", "M. Ivanova", "T. Baxter", "Savdo bo'limi boshlig'i"];
-const AUDIENCES: PageMeta["audience"][] = ["Operator", "Manager", "Head"];
-const LEVELS: PageMeta["level"][] = ["Basic", "Intermediate", "Expert"];
-const STATUSES: PageMeta["status"][] = ["up-to-date", "in-review", "outdated"];
-
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
-}
-
-export function getMockMeta(path: string): PageMeta {
-  const h = hashString(path);
-  const updated = new Date(2026, (h % 12), (h % 27) + 1);
-  const review = new Date(updated);
-  review.setMonth(review.getMonth() + 3);
-  const UZ_MONTHS = ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"];
-  const fmt = (d: Date) => `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
-  return {
-    owner: OWNERS[h % OWNERS.length],
-    approvedBy: APPROVERS[(h >> 2) % APPROVERS.length],
-    updatedDate: fmt(updated),
-    nextReviewDate: fmt(review),
-    audience: AUDIENCES[(h >> 4) % AUDIENCES.length],
-    level: LEVELS[(h >> 6) % LEVELS.length],
-    status: STATUSES[(h >> 8) % STATUSES.length],
-  };
-}
 

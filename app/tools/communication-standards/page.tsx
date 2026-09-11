@@ -1,5 +1,5 @@
 import { DocPageTemplate } from "@/components/DocPageTemplate";
-import { findNode, getMockMeta } from "@/lib/site-config";
+import { findNode } from "@/lib/site-config";
 import { 
   AlertTriangle, 
   Users, 
@@ -15,14 +15,12 @@ import Link from "next/link";
 export default function AmoCRMPage() {
   const path = "/tools/communication-standards";
   const node = findNode(path);
-  const meta = getMockMeta(path);
 
   return (
     <DocPageTemplate
       path={path}
       title="amoCRM dan foydalanish bo'yicha asosiy qoidalar"
       description={node?.description}
-      meta={meta}
       locked={node?.locked}
     >
       <div className="space-y-8">

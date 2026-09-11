@@ -1,20 +1,16 @@
 import { ShieldCheck, Award } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
-import { getMockMeta } from "@/lib/site-config";
 import { CERTIFICATES } from "@/lib/content/certificates";
 import { CertificateGallery } from "@/components/CertificateGallery";
 
 export default function TechnicalDocsPage() {
-  const meta = getMockMeta("/products/technical-docs");
-
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader
         path="/products/technical-docs"
         title="Texnik hujjatlar va sertifikatlar"
         description="WaterTech mahsulotlarining davlat GOST standartlari talablariga to'liq mosligini tasdiqlovchi rasmiy muvofiqlik sertifikatlari."
-        meta={meta}
       />
 
       {/* Rasmiy tasdiqlanganlik banneri */}

@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
-import { getMockMeta } from "@/lib/site-config";
 import { amoSops } from "@/lib/mock-data/amocrm";
 
 export function generateStaticParams() {
@@ -12,15 +11,12 @@ export default function AmoSopPage({ params }: { params: { slug: string } }) {
   const sop = amoSops.find((s) => s.slug === params.slug);
   if (!sop) notFound();
 
-  const meta = getMockMeta(`/tools/amocrm/${params.slug}`);
-
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path={`/tools/amocrm/${params.slug}`}
         title={sop.title}
         description="Qisqa standart tartib-qoida"
-        meta={meta}
       />
       <ol className="space-y-3">
         {sop.steps.map((s) => (

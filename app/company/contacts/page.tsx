@@ -1,9 +1,8 @@
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { getMockMeta } from "@/lib/site-config";
-import { contacts } from "@/lib/mock-data/contacts";
+import { contacts, type Contact } from "@/lib/mock-data/contacts";
 
-const columns: DbColumn[] = [
+const columns: DbColumn<Contact>[] = [
   { key: "name", label: "Ism", sortable: true },
   { key: "role", label: "Lavozim", sortable: true },
   { key: "topic", label: "Mavzu" },
@@ -12,7 +11,6 @@ const columns: DbColumn[] = [
 ];
 
 export default function ContactsPage() {
-  const meta = getMockMeta("/company/contacts");
   const roles = Array.from(new Set(contacts.map((c) => c.role)));
 
   return (
@@ -21,7 +19,6 @@ export default function ContactsPage() {
         path="/company/contacts"
         title="Ichki kontaktlar"
         description="Qaysi masala bo'yicha kimga murojaat qilish — ichki eskalatsiya yo'nalgichi."
-        meta={meta}
       />
       <DatabaseTemplate
         columns={columns}

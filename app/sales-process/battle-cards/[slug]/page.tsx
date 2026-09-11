@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import { BattleCardTemplate } from "@/components/BattleCardTemplate";
-import { getMockMeta } from "@/lib/site-config";
-import { battleCards } from "@/lib/mock-data/battle-cards";
+import { competitors } from "@/lib/content/competitors";
 
 export function generateStaticParams() {
-  return battleCards.map((c) => ({ slug: c.slug }));
+  return competitors.map((c) => ({ slug: c.id }));
 }
 
 export default function BattleCardPage({ params }: { params: { slug: string } }) {
-  const card = battleCards.find((c) => c.slug === params.slug);
-  if (!card) notFound();
+  const competitor = competitors.find((c) => c.id === params.slug);
+  if (!competitor) notFound();
 
-  const meta = getMockMeta(`/sales-process/battle-cards/${params.slug}`);
-  return <BattleCardTemplate card={card} meta={meta} />;
+  return <BattleCardTemplate competitor={competitor} />;
 }

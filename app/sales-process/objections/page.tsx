@@ -1,10 +1,30 @@
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { getMockMeta } from "@/lib/site-config";
-import { objections } from "@/lib/mock-data/objections";
+import { objections } from "@/lib/content/objections";
+import { scripts } from "@/lib/content/scripts";
 
-const columns: DbColumn[] = [
+interface ObjectionRow {
+  id: string;
+  objection: string;
+  realMeaning: string;
+  response: string;
+  followUp: string;
+  sourceScripts: string;
+}
+
+const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
+
+const rows: ObjectionRow[] = objections.map((o) => ({
+  id: o.id,
+  objection: `"${o.clientSays}"`,
+  realMeaning: o.realMeaning,
+  response: o.response,
+  followUp: o.followUp ?? "—",
+  sourceScripts: o.scriptIds.map((id) => scriptNameById.get(id) ?? id).join(", "),
+}));
+
+const columns: DbColumn<ObjectionRow>[] = [
   { key: "objection", label: "E'tiroz", sortable: true },
   { key: "realMeaning", label: "Nima demoqchi" },
   { key: "response", label: "Javob" },
@@ -13,14 +33,12 @@ const columns: DbColumn[] = [
 ];
 
 export default function ObjectionsPage() {
-  const meta = getMockMeta("/sales-process/objections");
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/objections"
         title="E'tirozlar"
         description="To'liq e'tirozlar bilan ishlash bazasi — nima deyiladi, bu nimani anglatadi va qanday javob berish kerak."
-        meta={meta}
       />
 
       <div className="flex items-start gap-3 rounded-2xl border border-status-warning/40 bg-status-warning/10 p-4">
@@ -32,7 +50,7 @@ export default function ObjectionsPage() {
         </p>
       </div>
 
-      <DatabaseTemplate columns={columns} rows={objections} />
+      <DatabaseTemplate columns={columns} rows={rows} />
     </div>
   );
 }

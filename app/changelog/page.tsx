@@ -1,16 +1,13 @@
 import { PageHeader } from "@/components/DocPageTemplate";
-import { getMockMeta } from "@/lib/site-config";
 import { changelogEntries } from "@/lib/mock-data/changelog";
 
 export default function ChangelogPage() {
-  const meta = getMockMeta("/changelog");
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/changelog"
         title="O'zgarishlar tarixi"
         description="Nima o'zgardi, qachon o'zgardi, kim tasdiqladi va kim o'qib chiqdi."
-        meta={meta}
       />
       <div className="space-y-0">
         {changelogEntries.map((c, i) => (

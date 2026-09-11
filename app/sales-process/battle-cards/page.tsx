@@ -1,24 +1,24 @@
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { getMockMeta } from "@/lib/site-config";
-import { battleCards } from "@/lib/mock-data/battle-cards";
+import { competitors } from "@/lib/content/competitors";
+import type { Competitor } from "@/lib/content/types";
 
-const columns: DbColumn[] = [
-  { key: "competitor", label: "Raqobatchi", sortable: true },
-  { key: "strongSegment", label: "Eng kuchli segment" },
+const columns: DbColumn<Competitor>[] = [
+  { key: "name", label: "Raqobatchi", sortable: true },
+  { key: "assortment", label: "Assortiment" },
+  { key: "maxDiscount", label: "Jami maks. chegirma" },
+  { key: "threatLevel", label: "Raqobat darajasi", sortable: true },
 ];
 
 export default function BattleCardsPage() {
-  const meta = getMockMeta("/sales-process/battle-cards");
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/battle-cards"
         title="Raqobat kartalari"
-        description="Har bir raqobatchi bo'yicha pozitsiya va javob berish qo'llanmasi."
-        meta={meta}
+        description="Har bir raqobatchi bo'yicha narx, chegirma va yetkazib berish shartlari."
       />
-      <DatabaseTemplate columns={columns} rows={battleCards} linkBase="/sales-process/battle-cards" linkKey="slug" />
+      <DatabaseTemplate columns={columns} rows={competitors} linkBase="/sales-process/battle-cards" />
     </div>
   );
 }
