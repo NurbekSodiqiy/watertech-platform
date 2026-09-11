@@ -22,29 +22,9 @@ export const siteTree: NavNode[] = [
     description: "To'liq katalog, texnik hujjatlar, narxlar va taqqoslashlar.",
     children: [
       { title: "Katalog", path: "/products", contentType: "database" },
-      { title: "Mahsulot turkumlari", path: "/products/lines-map", contentType: "doc" },
-      { title: "Narxnoma", path: "/products/price-sheet", contentType: "doc" },
-      { title: "Chegirma siyosati", path: "/products/discount-policy", contentType: "doc" },
       { title: "Taqqoslash", path: "/products/comparisons", contentType: "doc" },
       { title: "Texnik hujjatlar", path: "/products/technical-docs", contentType: "doc" },
-      { title: "Kafolat va xizmat", path: "/products/warranty-service", contentType: "doc" },
-      { title: "Texnik savol-javob", path: "/products/technical-faq", contentType: "database" },
       { title: "Rivojlanish rejasi", path: "/products/roadmap", contentType: "doc", locked: true },
-    ],
-  },
-  {
-    title: "Mijoz",
-    path: "/customers",
-    contentType: "doc",
-    description: "Kimga sotamiz, ular qanday qaror qabul qiladi va ilgari nima natija bergan.",
-    children: [
-      { title: "Ideal mijoz profili", path: "/customers/icp", contentType: "doc" },
-      { title: "Segmentlar", path: "/customers/segments", contentType: "database" },
-      { title: "Qaror zanjiri", path: "/customers/decision-chain", contentType: "doc" },
-      { title: "Mijoz yo'li", path: "/customers/journey-map", contentType: "doc" },
-      { title: "Amaliy holatlar", path: "/customers/case-studies", contentType: "database" },
-      { title: "Ish tamoyillari", path: "/customers/working-principles", contentType: "doc" },
-      { title: "Yo'qotilgan bitimlar tahlili", path: "/customers/lost-deals-analysis", contentType: "doc" },
     ],
   },
   {
@@ -53,18 +33,10 @@ export const siteTree: NavNode[] = [
     contentType: "doc",
     description: "Voronka, skriptlar, e'tirozlar bilan ishlash va bitim mexanikasi.",
     children: [
-      { title: "Voronka xaritasi", path: "/sales-process/funnel-map", contentType: "doc" },
-      { title: "Lid manbalari", path: "/sales-process/lead-sources", contentType: "doc" },
-      { title: "Lidlarni saralash", path: "/sales-process/lead-qualification", contentType: "doc" },
 
+      { title: "Jonli skript va yordamchi", path: "/sales-process/scripts", contentType: "doc" },
       { title: "E'tirozlar", path: "/sales-process/objections", contentType: "database" },
       { title: "Raqobat kartalari", path: "/sales-process/battle-cards", contentType: "database" },
-      { title: "Taklif va hisob-faktura", path: "/sales-process/proposal-invoice", contentType: "doc" },
-      { title: "Shartnoma shartlari", path: "/sales-process/contract-terms", contentType: "doc" },
-      { title: "To'lov shartlari", path: "/sales-process/payment-terms", contentType: "doc" },
-      { title: "Muzokara va chegirma", path: "/sales-process/negotiation-discount", contentType: "doc" },
-      { title: "Bitimdan keyingi kuzatuv", path: "/sales-process/post-close-followup", contentType: "doc" },
-      { title: "Tender va xarid", path: "/sales-process/tender-procurement", contentType: "doc" },
     ],
   },
   {
@@ -73,7 +45,6 @@ export const siteTree: NavNode[] = [
     contentType: "doc",
     description: "Dasturiy ta'minot, CRM standart tartib-qoidalari va muammolarni bartaraf etish.",
     children: [
-      { title: "Dasturlar ro'yxati", path: "/tools/software-list", contentType: "doc" },
       {
         title: "amoCRM",
         path: "/tools/amocrm",
@@ -88,8 +59,9 @@ export const siteTree: NavNode[] = [
         ],
       },
       { title: "Google Sheets", path: "/tools/google-sheets", contentType: "doc" },
-      { title: "Muloqot standartlari", path: "/tools/communication-standards", contentType: "doc" },
-      { title: "Muammolarni bartaraf etish", path: "/tools/troubleshooting", contentType: "doc" },
+      { title: "amoCRM qo'llanmasi", path: "/tools/communication-standards", contentType: "doc" },
+      { title: "Sotuv varonkasi", path: "/tools/troubleshooting", contentType: "doc" },
+      { title: "Qayta sotuv", path: "/tools/software-list", contentType: "doc" },
     ],
   },
   {
@@ -98,12 +70,8 @@ export const siteTree: NavNode[] = [
     contentType: "doc",
     description: "Yetkazib berish, transport, qaytarish va ombor ma'lumotlari.",
     children: [
-      { title: "Yetkazib berish shartlari", path: "/logistics/delivery-terms", contentType: "doc" },
-      { title: "Transport imkoniyatlari", path: "/logistics/transport-capacity", contentType: "doc" },
       { title: "Namuna yuborish", path: "/logistics/sample-shipping", contentType: "doc" },
       { title: "Qaytarish siyosati", path: "/logistics/returns-policy", contentType: "doc" },
-      { title: "Ombordagi qoldiq", path: "/logistics/stock-check", contentType: "doc" },
-      { title: "Hujjatlar", path: "/logistics/documents", contentType: "doc" },
     ],
   },
   {
@@ -112,32 +80,10 @@ export const siteTree: NavNode[] = [
     contentType: "doc",
     description: "Natijalar qanday o'lchanadi, taqdirlanadi va rivojlantiriladi.",
     children: [
-      { title: "Kunlik nazorat ro'yxati", path: "/standards/daily-checklist", contentType: "checklist" },
-      { title: "Haftalik / Oylik nazorat ro'yxati", path: "/standards/weekly-monthly-checklist", contentType: "checklist" },
-      { title: "Call Operator", path: "/standards/call-operator", contentType: "doc" },
       { title: "Muloqot standartlari", path: "/standards/communication-standards", contentType: "doc" },
-      { title: "Rollar va mas'uliyatlar", path: "/standards/roles-responsibilities", contentType: "doc" },
-      { title: "Qisqa qo'llanma", path: "/standards/onepager-guide", contentType: "doc" },
       { title: "KPI tizimi", path: "/standards/kpi-system", contentType: "doc" },
-      { title: "KPI paneli", path: "/standards/kpi-dashboard", contentType: "database", locked: true },
       { title: "Motivatsiya va bonus", path: "/standards/motivation-bonus", contentType: "doc" },
       { title: "Karyera yo'li", path: "/standards/career-path", contentType: "doc" },
-    ],
-  },
-  {
-    title: "Akademiya",
-    path: "/academy",
-    contentType: "doc",
-    description: "Moslashuv, o'quv modullari, sertifikatlar va ko'nikmalar rivoji.",
-    children: [
-      { title: "O'quv yo'nalishlari", path: "/academy/learning-paths", contentType: "doc" },
-      { title: "Modullar", path: "/academy/modules", contentType: "database" },
-      { title: "Sertifikatlar", path: "/academy/certifications", contentType: "doc" },
-      { title: "Eng yaxshi qo'ng'iroqlar to'plami", path: "/academy/best-calls-library", contentType: "video" },
-      { title: "Rolli o'yin yozuvlari", path: "/academy/roleplay-recordings", contentType: "video" },
-      { title: "Tavsiya etilgan adabiyotlar", path: "/academy/recommended-reading", contentType: "doc" },
-      { title: "Reyting va nishonlar", path: "/academy/leaderboard-badges", contentType: "doc" },
-      { title: "Bilim testi", path: "/academy/quiz", contentType: "quiz" },
     ],
   },
   {
@@ -153,6 +99,18 @@ export const siteTree: NavNode[] = [
     description: "Nima o'zgardi, qachon o'zgardi va kim bilishi kerak.",
   },
 ];
+
+/** Small count badges shown next to sidebar nav rows — only where the mock
+ * data has a real number behind it (total FAQ entries, changelog items still
+ * pending acknowledgement). Written here as static numbers (mirroring
+ * `faqItems.length` and the unread count in `changelogEntries`) instead of
+ * importing those mock-data arrays into the client sidebar bundle just to
+ * read two integers off them. Update these if the underlying mock data in
+ * lib/mock-data/faq.ts or lib/mock-data/changelog.ts changes. */
+export const NAV_BADGES: Record<string, { count: number; tone: "ok" | "warning" }> = {
+  "/faq": { count: 8, tone: "ok" },
+  "/changelog": { count: 3, tone: "warning" },
+};
 
 export function flattenTree(nodes: NavNode[] = siteTree): NavNode[] {
   const out: NavNode[] = [];
@@ -211,3 +169,4 @@ export function getMockMeta(path: string): PageMeta {
     status: STATUSES[(h >> 8) % STATUSES.length],
   };
 }
+

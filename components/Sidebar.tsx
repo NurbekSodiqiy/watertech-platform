@@ -2,31 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, ChevronLeft, Home, type LucideIcon } from "lucide-react";
-import { siteTree } from "@/lib/site-config";
+import { siteTree, NAV_BADGES } from "@/lib/site-config";
 import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
 import type { NavNode } from "@/lib/types";
-import { faqItems } from "@/lib/mock-data/faq";
-import { changelogEntries } from "@/lib/mock-data/changelog";
 import { Logo } from "@/components/Logo";
 
 const COLLAPSE_KEY = "watertech-sidebar-collapsed";
-
-/** Small count badges next to nav rows — only where the mock data has a real
- * number behind it (total FAQ entries, changelog items still pending
- * acknowledgement). Never invented for items with no underlying count. */
-const NAV_BADGES: Record<string, { count: number; tone: "ok" | "warning" }> = {
-  "/faq": { count: faqItems.length, tone: "ok" },
-  "/changelog": {
-    count: changelogEntries.filter((c) => {
-      const [read, total] = c.readCount.split("/").map((n) => parseInt(n.trim(), 10));
-      return read < total;
-    }).length,
-    tone: "warning",
-  },
-};
 
 function NavCountBadge({ tone, count }: { tone: "ok" | "warning"; count: number }) {
   return (
@@ -92,9 +76,22 @@ function IconBadge({
   );
 }
 
-/** Full-width row used in the expanded sidebar and the mobile drawer. */
-function NavItem({ node, depth, scope }: { node: NavNode; depth: number; scope: string }) {
-  const pathname = usePathname();
+/** Full-width row used in the expanded sidebar and the mobile drawer.
+ * `pathname` is threaded down from the single usePathname() call in
+ * SidebarNav (rather than each of the ~35 nodes subscribing individually)
+ * and the component is memoized so a navigation only re-renders the rows
+ * whose props actually changed. */
+const NavItem = memo(function NavItem({
+  node,
+  depth,
+  scope,
+  pathname,
+}: {
+  node: NavNode;
+  depth: number;
+  scope: string;
+  pathname: string;
+}) {
   const isActive = pathname === node.path;
   const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
   const [open, setOpen] = useState(isAncestor);
@@ -165,7 +162,7 @@ function NavItem({ node, depth, scope }: { node: NavNode; depth: number; scope: 
                   style={{ left: `${guideLeft}px`, width: `${16 + (depth + 1) * 16 - guideLeft}px`, height: "2px" }}
                   aria-hidden
                 />
-                <NavItem node={child} depth={depth + 1} scope={scope} />
+                <NavItem node={child} depth={depth + 1} scope={scope} pathname={pathname} />
               </div>
             ))}
           </div>
@@ -173,12 +170,12 @@ function NavItem({ node, depth, scope }: { node: NavNode; depth: number; scope: 
       )}
     </div>
   );
-}
+});
 
 /** Icon-only rail row used when the desktop sidebar is collapsed. Children
- * appear in a floating flyout instead of an inline accordion. */
-function CollapsedNavItem({ node, scope }: { node: NavNode; scope: string }) {
-  const pathname = usePathname();
+ * appear in a floating flyout instead of an inline accordion. `pathname` is
+ * threaded down from SidebarNav's single usePathname() call, same as NavItem. */
+function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: string; pathname: string }) {
   const isActive = pathname === node.path;
   const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
   const active = isActive || isAncestor;
@@ -272,7 +269,7 @@ export function SidebarNav({
         {groups.map((group, gi) => (
           <div key={gi} className="mb-5 space-y-1.5 last:mb-0">
             {group.map((node) => (
-              <CollapsedNavItem key={node.path} node={node} scope={scope} />
+              <CollapsedNavItem key={node.path} node={node} scope={scope} pathname={pathname} />
             ))}
           </div>
         ))}
@@ -300,7 +297,7 @@ export function SidebarNav({
       {groups.map((group, gi) => (
         <div key={gi} className="mb-6 space-y-1 last:mb-0">
           {group.map((node) => (
-            <NavItem key={node.path} node={node} depth={0} scope={scope} />
+            <NavItem key={node.path} node={node} depth={0} scope={scope} pathname={pathname} />
           ))}
         </div>
       ))}
