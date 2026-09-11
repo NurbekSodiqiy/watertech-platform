@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { AccentIconVisual } from "@/components/AccentIconVisual";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -15,7 +16,7 @@ if (typeof window !== "undefined") {
 // inside that SVG's own isolated document — it can't see this page's CSS —
 // so <img> would just render black in both themes. Inlining lets `text-accent`
 // on the wrapping badge flow into the stroke via normal color inheritance.
-function MissiyaIcon({ size = 40 }: { size?: number }) {
+function MissiyaIcon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -27,7 +28,7 @@ function MissiyaIcon({ size = 40 }: { size?: number }) {
   );
 }
 
-function Vizyon2030Icon({ size = 40 }: { size?: number }) {
+function Vizyon2030Icon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -40,7 +41,7 @@ function Vizyon2030Icon({ size = 40 }: { size?: number }) {
   );
 }
 
-function No1Icon({ size = 40 }: { size?: number }) {
+function No1Icon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +53,7 @@ function No1Icon({ size = 40 }: { size?: number }) {
   );
 }
 
-function SifatIcon({ size = 40 }: { size?: number }) {
+function SifatIcon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -63,7 +64,7 @@ function SifatIcon({ size = 40 }: { size?: number }) {
   );
 }
 
-function InnovatsiyaIcon({ size = 40 }: { size?: number }) {
+function InnovatsiyaIcon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -78,7 +79,7 @@ function InnovatsiyaIcon({ size = 40 }: { size?: number }) {
   );
 }
 
-function XavfsizlikIcon({ size = 40 }: { size?: number }) {
+function XavfsizlikIcon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -207,11 +208,7 @@ export default function MissionValuesPage() {
         {/* Mission Section — image left, text right */}
         <section>
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <MissiyaIcon size={40} />
-              </div>
-            </div>
+            <AccentIconVisual icon={MissiyaIcon} size={48} visualClassName="mv-visual" dataParallax={10} />
             <div className="text-center md:text-left">
               <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
               <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
@@ -230,29 +227,35 @@ export default function MissionValuesPage() {
 
           {/* "2030" — text left, image right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="text-center md:order-1 md:text-left">
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-primary-dark">2030</span>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
+            <div className="relative overflow-hidden text-center md:order-1 md:text-left">
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 select-none text-[130px] font-extrabold leading-none text-accent opacity-[0.07] md:left-0 md:translate-x-0 md:text-[160px]"
+              >
+                2030
+              </span>
+              <span className="relative mx-auto mb-2 block h-1 w-9 rounded-full bg-accent md:mx-0" />
+              <span className="relative mb-2 block text-[28px] font-extrabold leading-none text-accent">2030</span>
+              <p className="relative text-[14px] leading-relaxed text-text-secondary">
                 2030-yilga kelib O'zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o'rnatilgan bo'lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
             </div>
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <Vizyon2030Icon size={40} />
-              </div>
-            </div>
+            <AccentIconVisual icon={Vizyon2030Icon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
 
           {/* "№1" — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <No1Icon size={40} />
-              </div>
-            </div>
-            <div className="text-center md:text-left">
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-primary-dark">№1</span>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
+            <AccentIconVisual icon={No1Icon} size={48} visualClassName="mv-visual" dataParallax={10} />
+            <div className="relative overflow-hidden text-center md:text-left">
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 select-none text-[130px] font-extrabold leading-none text-accent opacity-[0.07] md:left-0 md:translate-x-0 md:text-[160px]"
+              >
+                №1
+              </span>
+              <span className="relative mx-auto mb-2 block h-1 w-9 rounded-full bg-accent md:mx-0" />
+              <span className="relative mb-2 block text-[28px] font-extrabold leading-none text-accent">№1</span>
+              <p className="relative text-[14px] leading-relaxed text-text-secondary">
                 Markaziy Osiyoda muhandislik santexnikasi bo'yicha №1 ekspert-hamkorga aylanish.
               </p>
             </div>
@@ -271,20 +274,12 @@ export default function MissionValuesPage() {
                 Quvur devorlarining ichida nima borligini mijoz ko'rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
             </div>
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <SifatIcon size={40} />
-              </div>
-            </div>
+            <AccentIconVisual icon={SifatIcon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
 
           {/* Innovatsiya — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <InnovatsiyaIcon size={40} />
-              </div>
-            </div>
+            <AccentIconVisual icon={InnovatsiyaIcon} size={48} visualClassName="mv-visual" dataParallax={10} />
             <div className="text-center md:text-left">
               <h3 className="mb-2 text-[16px] font-bold text-primary-dark">Innovatsiya</h3>
               <p className="text-[14px] leading-relaxed text-text-secondary">
@@ -301,11 +296,7 @@ export default function MissionValuesPage() {
                 Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak.
               </p>
             </div>
-            <div className="flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface md:order-2 md:h-64">
-              <div data-parallax="10" className="mv-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-                <XavfsizlikIcon size={40} />
-              </div>
-            </div>
+            <AccentIconVisual icon={XavfsizlikIcon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
         </section>
 

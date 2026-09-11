@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { AccentIconVisual } from "@/components/AccentIconVisual";
 import { CalendarDays, Settings, ShieldCheck, Globe, Factory, Cog, Target, Award, type LucideIcon } from "lucide-react";
 
 if (typeof window !== "undefined") {
@@ -167,7 +168,7 @@ export default function AboutPage() {
               key={label}
               className="about-badge-item flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center shadow-soft"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/20 bg-accent/[0.08] text-accent dark:bg-accent/[0.12]">
                 <Icon size={20} />
               </span>
               <span className="text-[13px] font-semibold leading-tight text-primary-dark">{label}</span>
@@ -181,11 +182,13 @@ export default function AboutPage() {
             const iconLeft = i % 2 === 0;
 
             const iconColumn = (
-              <div className={`flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface-alt md:h-56 ${iconLeft ? "" : "md:order-2"}`}>
-                <div data-parallax="20" className="about-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Icon size={40} />
-                </div>
-              </div>
+              <AccentIconVisual
+                icon={Icon}
+                size={48}
+                visualClassName="about-visual"
+                dataParallax={20}
+                className={iconLeft ? "" : "md:order-2"}
+              />
             );
 
             const textColumn = (
