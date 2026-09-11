@@ -1,10 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, MapPin, Shield, Gift, FileText, User, Headset, Info, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { partnershipPackagesData, PartnershipPackage } from "@/lib/mock-data/partnership-packages";
 import { competitorsData, Competitor } from "@/lib/mock-data/competitors";
 import { salesScriptsData, ScriptStage, ScriptTurn } from "@/lib/mock-data/sales-scripts";
+
+// Maps this page's interactive script categories (lib/mock-data/sales-scripts.ts
+// ids) to the matching full write-up at /sales-process/scripts/[slug]
+// (lib/mock-data/scripts.ts slugs) — the two data sources cover the same
+// topics but were built separately, so the ids don't all match verbatim
+// (e.g. "target-leads" here is "lead-orqali-tushgan" there).
+const scriptDetailSlugs: Record<string, string> = {
+  "target-leads": "lead-orqali-tushgan",
+  "sovuq-qongiroq": "sovuq-qongiroq",
+  "ustalar-uchun": "ustalar-uchun",
+  "qayta-aloqa": "qayta-aloqa",
+};
 
 // FAQ Data
 type FAQItem = {
@@ -674,6 +687,16 @@ export default function ScriptsPage() {
                   </div>
                 )}
               </div>
+
+              {scriptDetailSlugs[activeSalesScript.id] && (
+                <Link
+                  href={`/sales-process/scripts/${scriptDetailSlugs[activeSalesScript.id]}`}
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-surface-alt hover:text-primary-dark"
+                >
+                  Batafsil ko'rish
+                  <ArrowUpRight size={14} />
+                </Link>
+              )}
 
               <div className="rounded-xl border border-border overflow-hidden">
                 {activeSalesScript.stages.map((stage, index) => (
