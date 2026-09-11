@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useRef } from "react";
+import dynamic from "next/dynamic";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AccentIconVisual } from "@/components/AccentIconVisual";
 import { AccentTextPanel } from "@/components/AccentTextPanel";
 import { CalendarDays, Settings, ShieldCheck, Globe, Factory, Cog, Target, Award, type LucideIcon } from "lucide-react";
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+// GSAP + ScrollTrigger (~70KB) is only needed once this page has mounted in
+// the browser, not for the initial render — loading it via next/dynamic with
+// ssr:false keeps it out of this route's initial client bundle.
+const AboutScrollAnimations = dynamic(
+  () => import("@/components/AboutScrollAnimations").then((m) => m.AboutScrollAnimations),
+  { ssr: false }
+);
 
 const BADGES = [
   { Icon: CalendarDays, label: "2021-yildan buyon" },
@@ -54,95 +57,6 @@ export default function AboutPage() {
   // and that element's own scrollbar is hidden so only the window's shows.
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!scrollerRef.current) return;
-    const scroller: HTMLDivElement = scrollerRef.current;
-
-    const ctx = gsap.context(() => {
-      // Clamp to the scroller's real max scroll so the last element (which
-      // has no follow-content to provide scroll room) still reaches full
-      // progress instead of stopping short.
-      function clampedEnd(trigger: HTMLElement) {
-        return () => {
-          const rect = trigger.getBoundingClientRect();
-          const scrollerRect = scroller.getBoundingClientRect();
-          const relativeTop = rect.top - scrollerRect.top + scroller.scrollTop;
-          const naturalEnd = relativeTop - scroller.clientHeight * 0.45;
-          const maxScroll = scroller.scrollHeight - scroller.clientHeight;
-          return Math.min(naturalEnd, maxScroll);
-        };
-      }
-
-      // Two separate string-query matchMedia calls — an object-conditions
-      // call only fires when at least one of its named queries currently
-      // matches, so a single call keyed on one breakpoint silently never
-      // runs on the other (the bug that broke this exact animation on the
-      // mission-values page once already).
-      const mm = gsap.matchMedia();
-      mm.add("(min-width: 768px)", () => buildAnimations((base) => base));
-      mm.add("(max-width: 767px)", () => buildAnimations((base) => Math.min(6, base)));
-
-      function buildAnimations(rangeFor: (base: number) => number) {
-        const cleanups: Array<() => void> = [];
-
-        // Badge row: one trigger for the whole row, cards reveal together
-        // with a slight stagger.
-        const badgeRow = pageRef.current?.querySelector<HTMLElement>(".about-badges-row");
-        if (badgeRow) {
-          const items = gsap.utils.toArray<HTMLElement>(".about-badge-item", badgeRow);
-          gsap.fromTo(
-            items,
-            { autoAlpha: 0, y: 20 },
-            {
-              autoAlpha: 1,
-              y: 0,
-              ease: "none",
-              stagger: 0.15,
-              scrollTrigger: {
-                trigger: badgeRow,
-                scroller,
-                start: "top 85%",
-                end: clampedEnd(badgeRow),
-                scrub: true,
-              },
-            }
-          );
-          cleanups.push(() => items.forEach((el) => gsap.set(el, { clearProps: "all" })));
-        }
-
-        // Paragraph sections: zigzag blocks, each with its own fade-in +
-        // icon-badge parallax, same mechanism as mission-values.
-        const blocks = gsap.utils.toArray<HTMLElement>(".about-reveal");
-        blocks.forEach((block) => {
-          const visual = block.querySelector<HTMLElement>(".about-visual");
-          const range = rangeFor(Number(visual?.dataset.parallax) || 20);
-
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: block,
-              scroller,
-              start: "top 85%",
-              end: clampedEnd(block),
-              scrub: true,
-            },
-          });
-
-          tl.fromTo(block, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, ease: "none" }, 0);
-          if (visual) {
-            tl.fromTo(visual, { yPercent: -range }, { yPercent: 0, ease: "none" }, 0);
-          }
-        });
-        cleanups.push(() => blocks.forEach((block) => gsap.set(block, { clearProps: "all" })));
-
-        return () => cleanups.forEach((fn) => fn());
-      }
-
-      ScrollTrigger.refresh();
-    }, pageRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
     <div ref={scrollerRef} className="about-scroll-hide h-[calc(100vh-3.5rem)] overflow-y-auto">
       {/* Scrolls internally (keeps this page's height off the shared
@@ -153,6 +67,7 @@ export default function AboutPage() {
         .about-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
         .about-scroll-hide::-webkit-scrollbar { display: none; }
       `}</style>
+      <AboutScrollAnimations pageRef={pageRef} scrollerRef={scrollerRef} />
       <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
         {/* Header */}
         <div className="space-y-4">
