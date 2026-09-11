@@ -10,37 +10,32 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-type Block =
-  | { kind: "badge"; Icon: LucideIcon; label: string }
-  | { kind: "section"; Icon: LucideIcon; title: string; body: string };
+const BADGES = [
+  { Icon: CalendarDays, label: "2021-yildan buyon" },
+  { Icon: Settings, label: "Germaniya texnologiyasi" },
+  { Icon: ShieldCheck, label: "Xalqaro standartlar" },
+  { Icon: Globe, label: "Xorijga eksport" },
+];
 
-// Odd blocks: icon left, text right. Even blocks: text left, icon right —
-// same zigzag convention as /company/mission-values.
-const BLOCKS: Block[] = [
-  { kind: "badge", Icon: CalendarDays, label: "2021-yildan buyon" },
-  { kind: "badge", Icon: Settings, label: "Germaniya texnologiyasi" },
-  { kind: "badge", Icon: ShieldCheck, label: "Xalqaro standartlar" },
-  { kind: "badge", Icon: Globe, label: "Xorijga eksport" },
+// Odd sections (1st, 3rd): icon left, text right. Even sections (2nd, 4th):
+// text left, icon right — zigzag convention shared with /company/mission-values.
+const SECTIONS: { Icon: LucideIcon; title: string; body: string }[] = [
   {
-    kind: "section",
     Icon: Factory,
     title: "Biz haqimizda",
     body: "WATERTECH – bu 2021-yildan buyon O'zbekistonda faoliyat yuritayotgan, kanalizatsiya tizimlari uchun truba va fitinglar ishlab chiqaruvchi mahalliy brenddir. Kompaniyamiz o'z faoliyatini Germaniya texnologiyasi asosida tashkil etgan bo'lib, har bir mahsulotda sifat, ishonchlilik va uzoq muddatli xizmat kafolatini ta'minlaydi.",
   },
   {
-    kind: "section",
     Icon: Cog,
     title: "Ishlab chiqarish",
     body: "Ishlab chiqarish jarayonida biz yuqori sifatli polipropilen xom ashyolaridan foydalanamiz. Natijada WATERTECH truba va fitinglari nafaqat mahalliy bozorda, balki xorijiy bozorlarda ham o'z o'rnini topmoqda.",
   },
   {
-    kind: "section",
     Icon: Target,
     title: "Maqsadimiz",
     body: "Kompaniyamizning asosiy maqsadi – mijozlarga zamonaviy, chidamli va samarali kanalizatsiya tizimlarini taqdim etishdir. Har bir mahsulot texnik talab va xalqaro standartlarga muvofiq sinovdan o'tkaziladi.",
   },
   {
-    kind: "section",
     Icon: Award,
     title: "Nega WATERTECH",
     body: "WATERTECH – bu yangilik, texnologiya va ishonch uyg'unlashgan brend. Biz mijozlarimiz bilan uzoq muddatli hamkorlikni qadrlaymiz va har bir loyiha uchun eng optimal yechimlarni taklif etamiz.",
@@ -62,7 +57,19 @@ export default function AboutPage() {
     const scroller: HTMLDivElement = scrollerRef.current;
 
     const ctx = gsap.context(() => {
-      const blocks = gsap.utils.toArray<HTMLElement>(".about-reveal");
+      // Clamp to the scroller's real max scroll so the last element (which
+      // has no follow-content to provide scroll room) still reaches full
+      // progress instead of stopping short.
+      function clampedEnd(trigger: HTMLElement) {
+        return () => {
+          const rect = trigger.getBoundingClientRect();
+          const scrollerRect = scroller.getBoundingClientRect();
+          const relativeTop = rect.top - scrollerRect.top + scroller.scrollTop;
+          const naturalEnd = relativeTop - scroller.clientHeight * 0.45;
+          const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+          return Math.min(naturalEnd, maxScroll);
+        };
+      }
 
       // Two separate string-query matchMedia calls — an object-conditions
       // call only fires when at least one of its named queries currently
@@ -70,11 +77,40 @@ export default function AboutPage() {
       // runs on the other (the bug that broke this exact animation on the
       // mission-values page once already).
       const mm = gsap.matchMedia();
+      mm.add("(min-width: 768px)", () => buildAnimations((base) => base));
+      mm.add("(max-width: 767px)", () => buildAnimations((base) => Math.min(6, base)));
 
-      mm.add("(min-width: 768px)", () => buildTimelines((base) => base));
-      mm.add("(max-width: 767px)", () => buildTimelines((base) => Math.min(6, base)));
+      function buildAnimations(rangeFor: (base: number) => number) {
+        const cleanups: Array<() => void> = [];
 
-      function buildTimelines(rangeFor: (base: number) => number) {
+        // Badge row: one trigger for the whole row, cards reveal together
+        // with a slight stagger.
+        const badgeRow = pageRef.current?.querySelector<HTMLElement>(".about-badges-row");
+        if (badgeRow) {
+          const items = gsap.utils.toArray<HTMLElement>(".about-badge-item", badgeRow);
+          gsap.fromTo(
+            items,
+            { autoAlpha: 0, y: 20 },
+            {
+              autoAlpha: 1,
+              y: 0,
+              ease: "none",
+              stagger: 0.15,
+              scrollTrigger: {
+                trigger: badgeRow,
+                scroller,
+                start: "top 85%",
+                end: clampedEnd(badgeRow),
+                scrub: true,
+              },
+            }
+          );
+          cleanups.push(() => items.forEach((el) => gsap.set(el, { clearProps: "all" })));
+        }
+
+        // Paragraph sections: zigzag blocks, each with its own fade-in +
+        // icon-badge parallax, same mechanism as mission-values.
+        const blocks = gsap.utils.toArray<HTMLElement>(".about-reveal");
         blocks.forEach((block) => {
           const visual = block.querySelector<HTMLElement>(".about-visual");
           const range = rangeFor(Number(visual?.dataset.parallax) || 20);
@@ -84,17 +120,7 @@ export default function AboutPage() {
               trigger: block,
               scroller,
               start: "top 85%",
-              // Clamp to the scroller's real max scroll so the last block
-              // (which has no follow-content to provide scroll room) still
-              // reaches full progress instead of stopping short.
-              end: () => {
-                const rect = block.getBoundingClientRect();
-                const scrollerRect = scroller.getBoundingClientRect();
-                const relativeTop = rect.top - scrollerRect.top + scroller.scrollTop;
-                const naturalEnd = relativeTop - scroller.clientHeight * 0.45;
-                const maxScroll = scroller.scrollHeight - scroller.clientHeight;
-                return Math.min(naturalEnd, maxScroll);
-              },
+              end: clampedEnd(block),
               scrub: true,
             },
           });
@@ -104,10 +130,9 @@ export default function AboutPage() {
             tl.fromTo(visual, { yPercent: -range }, { yPercent: 0, ease: "none" }, 0);
           }
         });
+        cleanups.push(() => blocks.forEach((block) => gsap.set(block, { clearProps: "all" })));
 
-        return () => {
-          blocks.forEach((block) => gsap.set(block, { clearProps: "all" }));
-        };
+        return () => cleanups.forEach((fn) => fn());
       }
 
       ScrollTrigger.refresh();
@@ -135,35 +160,44 @@ export default function AboutPage() {
           </div>
         </div>
 
+        {/* Compact badge row (original layout) */}
+        <div className="about-badges-row grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {BADGES.map(({ Icon, label }) => (
+            <div
+              key={label}
+              className="about-badge-item flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center shadow-soft"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Icon size={20} />
+              </span>
+              <span className="text-[13px] font-semibold leading-tight text-primary-dark">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Paragraph sections: zigzag two-column blocks */}
         <div className="space-y-8 rounded-2xl border border-border bg-surface p-6 shadow-soft">
-          {BLOCKS.map((block, i) => {
-            const iconLeft = i % 2 === 0; // odd block number (1-indexed) = icon left
-            const key = block.kind === "badge" ? block.label : block.title;
+          {SECTIONS.map(({ Icon, title, body }, i) => {
+            const iconLeft = i % 2 === 0;
 
             const iconColumn = (
               <div className={`flex h-48 w-full items-center justify-center rounded-2xl border border-border bg-surface-alt md:h-56 ${iconLeft ? "" : "md:order-2"}`}>
                 <div data-parallax="20" className="about-visual flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <block.Icon size={40} />
+                  <Icon size={40} />
                 </div>
               </div>
             );
 
             const textColumn = (
               <div className={`text-center md:text-left ${iconLeft ? "" : "md:order-1"}`}>
-                {block.kind === "badge" ? (
-                  <h2 className="text-[22px] font-bold text-primary-dark">{block.label}</h2>
-                ) : (
-                  <>
-                    <h2 className="mb-3 text-[18px] font-bold text-primary-dark">{block.title}</h2>
-                    <p className="text-[15px] leading-relaxed text-text-secondary">{block.body}</p>
-                  </>
-                )}
+                <h2 className="mb-3 text-[18px] font-bold text-primary-dark">{title}</h2>
+                <p className="text-[15px] leading-relaxed text-text-secondary">{body}</p>
               </div>
             );
 
             return (
               <div
-                key={key}
+                key={title}
                 className="about-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface p-6 shadow-sm md:grid-cols-2 md:p-8"
               >
                 {iconColumn}
