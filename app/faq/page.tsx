@@ -2,6 +2,8 @@ import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getMockMeta } from "@/lib/site-config";
 import { faqItems } from "@/lib/mock-data/faq";
+import { contacts } from "@/lib/mock-data/contacts";
+import { MessageCircle } from "lucide-react";
 
 const columns: DbColumn[] = [
   { key: "question", label: "Savol", sortable: true },
@@ -13,6 +15,12 @@ const columns: DbColumn[] = [
 
 export default function FaqPage() {
   const meta = getMockMeta("/faq");
+  // Closest-matching contact for knowledge-base questions (topic explicitly
+  // mentions "bilimlar bazasi bo'yicha so'rovlar") — read live from the
+  // Kontaktlar page's own data rather than a hardcoded value.
+  const supportContact = contacts.find((c) => c.role === "Savdoni qo'llab-quvvatlash") ?? contacts[0];
+  const telegramHandle = supportContact.messenger.replace(/^@/, "");
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
@@ -23,22 +31,20 @@ export default function FaqPage() {
       />
       <DatabaseTemplate columns={columns} rows={faqItems} />
 
-      <div className="rounded-xl border border-dashed border-border bg-surface p-5">
-        <h2 className="mb-2 text-[15px] font-semibold text-primary-dark">Javobingizni topa olmadingizmi?</h2>
-        <form className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="text"
-            placeholder="Savolingizni yozing… (namuna forma, hali ulanmagan)"
-            className="flex-1 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-            disabled
-          />
-          <button
-            type="button"
-            className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface shadow-softer hover:bg-primary-dark"
-          >
-            Yuborish
-          </button>
-        </form>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-surface p-5">
+        <div>
+          <h2 className="text-[15px] font-semibold text-primary-dark">Javobingizni topa olmadingizmi?</h2>
+          <p className="mt-0.5 text-[13px] text-text-secondary">Bizga yozing — {supportContact.role} javob beradi.</p>
+        </div>
+        <a
+          href={`https://t.me/${telegramHandle}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface shadow-softer hover:bg-primary-dark"
+        >
+          <MessageCircle size={15} />
+          Bizga yozing
+        </a>
       </div>
     </div>
   );
