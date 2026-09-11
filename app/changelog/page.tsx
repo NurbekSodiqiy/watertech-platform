@@ -23,10 +23,15 @@ export default function ChangelogPage() {
               <p className="text-[12px] font-medium text-text-secondary">{c.date}</p>
               <p className="text-[14px] text-primary-dark">{c.whatChanged}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-text-secondary">
-                <a href={c.linkedPage} className="text-primary hover:underline">
-                  {c.linkedPage}
-                </a>
-                <span>· Tasdiqlagan: {c.approvedBy}</span>
+                {c.linkedPage && (
+                  <>
+                    <a href={c.linkedPage} className="text-primary hover:underline">
+                      {c.linkedPage}
+                    </a>
+                    <span>·</span>
+                  </>
+                )}
+                <span>Tasdiqlagan: {c.approvedBy}</span>
                 <span className="rounded-full border border-border bg-surface-alt px-2 py-0.5">
                   O'qildi: {c.readCount}
                 </span>

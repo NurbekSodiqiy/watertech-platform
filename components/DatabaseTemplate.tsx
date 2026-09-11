@@ -141,9 +141,13 @@ export function DatabaseTemplate({
                           {row[col.key] ? "Mavjud" : "Mavjud emas"}
                         </span>
                       ) : col.type === "link" ? (
-                        <a href={row[col.key]} className="text-primary hover:underline">
-                          {row[col.key]}
-                        </a>
+                        row[col.key] ? (
+                          <a href={row[col.key]} className="text-primary hover:underline">
+                            {row[col.key]}
+                          </a>
+                        ) : (
+                          <span className="text-text-secondary/50">—</span>
+                        )
                       ) : linkBase && col === columns[0] ? (
                         <Link
                           href={`${linkBase}/${row[linkKey]}`}
