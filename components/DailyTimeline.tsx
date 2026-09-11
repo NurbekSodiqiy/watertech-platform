@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2 } from "lucide-react";
+import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, type LucideIcon } from "lucide-react";
 
 const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS_FULL = [
@@ -27,7 +27,7 @@ type TimelineItem = {
   start: string;
   end: string;
   task: string;
-  icon: any;
+  icon: LucideIcon;
   isLunch?: boolean;
 };
 
