@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AccentIconVisual } from "@/components/AccentIconVisual";
+import { AccentTextPanel } from "@/components/AccentTextPanel";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -208,16 +209,16 @@ export default function MissionValuesPage() {
         {/* Mission Section — image left, text right */}
         <section>
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <AccentIconVisual icon={MissiyaIcon} size={48} visualClassName="mv-visual" dataParallax={10} />
-            <div className="text-center md:text-left">
-              <h2 className="mb-4 text-[20px] font-bold text-primary-dark uppercase tracking-wider">Missiya</h2>
-              <p className="mb-3 text-[18px] font-medium leading-relaxed text-primary md:text-[22px]">
+            <AccentIconVisual icon={MissiyaIcon} visualClassName="mv-visual" dataParallax={10} />
+            <AccentTextPanel>
+              <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-white">Missiya</h2>
+              <p className="mb-3 text-[18px] font-medium leading-relaxed text-white md:text-[22px]">
                 "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
               </p>
-              <p className="text-[15px] italic text-text-secondary">
+              <p className="text-[15px] italic text-white/80">
                 Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
               </p>
-            </div>
+            </AccentTextPanel>
           </div>
         </section>
 
@@ -227,38 +228,26 @@ export default function MissionValuesPage() {
 
           {/* "2030" — text left, image right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="relative overflow-hidden text-center md:order-1 md:text-left">
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 select-none text-[130px] font-extrabold leading-none text-accent opacity-[0.07] md:left-0 md:translate-x-0 md:text-[160px]"
-              >
-                2030
-              </span>
-              <span className="relative mx-auto mb-2 block h-1 w-9 rounded-full bg-accent md:mx-0" />
-              <span className="relative mb-2 block text-[28px] font-extrabold leading-none text-accent">2030</span>
-              <p className="relative text-[14px] leading-relaxed text-text-secondary">
+            <AccentTextPanel watermark="2030" className="md:order-1">
+              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
+              <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
+              <p className="text-[14px] leading-relaxed text-white/80">
                 2030-yilga kelib O'zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o'rnatilgan bo'lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
-            </div>
-            <AccentIconVisual icon={Vizyon2030Icon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
+            </AccentTextPanel>
+            <AccentIconVisual icon={Vizyon2030Icon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
 
           {/* "№1" — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <AccentIconVisual icon={No1Icon} size={48} visualClassName="mv-visual" dataParallax={10} />
-            <div className="relative overflow-hidden text-center md:text-left">
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 select-none text-[130px] font-extrabold leading-none text-accent opacity-[0.07] md:left-0 md:translate-x-0 md:text-[160px]"
-              >
-                №1
-              </span>
-              <span className="relative mx-auto mb-2 block h-1 w-9 rounded-full bg-accent md:mx-0" />
-              <span className="relative mb-2 block text-[28px] font-extrabold leading-none text-accent">№1</span>
-              <p className="relative text-[14px] leading-relaxed text-text-secondary">
+            <AccentIconVisual icon={No1Icon} visualClassName="mv-visual" dataParallax={10} />
+            <AccentTextPanel watermark="№1">
+              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
+              <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">№1</span>
+              <p className="text-[14px] leading-relaxed text-white/80">
                 Markaziy Osiyoda muhandislik santexnikasi bo'yicha №1 ekspert-hamkorga aylanish.
               </p>
-            </div>
+            </AccentTextPanel>
           </div>
         </section>
 
@@ -268,35 +257,35 @@ export default function MissionValuesPage() {
 
           {/* Sifat — text left, image right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="text-center md:order-1 md:text-left">
-              <h3 className="mb-2 text-[16px] font-bold text-primary-dark">Sifat – bu vijdon</h3>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
+            <AccentTextPanel className="md:order-1">
+              <h3 className="mb-2 text-[16px] font-bold text-white">Sifat – bu vijdon</h3>
+              <p className="text-[14px] leading-relaxed text-white/80">
                 Quvur devorlarining ichida nima borligini mijoz ko'rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
-            </div>
-            <AccentIconVisual icon={SifatIcon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
+            </AccentTextPanel>
+            <AccentIconVisual icon={SifatIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
 
           {/* Innovatsiya — image left, text right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <AccentIconVisual icon={InnovatsiyaIcon} size={48} visualClassName="mv-visual" dataParallax={10} />
-            <div className="text-center md:text-left">
-              <h3 className="mb-2 text-[16px] font-bold text-primary-dark">Innovatsiya</h3>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
+            <AccentIconVisual icon={InnovatsiyaIcon} visualClassName="mv-visual" dataParallax={10} />
+            <AccentTextPanel>
+              <h3 className="mb-2 text-[16px] font-bold text-white">Innovatsiya</h3>
+              <p className="text-[14px] leading-relaxed text-white/80">
                 Biz kechagi texnologiya bilan bugungi bozorni egallay olmaymiz.
               </p>
-            </div>
+            </AccentTextPanel>
           </div>
 
           {/* Xavfsizlik — text left, image right */}
           <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
-            <div className="text-center md:order-1 md:text-left">
-              <h3 className="mb-2 text-[16px] font-bold text-primary-dark">Xavfsizlik</h3>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
+            <AccentTextPanel className="md:order-1">
+              <h3 className="mb-2 text-[16px] font-bold text-white">Xavfsizlik</h3>
+              <p className="text-[14px] leading-relaxed text-white/80">
                 Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak.
               </p>
-            </div>
-            <AccentIconVisual icon={XavfsizlikIcon} size={48} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
+            </AccentTextPanel>
+            <AccentIconVisual icon={XavfsizlikIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
           </div>
         </section>
 

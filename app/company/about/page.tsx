@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AccentIconVisual } from "@/components/AccentIconVisual";
+import { AccentTextPanel } from "@/components/AccentTextPanel";
 import { CalendarDays, Settings, ShieldCheck, Globe, Factory, Cog, Target, Award, type LucideIcon } from "lucide-react";
 
 if (typeof window !== "undefined") {
@@ -184,7 +185,6 @@ export default function AboutPage() {
             const iconColumn = (
               <AccentIconVisual
                 icon={Icon}
-                size={48}
                 visualClassName="about-visual"
                 dataParallax={20}
                 className={iconLeft ? "" : "md:order-2"}
@@ -192,10 +192,10 @@ export default function AboutPage() {
             );
 
             const textColumn = (
-              <div className={`text-center md:text-left ${iconLeft ? "" : "md:order-1"}`}>
-                <h2 className="mb-3 text-[18px] font-bold text-primary-dark">{title}</h2>
-                <p className="text-[15px] leading-relaxed text-text-secondary">{body}</p>
-              </div>
+              <AccentTextPanel className={iconLeft ? "" : "md:order-1"}>
+                <h2 className="mb-3 text-[18px] font-bold text-white">{title}</h2>
+                <p className="text-[15px] leading-relaxed text-white/80">{body}</p>
+              </AccentTextPanel>
             );
 
             return (
