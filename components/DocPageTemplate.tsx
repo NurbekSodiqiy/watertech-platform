@@ -14,7 +14,7 @@ export function PageHeader({
   path: string;
   title: string;
   description?: string;
-  meta: PageMeta;
+  meta?: PageMeta;
   locked?: boolean;
 }) {
   return (
@@ -27,7 +27,7 @@ export function PageHeader({
         </div>
         {locked && <StatusLockBadge />}
       </div>
-      <MetadataBadgeRow meta={meta} />
+      {meta && <MetadataBadgeRow meta={meta} />}
     </div>
   );
 }
@@ -43,7 +43,7 @@ export function DocPageTemplate({
   path: string;
   title: string;
   description?: string;
-  meta: PageMeta;
+  meta?: PageMeta;
   locked?: boolean;
   children?: React.ReactNode;
 }) {
