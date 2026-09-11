@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { packageGroups } from "@/lib/content/packages";
@@ -8,9 +8,12 @@ import { competitors } from "@/lib/content/competitors";
 import { scripts } from "@/lib/content/scripts";
 import { objections } from "@/lib/content/objections";
 import { faqs } from "@/lib/content/faq";
-import type { Stage, Competitor, Objection, Package as PackageItem } from "@/lib/content/types";
+import type { Stage, Competitor, Objection, Package as PackageItem, ScriptTurn } from "@/lib/content/types";
 import { CompetitorDetailPanel } from "@/components/CompetitorDetailPanel";
-import { ScriptTurns, objectionToTurns } from "@/components/ScriptTurns";
+import { objectionToTurns } from "@/components/ScriptTurns";
+import { ScriptTurnList } from "@/components/ScriptTurnList";
+import { ClientNameProvider } from "@/components/ClientNameContext";
+import { ClientNameInput } from "@/components/ClientNameInput";
 
 // FAQ Data
 type FAQItem = {
@@ -64,16 +67,20 @@ export default function ScriptsPage() {
   const [selectedObjection, setSelectedObjection] = useState<Objection | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
 
-  // Mijoz ismi (sotuv skriptlari uchun global auto-fill)
-  const [clientName, setClientName] = useState("");
-  const [clientNameDraft, setClientNameDraft] = useState("");
-  const confirmClientName = () => setClientName(clientNameDraft.trim());
-
-  // Reset window scroll on content change
+  // The left ("TV screen") panel scrolls internally now instead of the
+  // whole window — resetting it to the top on selection change no longer
+  // yanks the operator away from wherever they were reading on the page.
+  const leftPanelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (leftPanelRef.current) leftPanelRef.current.scrollTop = 0;
   }, [activeTab, selectedFaqItem, selectedPackage, selectedCompetitor, activeSalesScriptId, selectedScriptStage, selectedObjection]);
 
+  // Stable reference for ScriptTurnList's memo to actually bail on —
+  // objectionToTurns(...) builds a fresh array every call otherwise.
+  const currentTurns: ScriptTurn[] | null = useMemo(() => {
+    if (selectedObjection) return objectionToTurns(selectedObjection);
+    return selectedScriptStage?.turns ?? null;
+  }, [selectedObjection, selectedScriptStage]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -93,6 +100,7 @@ export default function ScriptsPage() {
       .filter((o): o is Objection => !!o);
 
   return (
+    <ClientNameProvider>
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <div>
         <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Jonli skriptlar va Yordamchi</h1>
@@ -154,42 +162,25 @@ export default function ScriptsPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="client-name-input" className="text-sm font-medium text-text-secondary whitespace-nowrap">
-            Mijoz ismi:
-          </label>
-          <div className="flex items-center gap-1.5">
-            <input
-              id="client-name-input"
-              type="text"
-              autoComplete="off"
-              value={clientNameDraft}
-              onChange={(e) => setClientNameDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") confirmClientName();
-              }}
-              placeholder="Masalan: Aziz"
-              className="w-32 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-            />
-            <button
-              onClick={confirmClientName}
-              aria-label="Ismni tasdiqlash"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
-            >
-              <Check size={16} />
-            </button>
-          </div>
-        </div>
+        <ClientNameInput />
       </div>
 
       <div className="grid grid-cols-12 gap-6 items-start">
-        {/* LEFT PANEL (The "TV Screen") */}
-        <div className="col-span-12 md:col-span-8 bg-surface border border-primary-light/50 rounded-2xl p-8 min-h-[400px] flex flex-col justify-center shadow-soft">
+        {/* LEFT PANEL (The "TV Screen") — scrolls internally (same bounded
+            sticky pattern as the right panel below) so switching tabs/
+            stages/objections only resets this panel's own scroll, not the
+            whole window. */}
+        <div
+          ref={leftPanelRef}
+          className="col-span-12 md:col-span-8 bg-surface border border-primary-light/50 rounded-2xl p-8 min-h-[400px] flex flex-col shadow-soft sticky top-[88px] max-h-[calc(100vh-88px-24px)] overflow-y-auto"
+        >
           {activeTab === "faq" ? (
             !selectedFaqItem ? (
-              <p className="text-center text-text-secondary text-lg">
-                O&apos;ng paneldan kerakli savolni tanlang...
-              </p>
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-center text-text-secondary text-lg">
+                  O&apos;ng paneldan kerakli savolni tanlang...
+                </p>
+              </div>
             ) : (
               <div className="flex flex-col gap-5">
                 <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
@@ -203,9 +194,11 @@ export default function ScriptsPage() {
             )
           ) : activeTab === "packages" ? (
             !selectedPackage ? (
-              <p className="text-center text-text-secondary text-lg">
-                O&apos;ng paneldan kerakli paketni tanlang...
-              </p>
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-center text-text-secondary text-lg">
+                  O&apos;ng paneldan kerakli paketni tanlang...
+                </p>
+              </div>
             ) : (
               <div className={`rounded-xl border ${selectedPackage.isFeatured ? 'border-primary' : 'border-border'} bg-surface p-6 shadow-sm flex flex-col`}>
                 <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
@@ -272,30 +265,30 @@ export default function ScriptsPage() {
             )
           ) : activeTab === "competitors" ? (
             !selectedCompetitor ? (
-              <p className="text-center text-text-secondary text-lg">
-                O&apos;ng paneldan kerakli raqobatchini tanlang...
-              </p>
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-center text-text-secondary text-lg">
+                  O&apos;ng paneldan kerakli raqobatchini tanlang...
+                </p>
+              </div>
             ) : (
               <CompetitorDetailPanel competitor={selectedCompetitor} />
             )
           ) : (
             // activeTab === "sales_scripts"
             (!selectedScriptStage && !selectedObjection) ? (
-              <p className="text-center text-text-secondary text-lg">
-                O&apos;ng paneldan skript bosqichini tanlang...
-              </p>
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-center text-text-secondary text-lg">
+                  O&apos;ng paneldan skript bosqichini tanlang...
+                </p>
+              </div>
             ) : (
-              <div className="flex flex-col h-full overflow-y-auto">
+              <div className="flex flex-col">
                 <div className="mb-8 flex items-center justify-between border-b border-border pb-4">
                   <h2 className="text-2xl font-bold text-primary-dark">
                     {selectedObjection?.label || selectedScriptStage?.label}
                   </h2>
                 </div>
-                {selectedObjection ? (
-                  <ScriptTurns turns={objectionToTurns(selectedObjection)} clientName={clientName} />
-                ) : selectedScriptStage?.turns ? (
-                  <ScriptTurns turns={selectedScriptStage.turns} clientName={clientName} />
-                ) : null}
+                {currentTurns && <ScriptTurnList turns={currentTurns} />}
               </div>
             )
           )}
@@ -520,5 +513,6 @@ export default function ScriptsPage() {
         </div>
       </div>
     </div>
+    </ClientNameProvider>
   );
 }
