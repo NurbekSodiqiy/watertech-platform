@@ -116,7 +116,15 @@ export default function MissionValuesPage() {
   }, []);
 
   return (
-    <div ref={scrollerRef} className="h-[calc(100vh-3.5rem)] overflow-y-auto">
+    <div ref={scrollerRef} className="mv-scroll-hide h-[calc(100vh-3.5rem)] overflow-y-auto">
+    {/* This container still scrolls (needed for the height-containment fix
+        and as the GSAP ScrollTrigger scroller) — only its own visual
+        scrollbar is hidden, so the page shows just the one (window)
+        scrollbar the rest of the site already uses. */}
+    <style>{`
+      .mv-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
+      .mv-scroll-hide::-webkit-scrollbar { display: none; }
+    `}</style>
     <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
