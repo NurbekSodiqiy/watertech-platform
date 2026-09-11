@@ -201,7 +201,7 @@ export default function AboutPage() {
             return (
               <div
                 key={title}
-                className="about-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface p-6 shadow-sm md:grid-cols-2 md:p-8"
+                className="about-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2"
               >
                 {iconColumn}
                 {textColumn}

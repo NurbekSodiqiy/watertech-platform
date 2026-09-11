@@ -208,7 +208,7 @@ export default function MissionValuesPage() {
 
         {/* Mission Section — image left, text right */}
         <section>
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentIconVisual icon={MissiyaIcon} visualClassName="mv-visual" dataParallax={10} />
             <AccentTextPanel>
               <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-white">Missiya</h2>
@@ -227,7 +227,7 @@ export default function MissionValuesPage() {
           <h2 className="text-[20px] font-bold text-primary-dark">Vizyon 2030</h2>
 
           {/* "2030" — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
@@ -239,7 +239,7 @@ export default function MissionValuesPage() {
           </div>
 
           {/* "№1" — image left, text right */}
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentIconVisual icon={No1Icon} visualClassName="mv-visual" dataParallax={10} />
             <AccentTextPanel>
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
@@ -256,7 +256,7 @@ export default function MissionValuesPage() {
           <h2 className="text-[20px] font-bold text-primary-dark">Qadriyatlarimiz</h2>
 
           {/* Sifat — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Sifat – bu vijdon</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
@@ -267,7 +267,7 @@ export default function MissionValuesPage() {
           </div>
 
           {/* Innovatsiya — image left, text right */}
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentIconVisual icon={InnovatsiyaIcon} visualClassName="mv-visual" dataParallax={10} />
             <AccentTextPanel>
               <h3 className="mb-2 text-[16px] font-bold text-white">Innovatsiya</h3>
@@ -278,7 +278,7 @@ export default function MissionValuesPage() {
           </div>
 
           {/* Xavfsizlik — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-center gap-6 rounded-2xl border border-border bg-surface-alt p-6 shadow-sm md:grid-cols-2 md:p-8">
+          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Xavfsizlik</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
