@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, type LucideIcon } from "lucide-react";
+import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, CheckSquare, Square, type LucideIcon } from "lucide-react";
+import { useTrack } from "@/hooks/useTrack";
 
 const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS_FULL = [
@@ -46,11 +47,23 @@ function getTimeMinutes(timeStr: string) {
   return h * 60 + m;
 }
 
+// Local calendar date (not UTC) so the key rolls over at the viewer's own
+// midnight — checked items from a prior day are simply under a different
+// key, never explicitly cleared.
+function getTodayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+const CHECKLIST_KEY_PREFIX = "watertech-daily-checklist-";
+
 export function DailyTimeline() {
   const [currentMinutes, setCurrentMinutes] = useState(() => {
     const now = new Date();
     return now.getHours() * 60 + now.getMinutes();
   });
+  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+  const track = useTrack();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -59,6 +72,26 @@ export function DailyTimeline() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CHECKLIST_KEY_PREFIX + getTodayKey());
+      if (saved) setCheckedItems(JSON.parse(saved));
+    } catch {
+      // localStorage unavailable/corrupt — start unchecked
+    }
+  }, []);
+
+  function toggleCheck(id: number) {
+    const next = { ...checkedItems, [id]: !checkedItems[id] };
+    setCheckedItems(next);
+    try {
+      localStorage.setItem(CHECKLIST_KEY_PREFIX + getTodayKey(), JSON.stringify(next));
+    } catch {
+      // localStorage unavailable — state just won't persist across reloads
+    }
+    track("checklist_toggle", { entityType: "daily_task", entityId: String(id), meta: { checked: next[id] } });
+  }
 
   return (
     <div className="mt-8">
@@ -120,17 +153,29 @@ export function DailyTimeline() {
                 </div>
                 
                 <div className="flex items-start justify-between gap-2">
-                  <p
-                    className={`text-[14px] leading-relaxed ${
-                      item.isLunch
-                        ? "italic text-text-secondary"
-                        : state === "current"
-                        ? "font-semibold text-primary-dark"
-                        : "font-medium text-text-primary"
-                    }`}
-                  >
-                    {item.task}
-                  </p>
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleCheck(item.id)}
+                      aria-label={checkedItems[item.id] ? "Bajarilmagan deb belgilash" : "Bajarildi deb belgilash"}
+                      className={`mt-0.5 shrink-0 ${checkedItems[item.id] ? "text-status-ok" : "text-text-secondary/50 hover:text-primary"}`}
+                    >
+                      {checkedItems[item.id] ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                    <p
+                      className={`text-[14px] leading-relaxed ${
+                        checkedItems[item.id]
+                          ? "text-text-secondary line-through opacity-70"
+                          : item.isLunch
+                          ? "italic text-text-secondary"
+                          : state === "current"
+                          ? "font-semibold text-primary-dark"
+                          : "font-medium text-text-primary"
+                      }`}
+                    >
+                      {item.task}
+                    </p>
+                  </div>
                   {state === "current" && (
                     <span className="shrink-0 rounded-md bg-accent/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
                       Hozir
