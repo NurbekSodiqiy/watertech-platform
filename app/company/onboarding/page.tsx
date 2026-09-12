@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Lightbulb, CheckSquare, Square, ChevronDown, Calendar } from "lucide-react";
+import { useTrack } from "@/hooks/useTrack";
 
 const DAYS = [
   {
@@ -73,10 +74,12 @@ export default function OnboardingPage() {
     }
   }, []);
 
+  const track = useTrack();
   const toggleCheck = (index: number) => {
     const newChecked = { ...checkedItems, [index]: !checkedItems[index] };
     setCheckedItems(newChecked);
     localStorage.setItem("onboarding_checklist", JSON.stringify(newChecked));
+    track("checklist_toggle", { entityType: "onboarding_item", entityId: String(index), meta: { checked: newChecked[index] } });
   };
 
   const toggleDay = (day: number) => {

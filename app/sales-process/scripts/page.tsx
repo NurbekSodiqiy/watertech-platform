@@ -16,6 +16,7 @@ import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ClientNameProvider } from "@/components/ClientNameContext";
 import { ClientNameInput } from "@/components/ClientNameInput";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
+import { useTrack } from "@/hooks/useTrack";
 
 // FAQ Data
 type FAQItem = {
@@ -97,6 +98,29 @@ function ScriptsPageContent() {
   const [selectedObjection, setSelectedObjection] = useState<Objection | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
   const [competitorQuery, setCompetitorQuery] = useState("");
+
+  // Telemetry — one small effect per "thing being viewed" instead of a
+  // track() call duplicated at every place each piece of state can change
+  // (direct click, keyboard shortcut, objection nav buttons, URL restore).
+  const track = useTrack();
+  useEffect(() => {
+    track("script_select", { entityType: "script", entityId: activeSalesScriptId });
+  }, [activeSalesScriptId, track]);
+  useEffect(() => {
+    if (selectedScriptStage) track("stage_view", { entityType: "stage", entityId: selectedScriptStage.id });
+  }, [selectedScriptStage, track]);
+  useEffect(() => {
+    if (selectedObjection) track("objection_view", { entityType: "objection", entityId: selectedObjection.id });
+  }, [selectedObjection, track]);
+  useEffect(() => {
+    if (selectedCompetitor) track("competitor_view", { entityType: "competitor", entityId: selectedCompetitor.id });
+  }, [selectedCompetitor, track]);
+  useEffect(() => {
+    if (selectedPackage) track("package_view", { entityType: "package", entityId: selectedPackage.id });
+  }, [selectedPackage, track]);
+  useEffect(() => {
+    if (selectedFaqItem) track("faq_view", { entityType: "faq", entityId: selectedFaqItem.question });
+  }, [selectedFaqItem, track]);
 
   // Fallback restore from localStorage — only when the URL didn't already
   // specify a position (e.g. the operator navigated here fresh from the

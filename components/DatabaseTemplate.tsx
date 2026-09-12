@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpDown, ChevronRight, Search, Copy, Check } from "lucide-react";
 import { EmptyState } from "./EmptyState";
+import { useTrack } from "@/hooks/useTrack";
 
 export interface DbColumn<T> {
   key: keyof T & string;
@@ -21,6 +22,7 @@ export interface DbColumn<T> {
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
+  const track = useTrack();
   return (
     <button
       onClick={async (e) => {
@@ -28,6 +30,7 @@ function CopyButton({ value }: { value: string }) {
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
+          track("copy");
           setTimeout(() => setCopied(false), 1500);
         } catch {
           // Clipboard API unavailable — nothing to fall back to silently

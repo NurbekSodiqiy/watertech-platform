@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
+import { useTrack } from "@/hooks/useTrack";
 
 interface SearchItem {
   category: string;
@@ -29,6 +30,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const track = useTrack();
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +53,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const q = query.trim().toLowerCase();
     return SEARCH_INDEX.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 8);
   }, [query]);
+
+  // Debounced so this logs once per pause in typing, not once per keystroke.
+  useEffect(() => {
+    if (!query.trim()) return;
+    const t = setTimeout(() => {
+      track("search", { meta: { query: query.trim(), resultCount: results?.length ?? 0 } });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [query, results, track]);
 
   function go(path: string) {
     onClose();
