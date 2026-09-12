@@ -431,25 +431,6 @@ function ScriptsPageContent() {
           )}
         </div>
 
-        {/* Always-visible e'tirozlar chip row — one click during a live call,
-            no accordion to open first. Sits directly under the left panel. */}
-        <div className="col-span-12 md:col-span-8 flex flex-wrap items-center gap-2">
-          <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
-          {objections.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => selectObjection(o)}
-              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                selectedObjection?.id === o.id
-                  ? "border-primary bg-primary text-surface shadow-softer"
-                  : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-
         {/* RIGHT PANEL (The "Remote Control") */}
         <div className="col-span-12 md:col-span-4 bg-surface border border-primary-light/50 rounded-2xl p-4 space-y-2 shadow-soft sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
           {activeTab === "faq" ? (
@@ -679,6 +660,31 @@ function ScriptsPageContent() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Always-visible e'tirozlar chip row — one click during a live call,
+            no accordion to open first. Sits directly under the left panel.
+            Placed after both panels in DOM order so the 12-col grid's
+            default (sparse) auto-placement fills row 1 with the left+right
+            panels first, then wraps this col-span-8 row to row 2 — placing
+            it between them instead pushed the right panel into row 2 on its
+            own, where its sticky/max-height styling made it look like a
+            floating card stuck in the bottom-right corner. */}
+        <div className="col-span-12 md:col-span-8 flex flex-wrap items-center gap-2">
+          <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
+          {objections.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => selectObjection(o)}
+              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                selectedObjection?.id === o.id
+                  ? "border-primary bg-primary text-surface shadow-softer"
+                  : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>
