@@ -2,7 +2,9 @@ import { ShieldCheck, Award } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { CERTIFICATES } from "@/lib/content/certificates";
+import { CertificateGrid } from "@/components/CertificateGrid";
 import { CertificateGallery } from "@/components/CertificateGallery";
+import { CertificateLightboxProvider } from "@/components/CertificateLightboxContext";
 
 export default function TechnicalDocsPage() {
   return (
@@ -28,7 +30,10 @@ export default function TechnicalDocsPage() {
         </div>
       </div>
 
-      <CertificateGallery certificates={CERTIFICATES} />
+      <CertificateLightboxProvider>
+        <CertificateGrid certificates={CERTIFICATES} />
+        <CertificateGallery />
+      </CertificateLightboxProvider>
 
       {/* Standartlar va normativ hujjatlar ma'lumotnomasi */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-soft space-y-4">
