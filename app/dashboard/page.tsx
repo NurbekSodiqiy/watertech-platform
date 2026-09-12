@@ -37,7 +37,18 @@ export default async function DashboardPage({
   // Access check happens here, in the page itself — email from the
   // session, role looked up from allowed_users. Not a manager -> home,
   // no error shown (this route also isn't linked from the sidebar yet).
-  const { data: allowedRow } = await supabase.from("allowed_users").select("role").eq("email", user.email).maybeSingle();
+  const { data: allowedRow, error: roleCheckError } = await supabase
+    .from("allowed_users")
+    .select("role")
+    .eq("email", user.email)
+    .maybeSingle();
+  if (roleCheckError) {
+    console.error("[dashboard] role check query failed:", {
+      message: roleCheckError.message,
+      code: roleCheckError.code,
+      hint: roleCheckError.hint,
+    });
+  }
   if (allowedRow?.role !== "manager") redirect("/");
 
   const rawDate = Array.isArray(searchParams.date) ? searchParams.date[0] : searchParams.date;
