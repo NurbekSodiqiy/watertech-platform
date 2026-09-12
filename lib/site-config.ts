@@ -2,6 +2,12 @@ import type { NavNode } from "./types";
 
 export const siteTree: NavNode[] = [
   {
+    title: "Jonli skript va yordamchi",
+    path: "/sales-process/scripts",
+    contentType: "doc",
+    description: "Faol qo'ng'iroq paytida tez kirish uchun eng yuqorida — skriptlar, e'tirozlar, paketlar va raqobatchilar bir joyda.",
+  },
+  {
     title: "Kompaniya",
     path: "/company",
     contentType: "doc",
@@ -33,8 +39,6 @@ export const siteTree: NavNode[] = [
     contentType: "doc",
     description: "Voronka, skriptlar, e'tirozlar bilan ishlash va bitim mexanikasi.",
     children: [
-
-      { title: "Jonli skript va yordamchi", path: "/sales-process/scripts", contentType: "doc" },
       { title: "E'tirozlar", path: "/sales-process/objections", contentType: "database" },
       { title: "Raqobat kartalari", path: "/sales-process/battle-cards", contentType: "database" },
     ],
