@@ -55,7 +55,7 @@ export function DocPageTemplate({
         {children ?? (
           <div className="space-y-3">
             <p className="rounded-lg border border-dashed border-border bg-surface-alt px-4 py-6 text-center text-[13.5px] italic text-text-secondary">
-              [Kontent shu yerga qo'yiladi — bu bo'lim tarkibiy joy egallovchi. “{title}” uchun
+              [Kontent shu yerga qo&apos;yiladi — bu bo&apos;lim tarkibiy joy egallovchi. “{title}” uchun
               haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]
             </p>
           </div>

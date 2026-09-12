@@ -137,10 +137,10 @@ export default function MissionValuesPage() {
             <AccentTextPanel>
               <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-white">Missiya</h2>
               <p className="mb-3 text-[18px] font-medium leading-relaxed text-white md:text-[22px]">
-                "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
+                &quot;Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish.&quot;
               </p>
               <p className="text-[15px] italic text-white/80">
-                Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz.
+                Suv hayot manbai, biz esa uning xavfsiz oqimini ta&apos;minlaymiz.
               </p>
             </AccentTextPanel>
           </div>
@@ -156,7 +156,7 @@ export default function MissionValuesPage() {
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
               <p className="text-[14px] leading-relaxed text-white/80">
-                2030-yilga kelib O'zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o'rnatilgan bo'lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
+                2030-yilga kelib O&apos;zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o&apos;rnatilgan bo&apos;lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
             </AccentTextPanel>
             <AccentIconVisual icon={Vizyon2030Icon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
@@ -169,7 +169,7 @@ export default function MissionValuesPage() {
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">№1</span>
               <p className="text-[14px] leading-relaxed text-white/80">
-                Markaziy Osiyoda muhandislik santexnikasi bo'yicha №1 ekspert-hamkorga aylanish.
+                Markaziy Osiyoda muhandislik santexnikasi bo&apos;yicha №1 ekspert-hamkorga aylanish.
               </p>
             </AccentTextPanel>
           </div>
@@ -184,7 +184,7 @@ export default function MissionValuesPage() {
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Sifat – bu vijdon</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
-                Quvur devorlarining ichida nima borligini mijoz ko'rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
+                Quvur devorlarining ichida nima borligini mijoz ko&apos;rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
             </AccentTextPanel>
             <AccentIconVisual icon={SifatIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
@@ -206,7 +206,7 @@ export default function MissionValuesPage() {
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Xavfsizlik</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
-                Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak.
+                Bizning mahsulotimiz o&apos;rnatilgan joyda suv toshqini bo&apos;lmasligi kerak.
               </p>
             </AccentTextPanel>
             <AccentIconVisual icon={XavfsizlikIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />

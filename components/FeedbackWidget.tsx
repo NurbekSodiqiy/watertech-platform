@@ -14,7 +14,7 @@ export function FeedbackWidget() {
   return (
     <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
       <div className="flex items-center gap-2 text-[13px] text-text-secondary">
-        <span>Bu sahifa foydali bo'ldimi?</span>
+        <span>Bu sahifa foydali bo&apos;ldimi?</span>
         <button
           onClick={() => {
             setVote("up");

@@ -30,11 +30,11 @@ export default function ChangelogPage() {
                 )}
                 <span>Tasdiqlagan: {c.approvedBy}</span>
                 <span className="rounded-full border border-border bg-surface-alt px-2 py-0.5">
-                  O'qildi: {c.readCount}
+                  O&apos;qildi: {c.readCount}
                 </span>
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" className="h-3.5 w-3.5 rounded border-border accent-primary" disabled />
-                  O'qidim
+                  O&apos;qidim
                 </label>
               </div>
             </div>

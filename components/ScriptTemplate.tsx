@@ -56,7 +56,7 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
                     href="/sales-process/objections"
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-surface hover:text-primary-dark"
                   >
-                    E'tirozlar bo'limiga qarang
+                    E&apos;tirozlar bo&apos;limiga qarang
                     <ArrowUpRight size={14} />
                   </Link>
                 </div>

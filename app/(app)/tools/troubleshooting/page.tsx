@@ -77,7 +77,7 @@ export default function StageTransitionPage() {
           </div>
           <div>
             <p className="text-[15px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Sotuv voronkasi</strong> — bu sotuv jarayonlarini tushunish, optimallashtirish va nazorat qilish uchun muhim instrument. U potensial leadning dastlabki xabardorligidan to muvaffaqiyatli xarid amaliyotiga qadar bo'lgan yo'lining vizual va tahliliy ifodasidir. Voronkadagi har bir bo'lak <strong className="text-primary-dark font-medium">status</strong> deb ataladi.
+              <strong className="text-primary-dark font-bold">Sotuv voronkasi</strong> — bu sotuv jarayonlarini tushunish, optimallashtirish va nazorat qilish uchun muhim instrument. U potensial leadning dastlabki xabardorligidan to muvaffaqiyatli xarid amaliyotiga qadar bo&apos;lgan yo&apos;lining vizual va tahliliy ifodasidir. Voronkadagi har bir bo&apos;lak <strong className="text-primary-dark font-medium">status</strong> deb ataladi.
             </p>
           </div>
         </div>

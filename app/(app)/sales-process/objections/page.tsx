@@ -44,7 +44,7 @@ export default function ObjectionsPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-status-warning/40 bg-status-warning/10 p-4">
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-status-warning" />
         <p className="text-[13.5px] text-primary-dark">
-          <strong>Muhim:</strong> "O'ylab ko'raman" yoki "Keyinroq telefon qilaman" kabi maqsadsiz javoblar hech
+          <strong>Muhim:</strong> &quot;O&apos;ylab ko&apos;raman&quot; yoki &quot;Keyinroq telefon qilaman&quot; kabi maqsadsiz javoblar hech
           qachon yakuniy javob sifatida qabul qilinmaydi — operator har doim aniqlashtiruvchi savol bilan davom
           ettirishi kerak.
         </p>

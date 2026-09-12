@@ -33,7 +33,7 @@ export default function AmoCRMPage() {
           <div>
             <h3 className="text-[18px] font-bold text-primary-dark">Asosiy Oltin Qoida</h3>
             <p className="mt-2 text-[15.5px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Agar CRM'da yozilmagan bo'lsa — bo'lmagan deb hisoblanadi!</strong> Barcha qo'ng'iroq, uchrashuv va kelishuvlar CRM'da qayd etilishi shart.
+              <strong className="text-primary-dark font-bold">Agar CRM&apos;da yozilmagan bo&apos;lsa — bo&apos;lmagan deb hisoblanadi!</strong> Barcha qo&apos;ng&apos;iroq, uchrashuv va kelishuvlar CRM&apos;da qayd etilishi shart.
             </p>
           </div>
         </div>
@@ -59,10 +59,10 @@ export default function AmoCRMPage() {
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <ListTodo size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Vazifasiz bitim bo'lmasin</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">Vazifasiz bitim bo&apos;lmasin</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Har bir voronkadagi har bir bitimda (сделка) majburiy vazifa (задача) bo'lishi shart.
+              Har bir voronkadagi har bir bitimda (сделка) majburiy vazifa (задача) bo&apos;lishi shart.
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export default function AmoCRMPage() {
               <h4 className="text-[16px] font-bold text-primary-dark">Lotin alifbosi</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Bitimdagi mijoz ma'lumotlarini har doim lotin alifbosida yozish shart.
+              Bitimdagi mijoz ma&apos;lumotlarini har doim lotin alifbosida yozish shart.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export default function AmoCRMPage() {
               <h4 className="text-[16px] font-bold text-primary-dark">Dublikatlardan saqlaning</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              CRM'da kontaktni bir martadan ko'p kiritmaslik muhim. Barcha aloqalar bitta karta ostida bo'lishi kerak.
+              CRM&apos;da kontaktni bir martadan ko&apos;p kiritmaslik muhim. Barcha aloqalar bitta karta ostida bo&apos;lishi kerak.
             </p>
           </div>
 
@@ -114,7 +114,7 @@ export default function AmoCRMPage() {
               <h4 className="text-[16px] font-bold text-primary-dark">Harakatlarni belgilash</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Har bir qo'ng'iroq, keyingi harakat va vazifani CRM'da belgilang.
+              Har bir qo&apos;ng&apos;iroq, keyingi harakat va vazifani CRM&apos;da belgilang.
             </p>
           </div>
         </div>

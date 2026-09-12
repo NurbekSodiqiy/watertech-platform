@@ -22,7 +22,7 @@ export default function TechnicalDocsPage() {
             <ShieldCheck size={22} />
           </span>
           <div>
-            <h3 className="font-semibold text-status-ok">Davlat reestrida ro'yxatdan o'tgan</h3>
+            <h3 className="font-semibold text-status-ok">Davlat reestrida ro&apos;yxatdan o&apos;tgan</h3>
             <p className="mt-0.5 text-[13px] leading-relaxed text-status-ok/80">
               Barcha sertifikatlar QR kod orqali davlat muvofiqlik tizimida tekshirilishi mumkin.
             </p>
@@ -50,7 +50,7 @@ export default function TechnicalDocsPage() {
           <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-1">
             <span className="font-mono font-bold text-primary">ГОСТ 32415-2013</span>
             <p className="text-text-secondary leading-snug">
-              Bosimli issiq va sovuq suv ta'minoti hamda isitish tizimlari uchun termoplast quvurlar va fitinglar.
+              Bosimli issiq va sovuq suv ta&apos;minoti hamda isitish tizimlari uchun termoplast quvurlar va fitinglar.
             </p>
           </div>
 
@@ -71,7 +71,7 @@ export default function TechnicalDocsPage() {
           <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-1">
             <span className="font-mono font-bold text-primary">ГОСТ 34292-2017</span>
             <p className="text-text-secondary leading-snug">
-              Suv ta'minoti va isitish liniyalari uchun sharli hamda barashekli kranlar.
+              Suv ta&apos;minoti va isitish liniyalari uchun sharli hamda barashekli kranlar.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export default function TechnicalDocsPage() {
           <div className="rounded-xl border border-border bg-surface-alt p-3.5 space-y-1">
             <span className="font-mono font-bold text-primary">Ishlab chiqaruvchi</span>
             <p className="text-text-secondary leading-snug">
-              <strong>WATER-TECH MCHJ</strong> (O'zbekiston, Namangan shahri). Seriyali ishlab chiqarish.
+              <strong>WATER-TECH MCHJ</strong> (O&apos;zbekiston, Namangan shahri). Seriyali ishlab chiqarish.
             </p>
           </div>
         </div>

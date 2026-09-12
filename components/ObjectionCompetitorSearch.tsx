@@ -64,7 +64,7 @@ export function ObjectionCompetitorSearch({ competitors }: { competitors: Compet
                 href={`/sales-process/battle-cards/${selected.id}`}
                 className="flex items-center gap-1 text-[12px] font-medium text-primary hover:text-primary-hover"
               >
-                To'liq karta
+                To&apos;liq karta
                 <ArrowUpRight size={12} />
               </Link>
               <button

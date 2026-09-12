@@ -16,7 +16,7 @@ export default function Error({
       <div className="space-y-2">
         <h1 className="text-[24px] font-bold text-primary-dark">Xatolik yuz berdi</h1>
         <p className="text-[14px] text-text-secondary">
-          Sahifani yuklashda kutilmagan xatolik yuz berdi. Qayta urinib ko'ring.
+          Sahifani yuklashda kutilmagan xatolik yuz berdi. Qayta urinib ko&apos;ring.
         </p>
       </div>
       <button
@@ -24,7 +24,7 @@ export default function Error({
         className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-medium text-surface shadow-softer transition-colors hover:bg-primary-hover"
       >
         <RefreshCw size={16} />
-        Qayta urinib ko'ring
+        Qayta urinib ko&apos;ring
       </button>
     </div>
   );

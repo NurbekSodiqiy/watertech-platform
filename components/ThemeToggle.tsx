@@ -32,7 +32,7 @@ export function ThemeToggle() {
         }`}
       >
         <Sun size={13} />
-        <span className="hidden sm:inline">Yorug'</span>
+        <span className="hidden sm:inline">Yorug&apos;</span>
       </button>
       <button
         onClick={() => setTheme(true)}
@@ -42,7 +42,7 @@ export function ThemeToggle() {
         }`}
       >
         <Moon size={13} />
-        <span className="hidden sm:inline">Qorong'i</span>
+        <span className="hidden sm:inline">Qorong&apos;i</span>
       </button>
     </div>
   );

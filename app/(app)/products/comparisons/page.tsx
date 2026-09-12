@@ -19,7 +19,7 @@ export default function ComparisonsPage() {
         </div>
         <h2 className="text-[22px] font-bold text-primary-dark">Tez orada</h2>
         <p className="max-w-md text-[15px] leading-relaxed text-text-secondary">
-          Bu bo'lim ustida qizg'in ish olib borilmoqda. Yaqin kunlarda barcha raqobatchilar bilan taqqoslash jadvali va tahlillar yuklanadi.
+          Bu bo&apos;lim ustida qizg&apos;in ish olib borilmoqda. Yaqin kunlarda barcha raqobatchilar bilan taqqoslash jadvali va tahlillar yuklanadi.
         </p>
       </div>
     </DocPageTemplate>

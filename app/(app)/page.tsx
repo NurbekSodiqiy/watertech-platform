@@ -37,7 +37,7 @@ export default async function HomePage() {
 
       <div>
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-          Tezkor o'tish
+          Tezkor o&apos;tish
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           {quickAccess.map((item) => (

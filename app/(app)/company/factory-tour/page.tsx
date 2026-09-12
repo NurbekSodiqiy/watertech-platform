@@ -8,7 +8,7 @@ export default function FactoryTourPage() {
         <Breadcrumbs path="/company/factory-tour" />
         <div>
           <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">
-            Zavod bo'ylab sayohat
+            Zavod bo&apos;ylab sayohat
           </h1>
         </div>
       </div>

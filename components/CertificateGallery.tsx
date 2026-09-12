@@ -57,7 +57,7 @@ export function CertificateGallery() {
               title="To'liq o'lchamda ochish"
             >
               <ExternalLink size={15} />
-              <span className="hidden sm:inline">To'liq o'lcham</span>
+              <span className="hidden sm:inline">To&apos;liq o&apos;lcham</span>
             </a>
 
             <a

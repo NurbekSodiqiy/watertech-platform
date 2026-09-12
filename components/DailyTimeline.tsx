@@ -67,15 +67,13 @@ export function DailyTimeline() {
         <div className="absolute bottom-0 left-8 top-0 hidden w-px bg-border sm:block" />
         <div className="absolute bottom-0 left-4 top-0 w-px bg-border sm:hidden" />
         
-        {schedule.map((item, index) => {
+        {schedule.map((item) => {
           const startMins = getTimeMinutes(item.start);
           const endMins = getTimeMinutes(item.end);
           
           let state: "past" | "current" | "future" = "future";
           if (currentMinutes >= endMins) state = "past";
           else if (currentMinutes >= startMins && currentMinutes < endMins) state = "current";
-
-          const isLast = index === schedule.length - 1;
 
           return (
             <div key={item.id} className="relative flex items-start gap-4 pb-6 sm:gap-6">

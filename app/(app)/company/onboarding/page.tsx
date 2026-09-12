@@ -70,7 +70,7 @@ export default function OnboardingPage() {
     if (saved) {
       try {
         setCheckedItems(JSON.parse(saved));
-      } catch (e) {}
+      } catch {}
     }
   }, []);
 
@@ -109,7 +109,7 @@ export default function OnboardingPage() {
         <div className="flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-accent">
           <Lightbulb className="mt-0.5 shrink-0" size={20} />
           <p className="text-[15px] leading-relaxed">
-            <strong>Xush kelibsiz!</strong> Ushbu 4 kunlik rejani bajaring va jamoamizning to'laqonli a'zosiga aylaning.
+            <strong>Xush kelibsiz!</strong> Ushbu 4 kunlik rejani bajaring va jamoamizning to&apos;laqonli a&apos;zosiga aylaning.
           </p>
         </div>
 

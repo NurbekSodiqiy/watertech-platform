@@ -612,7 +612,7 @@ function ScriptsPageContent() {
                 href={`/sales-process/scripts/${activeSalesScript.id}`}
                 className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-surface-alt hover:text-primary-dark"
               >
-                Batafsil ko'rish
+                Batafsil ko&apos;rish
                 <ArrowUpRight size={14} />
               </Link>
 
@@ -675,7 +675,7 @@ function ScriptsPageContent() {
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 pl-6 text-[13px] font-medium text-primary hover:bg-surface hover:text-primary-dark"
                         >
-                          E'tirozlar bo'limiga qarang
+                          E&apos;tirozlar bo&apos;limiga qarang
                           <ArrowUpRight size={13} />
                         </Link>
                       </div>

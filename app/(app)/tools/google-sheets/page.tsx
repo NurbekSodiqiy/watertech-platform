@@ -58,7 +58,7 @@ export default function GoogleSheetsPage() {
             <div>
               <h3 className="text-[17px] font-bold text-primary-dark">Google Sheets Shablon</h3>
               <p className="text-[13.5px] text-text-secondary mt-1.5 max-w-[260px] mx-auto leading-relaxed">
-                Darsda ko'rsatilgan ishchi shablondan nusxa oling va o'z ishingizda foydalaning.
+                Darsda ko&apos;rsatilgan ishchi shablondan nusxa oling va o&apos;z ishingizda foydalaning.
               </p>
             </div>
             {/* TODO: "Shablonni ochish" tugmasi haqiqiy shablon havolasi

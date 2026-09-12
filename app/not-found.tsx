@@ -10,7 +10,7 @@ export default function NotFound() {
       <div className="space-y-2">
         <h1 className="text-[24px] font-bold text-primary-dark">Sahifa topilmadi</h1>
         <p className="text-[14px] text-text-secondary">
-          Siz izlagan sahifa mavjud emas yoki ko'chirilgan bo'lishi mumkin.
+          Siz izlagan sahifa mavjud emas yoki ko&apos;chirilgan bo&apos;lishi mumkin.
         </p>
       </div>
       <Link

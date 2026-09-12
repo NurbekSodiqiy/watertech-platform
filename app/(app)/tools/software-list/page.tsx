@@ -1,10 +1,8 @@
 import { DocPageTemplate } from "@/components/DocPageTemplate";
-import { findNode } from "@/lib/site-config";
 import { Info, Zap, RefreshCw, XCircle } from "lucide-react";
 
 export default function RepeatSalesPage() {
   const path = "/tools/software-list";
-  const node = findNode(path);
 
   const STAGES = [
     {
@@ -57,7 +55,7 @@ export default function RepeatSalesPage() {
           </div>
           <div>
             <p className="text-[15px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Qayta sotuv voronkasi</strong> — birinchi marta xarid qilgan mijozlarni doimiy hamkorga aylantirish, mahsulot qoldiqlarini o'z vaqtida to'ldirish va takroriy buyurtmalarni avtomatlashtirish tizimi.
+              <strong className="text-primary-dark font-bold">Qayta sotuv voronkasi</strong> — birinchi marta xarid qilgan mijozlarni doimiy hamkorga aylantirish, mahsulot qoldiqlarini o&apos;z vaqtida to&apos;ldirish va takroriy buyurtmalarni avtomatlashtirish tizimi.
             </p>
           </div>
         </div>

@@ -19,7 +19,7 @@ export default function RoadmapPage() {
         </div>
         <h2 className="text-[22px] font-bold text-primary-dark">Tez orada</h2>
         <p className="max-w-md text-[15px] leading-relaxed text-text-secondary">
-          Bu bo'lim ustida ish olib borilmoqda. Kompaniyaning mahsulotlar va ishlab chiqarish bo'yicha kelajakdagi rejalari shu yerga yuklanadi.
+          Bu bo&apos;lim ustida ish olib borilmoqda. Kompaniyaning mahsulotlar va ishlab chiqarish bo&apos;yicha kelajakdagi rejalari shu yerga yuklanadi.
         </p>
       </div>
     </DocPageTemplate>
