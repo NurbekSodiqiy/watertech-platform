@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown, ChevronRight, Search } from "lucide-react";
+import { ArrowUpDown, ChevronRight, Search, Copy, Check } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 
 export interface DbColumn<T> {
@@ -11,8 +11,34 @@ export interface DbColumn<T> {
   label: string;
   sortable?: boolean;
   /** Declarative cell renderer — kept data-only so columns stay serializable
-   * when passed from a Server Component into this Client Component. */
-  type?: "text" | "stock" | "link";
+   * when passed from a Server Component into this Client Component.
+   * "longtext" is for prose-length cell values (a full sentence or more)
+   * that need to actually be read at a glance — larger, higher-contrast
+   * text plus a copy-to-clipboard button, instead of the compact table
+   * styling meant for short values like prices or stock status. */
+  type?: "text" | "stock" | "link" | "longtext";
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // Clipboard API unavailable — nothing to fall back to silently
+        }
+      }}
+      aria-label="Nusxalash"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
+    >
+      {copied ? <Check size={13} className="text-status-ok" /> : <Copy size={13} />}
+    </button>
+  );
 }
 
 export interface DbFilter {
@@ -136,8 +162,15 @@ export function DatabaseTemplate<T extends { id: string }>({
                   className={`border-b border-border last:border-0 hover:bg-primary/5 ${linkBase ? "cursor-pointer" : ""}`}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-2.5 text-text-secondary">
-                      {col.type === "stock" ? (
+                    <td key={col.key} className={col.type === "longtext" ? "px-4 py-3 align-top" : "px-4 py-2.5 text-text-secondary"}>
+                      {col.type === "longtext" ? (
+                        <div className="flex items-start gap-2">
+                          <p className="flex-1 whitespace-pre-wrap text-[14px] leading-relaxed text-primary-dark">
+                            {String(row[col.key] ?? "—")}
+                          </p>
+                          <CopyButton value={String(row[col.key] ?? "")} />
+                        </div>
+                      ) : col.type === "stock" ? (
                         <span className={row[col.key] ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
                           {row[col.key] ? "Mavjud" : "Mavjud emas"}
                         </span>

@@ -25,10 +25,10 @@ const rows: ObjectionRow[] = objections.map((o) => ({
 }));
 
 const columns: DbColumn<ObjectionRow>[] = [
-  { key: "objection", label: "E'tiroz", sortable: true },
-  { key: "realMeaning", label: "Nima demoqchi" },
-  { key: "response", label: "Javob" },
-  { key: "followUp", label: "Qo'shimcha / keyingi qadam" },
+  { key: "objection", label: "E'tiroz", sortable: true, type: "longtext" },
+  { key: "realMeaning", label: "Nima demoqchi", type: "longtext" },
+  { key: "response", label: "Javob", type: "longtext" },
+  { key: "followUp", label: "Qo'shimcha / keyingi qadam", type: "longtext" },
   { key: "sourceScripts", label: "Qaysi skriptda" },
 ];
 
