@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import manifest from "../../../public/products/manifest.json";
+import { products } from "@/lib/content/products";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 
@@ -36,7 +36,7 @@ export default function ProductsPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [lightbox]);
 
-  const filteredProducts = manifest.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     // 1. Line filtri
     if (product.line !== activeLine) return false;
     
