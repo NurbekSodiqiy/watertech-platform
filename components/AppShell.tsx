@@ -8,7 +8,6 @@ import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
 import { CommandPalette } from "./CommandPalette";
-import { TelemetryProvider } from "./TelemetryProvider";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -33,7 +32,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <TelemetryProvider />
       <Sidebar />
 
       <AnimatePresence>

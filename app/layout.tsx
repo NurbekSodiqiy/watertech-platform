@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { ThemeScript } from "@/components/ThemeScript";
+import { TelemetryProvider } from "@/components/TelemetryProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeScript />
       </head>
       <body className={`${inter.variable} font-sans text-primary-dark`}>
+        <TelemetryProvider />
         <AppShell>{children}</AppShell>
       </body>
     </html>
