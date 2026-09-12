@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, ChevronLeft, Package, CreditCard, Percent, Truck, Clock, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, Search, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, Search, type LucideIcon } from "lucide-react";
 import { packageGroups } from "@/lib/content/packages";
 import { competitors } from "@/lib/content/competitors";
 import { scripts } from "@/lib/content/scripts";
@@ -15,6 +15,7 @@ import { objectionToTurns } from "@/components/ScriptTurns";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ClientNameProvider } from "@/components/ClientNameContext";
 import { ClientNameInput } from "@/components/ClientNameInput";
+import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 
 // FAQ Data
 type FAQItem = {
@@ -411,13 +412,14 @@ function ScriptsPageContent() {
               <div className="flex flex-col">
                 <div className="mb-8 border-b border-border pb-4">
                   {selectedObjection && selectedScriptStage && (
-                    <button
-                      onClick={() => setSelectedObjection(null)}
-                      className="mb-2 flex items-center gap-1 text-[13px] font-medium text-primary hover:text-primary-hover"
-                    >
-                      <ChevronLeft size={14} />
-                      {selectedScriptStage.label}ga qaytish
-                    </button>
+                    <ObjectionNavButtons
+                      script={activeSalesScript}
+                      currentStage={selectedScriptStage}
+                      onSelectStage={(stage) => {
+                        setSelectedObjection(null);
+                        setSelectedScriptStage(stage);
+                      }}
+                    />
                   )}
                   <h2 className="text-2xl font-bold text-primary-dark">
                     {selectedObjection?.label || selectedScriptStage?.label}
