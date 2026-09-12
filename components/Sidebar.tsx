@@ -12,6 +12,12 @@ import { Logo } from "@/components/Logo";
 
 const COLLAPSE_KEY = "watertech-sidebar-collapsed";
 
+// The one nav item operators need fastest, during a live call — visually
+// set apart from its two group siblings (Kompaniya, Mahsulot va narx) with
+// an accent border, not moved or regrouped. Purely visual; navigation
+// logic and ordering are unchanged.
+const PINNED_PATH = "/sales-process/scripts";
+
 function NavCountBadge({ tone, count }: { tone: "ok" | "warning"; count: number }) {
   return (
     <span
@@ -99,6 +105,7 @@ const NavItem = memo(function NavItem({
   const hasChildren = !!node.children?.length;
   const rowPaddingLeft = 16 + depth * 16;
   const guideLeft = rowPaddingLeft + 8;
+  const isPinned = depth === 0 && node.path === PINNED_PATH;
 
   useEffect(() => {
     if (isAncestor) setOpen(true);
@@ -111,8 +118,8 @@ const NavItem = memo(function NavItem({
         <div
           className={`group relative z-10 flex w-full items-center gap-1 rounded-2xl py-3.5 pr-3 ${
             isActive ? "" : "hover:bg-primary/5"
-          }`}
-          style={{ paddingLeft: `${rowPaddingLeft}px` }}
+          } ${isPinned ? `border-l-[3px] border-l-accent ${isActive ? "" : "bg-accent/5"}` : ""}`}
+          style={{ paddingLeft: `${rowPaddingLeft - (isPinned ? 3 : 0)}px` }}
         >
           <Link
             href={node.path}
@@ -181,6 +188,7 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
   const active = isActive || isAncestor;
   const Icon = contentTypeIcons[node.contentType];
   const hasChildren = !!node.children?.length;
+  const isPinned = node.path === PINNED_PATH;
 
   return (
     <div className="group relative flex justify-center">
@@ -199,6 +207,12 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
         <IconBadge Icon={Icon} active={active} size={40} iconSize={18} />
         {node.locked && (
           <LockIcon size={10} className="absolute right-1 top-1 text-status-warning" />
+        )}
+        {isPinned && (
+          <span
+            className="absolute -bottom-0.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-accent"
+            aria-hidden
+          />
         )}
       </Link>
 
