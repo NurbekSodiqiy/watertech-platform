@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Compass } from "lucide-react";
 import { scripts } from "@/lib/content/scripts";
@@ -165,6 +165,14 @@ function ScriptsPageContent() {
     return selectedScriptStage?.turns ?? null;
   }, [selectedObjection, selectedScriptStage]);
 
+  // The one function that actually opens Call Mode — F2 and the on-screen
+  // "Qo'ng'iroq rejimi" button both call this rather than each having their
+  // own copy. "Call Mode" with nothing selected isn't meaningful, so it's a
+  // no-op until a stage/objection is open.
+  const openCallMode = useCallback(() => {
+    if (selectedScriptStage || selectedObjection) setCallModeOn(true);
+  }, [selectedScriptStage, selectedObjection]);
+
   // Keyboard shortcuts — never while the operator is typing somewhere
   // (client-name field, the competitor search box, CommandPalette's own
   // input). `/` works across all tabs of this page; 1-6/arrows/Esc stay
@@ -188,12 +196,12 @@ function ScriptsPageContent() {
 
       if (activeTab !== "sales_scripts") return;
 
-      // Closing (when already on) doesn't require a stage/objection to
-      // still be selected; opening does — "Call Mode" with nothing to show
-      // isn't meaningful.
+      // Closing (when already on) just turns it off; opening goes through
+      // the same openCallMode() the on-screen button uses.
       if (e.key === "F2") {
         e.preventDefault();
-        setCallModeOn((prev) => (prev ? false : !!(selectedScriptStage || selectedObjection)));
+        if (callModeOn) setCallModeOn(false);
+        else openCallMode();
         return;
       }
 
@@ -235,7 +243,7 @@ function ScriptsPageContent() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection, callModeOn]);
+  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection, callModeOn, openCallMode]);
 
   // Used by the always-visible objection chip row — jumps straight to an
   // objection's response from anywhere, one click, no accordion digging.
@@ -334,6 +342,7 @@ function ScriptsPageContent() {
             setExpandedScriptStageId={setExpandedScriptStageId}
             setIsScriptDropdownOpen={setIsScriptDropdownOpen}
             onSelectStage={handleSelectStage}
+            onOpenCallMode={openCallMode}
           />
         )}
 

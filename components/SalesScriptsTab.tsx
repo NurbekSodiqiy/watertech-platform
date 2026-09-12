@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Dispatch, RefObject, SetStateAction } from "react";
-import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, PhoneCall, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
 import { scripts } from "@/lib/content/scripts";
 import { objections } from "@/lib/content/objections";
 import { competitors } from "@/lib/content/competitors";
@@ -46,6 +46,7 @@ export function SalesScriptsTab({
   setExpandedScriptStageId,
   setIsScriptDropdownOpen,
   onSelectStage,
+  onOpenCallMode,
 }: {
   leftPanelRef: RefObject<HTMLDivElement>;
   activeSalesScript: Script;
@@ -61,6 +62,10 @@ export function SalesScriptsTab({
   setExpandedScriptStageId: Dispatch<SetStateAction<string | null>>;
   setIsScriptDropdownOpen: Dispatch<SetStateAction<boolean>>;
   onSelectStage: (stage: Stage) => void;
+  /** Same open-Call-Mode function F2 already calls — a clickable entry
+   * point for operators whose laptop maps F2 to a hardware function
+   * (screen brightness etc.) before it ever reaches the browser. */
+  onOpenCallMode: () => void;
 }) {
   function toggleScriptStage(stageId: string) {
     setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
@@ -92,9 +97,19 @@ export function SalesScriptsTab({
                   onSelectStage={onSelectStage}
                 />
               )}
-              <h2 className="text-2xl font-bold text-primary-dark">
-                {selectedObjection?.label || selectedScriptStage?.label}
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-2xl font-bold text-primary-dark">
+                  {selectedObjection?.label || selectedScriptStage?.label}
+                </h2>
+                <button
+                  type="button"
+                  onClick={onOpenCallMode}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/20"
+                >
+                  <PhoneCall size={15} />
+                  Qo&apos;ng&apos;iroq rejimi
+                </button>
+              </div>
             </div>
             {selectedObjection && <ObjectionCompetitorSearch competitors={competitors} />}
             {currentTurns && <ScriptTurnList turns={currentTurns} />}
