@@ -1,7 +1,7 @@
 import { DailyTimeline, DailyDateLabel } from "@/components/DailyTimeline";
+import { HomeGreeting } from "@/components/HomeGreeting";
 import Link from "next/link";
 import { Headphones, Package } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 
 const quickAccess = [
   {
@@ -18,20 +18,11 @@ const quickAccess = [
   },
 ];
 
-export default async function HomePage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const displayName =
-    (user?.user_metadata?.full_name as string | undefined) ||
-    (user?.user_metadata?.name as string | undefined) ||
-    "Operator";
-
+export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-[32px] font-extrabold tracking-tight text-primary-dark">Salom, {displayName}</h1>
+        <HomeGreeting />
         <DailyDateLabel />
       </div>
 
