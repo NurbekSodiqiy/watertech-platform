@@ -10,7 +10,13 @@ import type { ScriptTurn } from "@/lib/content/types";
  * not on every unrelated state change elsewhere on the page. Callers must
  * pass a stable `turns` reference (e.g. via useMemo) for the memo to pay
  * off. */
-export const ScriptTurnList = memo(function ScriptTurnList({ turns }: { turns: ScriptTurn[] }) {
+export const ScriptTurnList = memo(function ScriptTurnList({
+  turns,
+  large = false,
+}: {
+  turns: ScriptTurn[];
+  large?: boolean;
+}) {
   const { clientName } = useClientName();
-  return <ScriptTurns turns={turns} clientName={clientName} />;
+  return <ScriptTurns turns={turns} clientName={clientName} large={large} />;
 });

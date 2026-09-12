@@ -17,6 +17,8 @@ import { ClientNameProvider } from "@/components/ClientNameContext";
 import { ClientNameInput } from "@/components/ClientNameInput";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionCompetitorSearch } from "@/components/ObjectionCompetitorSearch";
+import { ObjectionChipRow } from "@/components/ObjectionChipRow";
+import { CallModeOverlay } from "@/components/CallModeOverlay";
 import { useTrack } from "@/hooks/useTrack";
 
 // FAQ Data
@@ -99,6 +101,7 @@ function ScriptsPageContent() {
   const [selectedObjection, setSelectedObjection] = useState<Objection | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
   const [competitorQuery, setCompetitorQuery] = useState("");
+  const [callModeOn, setCallModeOn] = useState(false);
 
   // Set right before a URL->state sync below writes state, so the
   // state->URL push effect (further down) can tell "this state change came
@@ -128,6 +131,16 @@ function ScriptsPageContent() {
   useEffect(() => {
     if (selectedFaqItem) track("faq_view", { entityType: "faq", entityId: selectedFaqItem.question });
   }, [selectedFaqItem, track]);
+  // Skips the mount-time run — callModeOn starts false, and that isn't a
+  // real "left Call Mode" event, just the initial value.
+  const isFirstCallModeRender = useRef(true);
+  useEffect(() => {
+    if (isFirstCallModeRender.current) {
+      isFirstCallModeRender.current = false;
+      return;
+    }
+    track(callModeOn ? "call_mode_on" : "call_mode_off");
+  }, [callModeOn, track]);
 
   // Fallback restore from localStorage — only when the URL didn't already
   // specify a position (e.g. the operator navigated here fresh from the
@@ -230,6 +243,15 @@ function ScriptsPageContent() {
 
       if (activeTab !== "sales_scripts") return;
 
+      // Closing (when already on) doesn't require a stage/objection to
+      // still be selected; opening does — "Call Mode" with nothing to show
+      // isn't meaningful.
+      if (e.key === "F2") {
+        e.preventDefault();
+        setCallModeOn((prev) => (prev ? false : !!(selectedScriptStage || selectedObjection)));
+        return;
+      }
+
       if (e.key >= "1" && e.key <= "6") {
         const stage = activeSalesScript.stages[Number(e.key) - 1];
         if (stage) {
@@ -257,14 +279,18 @@ function ScriptsPageContent() {
         return;
       }
 
-      if (e.key === "Escape" && (selectedObjection || selectedScriptStage)) {
-        setSelectedObjection(null);
-        setSelectedScriptStage(null);
+      if (e.key === "Escape") {
+        if (callModeOn) {
+          setCallModeOn(false);
+        } else if (selectedObjection || selectedScriptStage) {
+          setSelectedObjection(null);
+          setSelectedScriptStage(null);
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection]);
+  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection, callModeOn]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -290,6 +316,14 @@ function ScriptsPageContent() {
     setSelectedObjection(o);
     const stage = activeSalesScript.stages.find((s) => s.objectionIds.includes(o.id));
     if (stage) setSelectedScriptStage(stage);
+  };
+
+  // Shared by ObjectionNavButtons (back/forward out of an objection) and
+  // Call Mode's "Keyingi bosqich" button — picking a stage always leaves
+  // any objection view.
+  const handleSelectStage = (stage: Stage) => {
+    setSelectedObjection(null);
+    setSelectedScriptStage(stage);
   };
 
   const filteredCompetitors = useMemo(
@@ -486,10 +520,7 @@ function ScriptsPageContent() {
                     <ObjectionNavButtons
                       script={activeSalesScript}
                       currentStage={selectedScriptStage}
-                      onSelectStage={(stage) => {
-                        setSelectedObjection(null);
-                        setSelectedScriptStage(stage);
-                      }}
+                      onSelectStage={handleSelectStage}
                     />
                   )}
                   <h2 className="text-2xl font-bold text-primary-dark">
@@ -742,23 +773,27 @@ function ScriptsPageContent() {
             it between them instead pushed the right panel into row 2 on its
             own, where its sticky/max-height styling made it look like a
             floating card stuck in the bottom-right corner. */}
-        <div className="col-span-12 md:col-span-8 flex flex-wrap items-center gap-2">
-          <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
-          {objections.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => selectObjection(o)}
-              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                selectedObjection?.id === o.id
-                  ? "border-primary bg-primary text-surface shadow-softer"
-                  : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
+        <div className="col-span-12 md:col-span-8">
+          <ObjectionChipRow
+            objections={objections}
+            selectedObjectionId={selectedObjection?.id}
+            onSelect={selectObjection}
+          />
         </div>
       </div>
+
+      {callModeOn && (selectedScriptStage || selectedObjection) && currentTurns && (
+        <CallModeOverlay
+          script={activeSalesScript}
+          currentStage={selectedScriptStage}
+          currentObjection={selectedObjection}
+          turns={currentTurns}
+          objections={objections}
+          onSelectStage={handleSelectStage}
+          onSelectObjection={selectObjection}
+          onClose={() => setCallModeOn(false)}
+        />
+      )}
     </div>
     </ClientNameProvider>
   );

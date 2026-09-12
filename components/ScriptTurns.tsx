@@ -179,7 +179,17 @@ export function objectionToTurns(o: Objection): ScriptTurn[] {
   return turns;
 }
 
-export function ScriptTurns({ turns, clientName }: { turns: ScriptTurn[]; clientName?: string }) {
+export function ScriptTurns({
+  turns,
+  clientName,
+  large = false,
+}: {
+  turns: ScriptTurn[];
+  clientName?: string;
+  /** Call Mode reads this at arm's length during a live call — roughly
+   * 1.6x the normal turn text size, nothing else scales. */
+  large?: boolean;
+}) {
   return (
     <div className="space-y-4">
       {turns.map((turn, idx) => {
@@ -212,7 +222,9 @@ export function ScriptTurns({ turns, clientName }: { turns: ScriptTurn[]; client
                 <span className="text-[11px] font-bold uppercase tracking-widest mb-1 text-text-secondary">
                   {isOperator ? "Operator" : "Mijoz"}
                 </span>
-                <div className="text-base leading-relaxed text-primary-dark whitespace-pre-wrap">
+                <div
+                  className={`leading-relaxed text-primary-dark whitespace-pre-wrap ${large ? "text-[26px]" : "text-base"}`}
+                >
                   {withClientName(turn.text, clientName)}
                 </div>
               </div>
