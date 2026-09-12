@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import manifest from "../../../public/products/manifest.json";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
@@ -150,10 +151,12 @@ export default function ProductsPage() {
                     </div>
                   ) : (
                     <>
-                      <img
+                      <Image
                         src={`/products/${product.filename}`}
                         alt={product.name_ru}
-                        className="object-contain w-full h-full"
+                        fill
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                        className="object-contain p-4"
                         onError={() => setImgErrors(prev => ({ ...prev, [product.filename]: true }))}
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-primary-dark/0 group-hover:bg-primary-dark/10 transition-none">
@@ -214,11 +217,13 @@ export default function ProductsPage() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="flex items-center justify-center bg-surface-alt p-4">
-                <img
+              <div className="relative h-[70vh] w-full bg-surface-alt p-4">
+                <Image
                   src={lightbox.src}
                   alt={lightbox.alt}
-                  className="max-h-[70vh] w-auto object-contain"
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 90vw"
+                  className="object-contain"
                 />
               </div>
             </motion.div>

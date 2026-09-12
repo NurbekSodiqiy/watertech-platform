@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { ExternalLink, X, ChevronRight, ChevronLeft, Download } from "lucide-react";
 import { useCertificateLightbox } from "@/components/CertificateLightboxContext";
 
@@ -92,12 +93,14 @@ export function CertificateGallery() {
             </button>
           )}
 
-          <div className="h-full w-full overflow-auto p-4 flex items-center justify-center">
-            <img
+          <div className="relative h-full w-full p-4">
+            <Image
               key={currentImageIndex}
               src={selectedCert.images[currentImageIndex]}
               alt={`${selectedCert.title} - ${currentImageIndex + 1}-bet`}
-              className="max-h-[72vh] w-auto rounded-lg border border-border shadow-soft object-contain"
+              fill
+              sizes="(min-width: 1024px) 60vw, 90vw"
+              className="rounded-lg border border-border shadow-soft object-contain"
             />
           </div>
 

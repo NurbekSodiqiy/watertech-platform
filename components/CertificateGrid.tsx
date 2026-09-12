@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ExternalLink, ZoomIn, Calendar, Building2, FileText, Layers } from "lucide-react";
 import type { CertificateItem } from "@/lib/content/certificates";
 import { CertificateCardTrigger } from "@/components/CertificateCardTrigger";
@@ -19,10 +20,12 @@ export function CertificateGrid({ certificates }: { certificates: CertificateIte
             className="group relative flex h-80 w-full cursor-pointer items-center justify-center overflow-hidden border-b border-border bg-surface-alt p-4"
           >
             <div className="relative h-full w-full">
-              <img
+              <Image
                 src={cert.images[0]}
                 alt={cert.title}
-                className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
               />
             </div>
 
