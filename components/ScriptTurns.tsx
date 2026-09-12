@@ -1,7 +1,12 @@
 "use client";
 
-import { Info, User, Headset } from "lucide-react";
-import type { ScriptTurn, Objection } from "@/lib/content/types";
+import { useState } from "react";
+import Link from "next/link";
+import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
+import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
+import { packageGroups } from "@/lib/content/packages";
+import { competitors } from "@/lib/content/competitors";
+import { faqs } from "@/lib/content/faq";
 
 const CLIENT_NAME_PLACEHOLDER = /_{2,}\s*aka\b/g;
 
@@ -44,6 +49,90 @@ export function withClientName(text: string, clientName?: string) {
     out = out.replace(/\[soat\]/g, () => (soatSeen++ === 0 ? slots.hour1 : slots.hour2));
   }
   return out;
+}
+
+const LINK_TYPE_ICON: Record<ScriptTurnLink["type"], typeof Package> = {
+  package: Package,
+  competitor: Building2,
+  faq: HelpCircle,
+};
+
+/** Looks up the linked package/competitor/FAQ from the existing content
+ * arrays — links only ever reference ids that already exist, no new content
+ * is introduced here. */
+function resolveLinkDetail(link: ScriptTurnLink): { title: string; body: string; href?: string } | null {
+  if (link.type === "competitor") {
+    const c = competitors.find((c) => c.id === link.id);
+    if (!c) return null;
+    return {
+      title: c.name,
+      body: `Maks. chegirma: ${c.maxDiscount} · Raqobat darajasi: ${c.threatLevel}`,
+      href: `/sales-process/battle-cards/${c.id}`,
+    };
+  }
+  if (link.type === "package") {
+    const p = packageGroups.flatMap((g) => g.packages).find((p) => p.id === link.id);
+    if (!p) return null;
+    return { title: p.name, body: `${p.orderVolume} · ${p.estimatedDiscount} chegirma` };
+  }
+  const f = faqs.find((f) => f.id === link.id);
+  if (!f) return null;
+  return { title: f.question, body: f.answer, href: "/faq" };
+}
+
+/** Small inline chip for a ScriptTurn.links entry — toggles a compact
+ * preview of the linked package/competitor/FAQ using data that already
+ * exists, with a link to the full page where one exists (battle-cards,
+ * faq). No navigation state is shared with the host page, so this works
+ * the same whether it's rendered from the interactive scripts view or the
+ * static per-script page. */
+function LinkChip({ link }: { link: ScriptTurnLink }) {
+  const [open, setOpen] = useState(false);
+  const detail = resolveLinkDetail(link);
+  if (!detail) return null;
+  const Icon = LINK_TYPE_ICON[link.type];
+
+  return (
+    <div className="inline-flex flex-col">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
+          open
+            ? "border-primary bg-primary/10 text-primary-dark"
+            : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
+        }`}
+      >
+        <Icon size={12} />
+        {link.label}
+        <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-1.5 max-w-sm rounded-xl border border-border bg-surface-alt p-3">
+          <p className="text-[13px] font-semibold text-primary-dark">{detail.title}</p>
+          <p className="mt-0.5 text-[12.5px] leading-relaxed text-text-secondary">{detail.body}</p>
+          {detail.href && (
+            <Link
+              href={detail.href}
+              className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:text-primary-hover"
+            >
+              Batafsil
+              <ArrowUpRight size={11} />
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TurnLinks({ links }: { links: ScriptTurnLink[] }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {links.map((link, i) => (
+        <LinkChip key={`${link.type}-${link.id}-${i}`} link={link} />
+      ))}
+    </div>
+  );
 }
 
 /** Turns a shared Objection record into the same mijoz → operator → (note)
@@ -97,6 +186,7 @@ export function ScriptTurns({ turns, clientName }: { turns: ScriptTurn[]; client
                 </div>
               </div>
             </div>
+            {turn.links && turn.links.length > 0 && <TurnLinks links={turn.links} />}
           </div>
         );
       })}

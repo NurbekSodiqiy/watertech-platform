@@ -1,5 +1,12 @@
 export type ScriptTurnSpeaker = "operator" | "mijoz" | "note";
 
+export interface ScriptTurnLink {
+  label: string;
+  type: "package" | "competitor" | "faq";
+  /** Id into Package["id"], Competitor["id"] or Faq["id"] depending on type. */
+  id: string;
+}
+
 export interface ScriptTurn {
   speaker: ScriptTurnSpeaker;
   text: string;
@@ -9,6 +16,11 @@ export interface ScriptTurn {
    * yozmagan bo'lsa, murojaat qilish uchun ismingizni bilsam bo'ladimi?)").
    * Render as `(agar ${condition}, ${text})` to reproduce that exact copy. */
   condition?: string;
+  /** Related package/competitor/FAQ entries to surface as inline chips
+   * under this turn. Structural only for now — no script content sets this
+   * yet; which turn should link to which package/competitor is a separate
+   * content decision still to be made. */
+  links?: ScriptTurnLink[];
 }
 
 export interface Stage {
