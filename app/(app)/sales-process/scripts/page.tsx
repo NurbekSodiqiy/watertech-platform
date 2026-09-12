@@ -100,6 +100,12 @@ function ScriptsPageContent() {
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
   const [competitorQuery, setCompetitorQuery] = useState("");
 
+  // Set right before a URL->state sync below writes state, so the
+  // state->URL push effect (further down) can tell "this state change came
+  // from Back/Forward" apart from "the operator just clicked something" and
+  // skip re-pushing the same URL it just read.
+  const isSyncingFromUrl = useRef(false);
+
   // Telemetry — one small effect per "thing being viewed" instead of a
   // track() call duplicated at every place each piece of state can change
   // (direct click, keyboard shortcut, objection nav buttons, URL restore).
@@ -142,11 +148,37 @@ function ScriptsPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-derive script/stage state when the URL changes out from under us —
+  // i.e. the operator pressed Back/Forward. Without this, pushing a new
+  // history entry per stage (below) would change the address bar on Back
+  // but leave the visible stage exactly as it was, since state only ever
+  // read the URL once, at mount.
+  useEffect(() => {
+    const script = urlScriptId ? scripts.find((s) => s.id === urlScriptId) : undefined;
+    if (!script) return;
+    const stage = urlStageId ? script.stages.find((s) => s.id === urlStageId) ?? null : null;
+    const unchanged = script.id === activeSalesScriptId && (stage?.id ?? null) === (selectedScriptStage?.id ?? null);
+    if (unchanged) return;
+    isSyncingFromUrl.current = true;
+    setActiveSalesScriptId(script.id);
+    setSelectedScriptStage(stage);
+    setSelectedObjection(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlScriptId, urlStageId]);
+
   // Keep the URL and localStorage in sync with the current script/stage
   // whenever the operator is on the scripts tab, so both a reload and a
-  // later visit land back in the same place.
+  // later visit land back in the same place. `push` (not `replace`) is
+  // deliberate — each script/stage change gets its own history entry so the
+  // browser's Back button steps back through them one at a time. Skipped
+  // when the change just came FROM the URL (the effect above) so pressing
+  // Back doesn't immediately push a duplicate forward entry.
   useEffect(() => {
     if (activeTab !== "sales_scripts") return;
+    if (isSyncingFromUrl.current) {
+      isSyncingFromUrl.current = false;
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_SCRIPT_KEY, activeSalesScriptId);
       if (selectedScriptStage) localStorage.setItem(STORAGE_STAGE_KEY, selectedScriptStage.id);
@@ -157,7 +189,7 @@ function ScriptsPageContent() {
     const params = new URLSearchParams();
     params.set("script", activeSalesScriptId);
     if (selectedScriptStage) params.set("stage", selectedScriptStage.id);
-    router.replace(`/sales-process/scripts?${params.toString()}`, { scroll: false });
+    router.push(`/sales-process/scripts?${params.toString()}`, { scroll: false });
   }, [activeTab, activeSalesScriptId, selectedScriptStage, router]);
 
   // The left ("TV screen") panel scrolls internally now instead of the
