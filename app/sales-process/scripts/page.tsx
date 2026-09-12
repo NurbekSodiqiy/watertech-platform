@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Package, CreditCard, Percent, Truck, Clock, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, type LucideIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronRight, ChevronLeft, Package, CreditCard, Percent, Truck, Clock, Target, Phone, Wrench, RotateCcw, Check, Compass, Star, ArrowUpRight, Search, type LucideIcon } from "lucide-react";
 import { packageGroups } from "@/lib/content/packages";
 import { competitors } from "@/lib/content/competitors";
 import { scripts } from "@/lib/content/scripts";
@@ -46,8 +47,28 @@ const salesScriptIcons: Record<string, LucideIcon> = {
   "qayta-aloqa": RotateCcw,
 };
 
+// Last opened script/stage — restored on mount from the URL (?script=&stage=)
+// if present, else from localStorage, so an F5 reload or the browser's back
+// button drops the operator back where they were instead of the first stage
+// of the first script every time.
+const STORAGE_SCRIPT_KEY = "watertech-scripts-last-script";
+const STORAGE_STAGE_KEY = "watertech-scripts-last-stage";
+
 export default function ScriptsPage() {
-  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">("faq");
+  return (
+    <Suspense fallback={null}>
+      <ScriptsPageContent />
+    </Suspense>
+  );
+}
+
+function ScriptsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlScriptId = searchParams.get("script");
+  const urlStageId = searchParams.get("stage");
+
+  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">("sales_scripts");
 
   // Savol-javob state
   const [selectedFaqItem, setSelectedFaqItem] = useState<FAQItem | null>(null);
@@ -59,13 +80,59 @@ export default function ScriptsPage() {
   // Raqobatchilar state
   const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
 
-  // Sotuv skriptlari state
-  const [activeSalesScriptId, setActiveSalesScriptId] = useState<string>(scripts[0].id);
+  // Sotuv skriptlari state — initial value comes straight from the URL query
+  // when present (identical on server and client, so this is hydration-safe
+  // unlike reading localStorage during render).
+  const [activeSalesScriptId, setActiveSalesScriptId] = useState<string>(() =>
+    urlScriptId && scripts.some((s) => s.id === urlScriptId) ? urlScriptId : scripts[0].id
+  );
   const activeSalesScript = scripts.find((s) => s.id === activeSalesScriptId) || scripts[0];
-  const [selectedScriptStage, setSelectedScriptStage] = useState<Stage | null>(null);
+  const [selectedScriptStage, setSelectedScriptStage] = useState<Stage | null>(() => {
+    if (!urlScriptId || !urlStageId) return null;
+    const script = scripts.find((s) => s.id === urlScriptId);
+    return script?.stages.find((s) => s.id === urlStageId) ?? null;
+  });
   const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
   const [selectedObjection, setSelectedObjection] = useState<Objection | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+  const [competitorQuery, setCompetitorQuery] = useState("");
+
+  // Fallback restore from localStorage — only when the URL didn't already
+  // specify a position (e.g. the operator navigated here fresh from the
+  // sidebar rather than reloading/returning to a specific stage's link).
+  useEffect(() => {
+    if (urlScriptId) return;
+    try {
+      const savedScriptId = localStorage.getItem(STORAGE_SCRIPT_KEY);
+      const savedStageId = localStorage.getItem(STORAGE_STAGE_KEY);
+      const script = savedScriptId ? scripts.find((s) => s.id === savedScriptId) : undefined;
+      if (!script) return;
+      setActiveSalesScriptId(script.id);
+      setSelectedScriptStage(savedStageId ? script.stages.find((s) => s.id === savedStageId) ?? null : null);
+    } catch {
+      // localStorage unavailable — position just won't be restored
+    }
+    // Restoring is a one-time, mount-only concern.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the URL and localStorage in sync with the current script/stage
+  // whenever the operator is on the scripts tab, so both a reload and a
+  // later visit land back in the same place.
+  useEffect(() => {
+    if (activeTab !== "sales_scripts") return;
+    try {
+      localStorage.setItem(STORAGE_SCRIPT_KEY, activeSalesScriptId);
+      if (selectedScriptStage) localStorage.setItem(STORAGE_STAGE_KEY, selectedScriptStage.id);
+      else localStorage.removeItem(STORAGE_STAGE_KEY);
+    } catch {
+      // localStorage unavailable — position just won't persist
+    }
+    const params = new URLSearchParams();
+    params.set("script", activeSalesScriptId);
+    if (selectedScriptStage) params.set("stage", selectedScriptStage.id);
+    router.replace(`/sales-process/scripts?${params.toString()}`, { scroll: false });
+  }, [activeTab, activeSalesScriptId, selectedScriptStage, router]);
 
   // The left ("TV screen") panel scrolls internally now instead of the
   // whole window — resetting it to the top on selection change no longer
@@ -81,6 +148,51 @@ export default function ScriptsPage() {
     if (selectedObjection) return objectionToTurns(selectedObjection);
     return selectedScriptStage?.turns ?? null;
   }, [selectedObjection, selectedScriptStage]);
+
+  // Keyboard shortcuts — only while on the scripts tab, and never while the
+  // operator is typing somewhere (client-name field, a future search box).
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping || activeTab !== "sales_scripts") return;
+
+      if (e.key >= "1" && e.key <= "6") {
+        const stage = activeSalesScript.stages[Number(e.key) - 1];
+        if (stage) {
+          setSelectedObjection(null);
+          setSelectedScriptStage(stage);
+          setExpandedScriptStageId(null);
+        }
+        return;
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const stages = activeSalesScript.stages;
+        const currentIndex = selectedScriptStage ? stages.findIndex((s) => s.id === selectedScriptStage.id) : -1;
+        const nextIndex =
+          e.key === "ArrowRight"
+            ? Math.min(currentIndex < 0 ? 0 : currentIndex + 1, stages.length - 1)
+            : Math.max(currentIndex < 0 ? 0 : currentIndex - 1, 0);
+        const stage = stages[nextIndex];
+        if (stage) {
+          e.preventDefault();
+          setSelectedObjection(null);
+          setSelectedScriptStage(stage);
+          setExpandedScriptStageId(null);
+        }
+        return;
+      }
+
+      if (e.key === "Escape" && (selectedObjection || selectedScriptStage)) {
+        setSelectedObjection(null);
+        setSelectedScriptStage(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategory((prev) => (prev === category ? null : category));
@@ -98,6 +210,20 @@ export default function ScriptsPage() {
     stage.objectionIds
       .map((id) => objections.find((o) => o.id === id))
       .filter((o): o is Objection => !!o);
+
+  // Used by the always-visible objection chip row — jumps straight to an
+  // objection's response from anywhere, one click, no accordion digging.
+  const selectObjection = (o: Objection) => {
+    setActiveTab("sales_scripts");
+    setSelectedObjection(o);
+    const stage = activeSalesScript.stages.find((s) => s.objectionIds.includes(o.id));
+    if (stage) setSelectedScriptStage(stage);
+  };
+
+  const filteredCompetitors = useMemo(
+    () => competitors.filter((c) => c.name.toLowerCase().includes(competitorQuery.trim().toLowerCase())),
+    [competitorQuery]
+  );
 
   return (
     <ClientNameProvider>
@@ -283,7 +409,16 @@ export default function ScriptsPage() {
               </div>
             ) : (
               <div className="flex flex-col">
-                <div className="mb-8 flex items-center justify-between border-b border-border pb-4">
+                <div className="mb-8 border-b border-border pb-4">
+                  {selectedObjection && selectedScriptStage && (
+                    <button
+                      onClick={() => setSelectedObjection(null)}
+                      className="mb-2 flex items-center gap-1 text-[13px] font-medium text-primary hover:text-primary-hover"
+                    >
+                      <ChevronLeft size={14} />
+                      {selectedScriptStage.label}ga qaytish
+                    </button>
+                  )}
                   <h2 className="text-2xl font-bold text-primary-dark">
                     {selectedObjection?.label || selectedScriptStage?.label}
                   </h2>
@@ -292,6 +427,25 @@ export default function ScriptsPage() {
               </div>
             )
           )}
+        </div>
+
+        {/* Always-visible e'tirozlar chip row — one click during a live call,
+            no accordion to open first. Sits directly under the left panel. */}
+        <div className="col-span-12 md:col-span-8 flex flex-wrap items-center gap-2">
+          <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
+          {objections.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => selectObjection(o)}
+              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                selectedObjection?.id === o.id
+                  ? "border-primary bg-primary text-surface shadow-softer"
+                  : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
 
         {/* RIGHT PANEL (The "Remote Control") */}
@@ -366,22 +520,35 @@ export default function ScriptsPage() {
             ))
           ) : activeTab === "competitors" ? (
             <div className="flex flex-col space-y-2">
-              {competitors.map((comp) => (
-                <button
-                  key={comp.id}
-                  onClick={() => setSelectedCompetitor(comp)}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-colors text-left font-medium ${
-                    selectedCompetitor?.id === comp.id
-                      ? "bg-surface-alt border-primary text-primary-dark"
-                      : "bg-surface border-border hover:bg-surface-alt text-primary-dark"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    {comp.name}
-                  </span>
-                  <ChevronRight className={`w-4 h-4 ${selectedCompetitor?.id === comp.id ? 'text-primary' : 'text-text-secondary'}`} />
-                </button>
-              ))}
+              <div className="relative">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                <input
+                  value={competitorQuery}
+                  onChange={(e) => setCompetitorQuery(e.target.value)}
+                  placeholder="Raqobatchi nomi bo'yicha qidirish…"
+                  className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+                />
+              </div>
+              {filteredCompetitors.length === 0 ? (
+                <p className="px-1 py-4 text-center text-[13px] text-text-secondary">Mos raqobatchi topilmadi.</p>
+              ) : (
+                filteredCompetitors.map((comp) => (
+                  <button
+                    key={comp.id}
+                    onClick={() => setSelectedCompetitor(comp)}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-colors text-left font-medium ${
+                      selectedCompetitor?.id === comp.id
+                        ? "bg-surface-alt border-primary text-primary-dark"
+                        : "bg-surface border-border hover:bg-surface-alt text-primary-dark"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {comp.name}
+                    </span>
+                    <ChevronRight className={`w-4 h-4 ${selectedCompetitor?.id === comp.id ? 'text-primary' : 'text-text-secondary'}`} />
+                  </button>
+                ))
+              )}
             </div>
           ) : (
             // activeTab === "sales_scripts"
@@ -483,7 +650,7 @@ export default function ScriptsPage() {
                             key={o.id}
                             onClick={() => {
                               setSelectedObjection(o);
-                              setSelectedScriptStage(null);
+                              setSelectedScriptStage(stage);
                             }}
                             className={`text-left w-full p-3 rounded-lg hover:bg-surface text-sm transition-colors pl-6 font-medium ${
                               selectedObjection?.id === o.id
