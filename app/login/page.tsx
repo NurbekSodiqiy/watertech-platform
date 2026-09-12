@@ -2,13 +2,10 @@ import { AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { GoogleSignInButton } from "./GoogleSignInButton";
 
-// Fixed, full-viewport overlay: this covers the AppShell chrome (sidebar,
-// topbar) that the root layout still mounts around every route, without
-// having to touch AppShell/TopBar/Sidebar at all — both are design-locked
-// (AGENTS.md) and restructuring the route tree into a shell-less group to
-// avoid this would mean moving every existing page. `position: fixed` is
-// relative to the viewport, not this page's place in the component tree,
-// so it reaches over the shell regardless of nesting.
+// Fixed, full-viewport overlay. AppShell now only mounts inside the
+// app/(app) route group, so this route has no shell to cover any more —
+// kept as a harmless belt-and-braces guard against anything ever being
+// rendered behind it.
 export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
   const notAllowed = searchParams.error === "not_allowed";
 

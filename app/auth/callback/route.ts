@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data: allowedRow, error: allowedError } = await admin
     .from("allowed_users")
-    .select("email")
+    .select("email, role")
     .eq("email", email)
     .maybeSingle();
 
@@ -45,7 +45,8 @@ export async function GET(request: Request) {
   }
 
   if (allowedRow) {
-    return NextResponse.redirect(`${origin}/`);
+    const destination = allowedRow.role === "manager" ? "/dashboard" : "/";
+    return NextResponse.redirect(`${origin}${destination}`);
   }
 
   await supabase.auth.signOut();

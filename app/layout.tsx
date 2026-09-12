@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/AppShell";
 import { ThemeScript } from "@/components/ThemeScript";
 import { TelemetryProvider } from "@/components/TelemetryProvider";
 
@@ -20,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} font-sans text-primary-dark`}>
         <TelemetryProvider />
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

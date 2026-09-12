@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import manifest from "../../public/products/manifest.json";
+import manifest from "../../../public/products/manifest.json";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 
