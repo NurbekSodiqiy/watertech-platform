@@ -135,6 +135,37 @@ function TurnLinks({ links }: { links: ScriptTurnLink[] }) {
   );
 }
 
+/** A conditional note ("agar ismini yozmagan bo'lsa...") is now something
+ * the operator explicitly picks a state for, rather than always-shown
+ * auto-formatted text — closed by default, click to reveal which of the
+ * two situations applies and what to say. No new content: still just
+ * `turn.condition` and `turn.text` as already written. */
+function ConditionNote({ condition, text, clientName }: { condition: string; text: string; clientName?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="mt-1 ml-10 flex flex-col items-start gap-1.5">
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
+          show
+            ? "border-primary bg-primary/10 text-primary-dark"
+            : "border-border bg-surface text-text-secondary hover:border-primary/40 hover:text-primary-dark"
+        }`}
+      >
+        <Info size={12} />
+        Agar {condition}
+        <ChevronDown size={12} className={`transition-transform ${show ? "rotate-180" : ""}`} />
+      </button>
+      {show && (
+        <div className="flex gap-2 text-sm italic text-text-secondary">
+          <span>{withClientName(text, clientName)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Turns a shared Objection record into the same mijoz → operator → (note)
  * turn sequence a script's own turns[] would carry, so an objection looks
  * identical whether it's reached from a script's accordion or shown on its
@@ -153,13 +184,13 @@ export function ScriptTurns({ turns, clientName }: { turns: ScriptTurn[]; client
     <div className="space-y-4">
       {turns.map((turn, idx) => {
         if (turn.speaker === "note") {
-          const text = turn.condition
-            ? `(agar ${turn.condition}, ${turn.text})`
-            : turn.text;
+          if (turn.condition) {
+            return <ConditionNote key={idx} condition={turn.condition} text={turn.text} clientName={clientName} />;
+          }
           return (
             <div key={idx} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
               <Info size={16} className="shrink-0 mt-0.5 opacity-70" />
-              <span>{withClientName(text, clientName)}</span>
+              <span>{withClientName(turn.text, clientName)}</span>
             </div>
           );
         }
