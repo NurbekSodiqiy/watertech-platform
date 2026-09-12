@@ -6,16 +6,6 @@ export default function StageTransitionPage() {
   const path = "/tools/troubleshooting";
   const node = findNode(path);
 
-  const meta = {
-    owner: "Savdo bo'limi",
-    status: "up-to-date" as const,
-    audience: "Operator" as const,
-    level: "Basic" as const,
-    approvedBy: "A. Kessler",
-    updatedDate: "09-sen, 2026",
-    nextReviewDate: "09-dek, 2026"
-  };
-
   const STAGES = [
     {
       num: "01",
@@ -77,7 +67,6 @@ export default function StageTransitionPage() {
       path={path}
       title="amoCRM Sotuv voronkasi va bosqichlar reglamenti"
       description={node?.description}
-      meta={meta}
     >
       <div className="space-y-8">
         

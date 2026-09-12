@@ -6,16 +6,6 @@ export default function RepeatSalesPage() {
   const path = "/tools/software-list";
   const node = findNode(path);
 
-  const meta = {
-    owner: "Savdo bo'limi",
-    status: "up-to-date" as const,
-    audience: "Operator" as const,
-    level: "Basic" as const,
-    approvedBy: "A. Kessler",
-    updatedDate: "09-sen, 2026",
-    nextReviewDate: "09-dek, 2026"
-  };
-
   const STAGES = [
     {
       num: "01",
@@ -57,7 +47,6 @@ export default function RepeatSalesPage() {
       path={path}
       title="Qayta sotuv voronkasi reglamenti"
       description="Mavjud mijozlar bilan qayta aloqa, yangi buyurtmalar olish va avtomatik triggerlar orqali uzluksiz savdoni ta'minlash yo'riqnomasi."
-      meta={meta}
     >
       <div className="space-y-8">
         
