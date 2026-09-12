@@ -223,6 +223,12 @@ export const scripts: Script[] = [
         ],
       },
       {
+        id: "sovuq-5",
+        label: "E'tiroz ustida ishlash",
+        objectionIds: ALL_OBJECTION_IDS,
+        turns: [],
+      },
+      {
         id: "sovuq-4",
         label: "Yakuniy harakat",
         objectionIds: [],
@@ -240,12 +246,6 @@ export const scripts: Script[] = [
           },
           { speaker: "operator", subStepHeader: "Tahlil", text: "Qo'ng'iroqlaringizni tahlil qilib, nimasi ishlaganini va nimani yaxshilash kerakligini aniqlang." },
         ],
-      },
-      {
-        id: "sovuq-5",
-        label: "E'tiroz ustida ishlash",
-        objectionIds: ALL_OBJECTION_IDS,
-        turns: [],
       },
     ]),
   },
