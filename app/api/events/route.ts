@@ -44,7 +44,12 @@ export async function POST(request: Request) {
   const { error } = await admin.from("telemetry_events").insert(rows);
 
   if (error) {
-    console.error("[api/events] insert failed:", error.message);
+    console.error("[api/events] insert failed:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
     return NextResponse.json({ error: "insert failed" }, { status: 500 });
   }
 
