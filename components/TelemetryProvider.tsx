@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { track } from "@/lib/telemetry/client";
 
-/** Tracks page_enter/page_leave purely off route changes — no visible UI,
- * mounted once near the top of AppShell so it sees every navigation. */
+/** Tracks page_enter/page_leave purely off route changes — no visible UI.
+ * Mounted once in app/layout.tsx, as a sibling of AppShell (not inside it —
+ * AppShell.tsx is design-locked, AGENTS.md), so it still sees every
+ * navigation across the whole app. */
 export function TelemetryProvider() {
   const pathname = usePathname();
   const prevPath = useRef<string | null>(null);
