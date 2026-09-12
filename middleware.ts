@@ -40,21 +40,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Managers are confined to /dashboard — any other protected route (typed
-  // in directly, a stale bookmark, etc.) bounces back there. API routes are
+  // Managers are confined to /dashboard, and /dashboard is confined to
+  // managers — this is the one role check for both directions, so a
+  // request already sitting on /dashboard doesn't skip it. API routes are
   // excluded so this never turns a fetch (e.g. telemetry) into a redirect
   // response instead of JSON.
   const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isApi = pathname.startsWith("/api/");
-  if (user?.email && !isDashboard && !isApi && !isPublicPath(pathname)) {
+  if (user?.email && !isApi && !isPublicPath(pathname)) {
     const { data: allowedRow } = await supabase
       .from("allowed_users")
       .select("role")
       .eq("email", user.email)
       .maybeSingle();
-    if (allowedRow?.role === "manager") {
+    const isManager = allowedRow?.role === "manager";
+
+    if (isManager !== isDashboard) {
       const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
+      url.pathname = isManager ? "/dashboard" : "/";
       url.search = "";
       return NextResponse.redirect(url);
     }
