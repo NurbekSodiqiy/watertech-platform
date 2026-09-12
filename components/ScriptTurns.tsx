@@ -5,9 +5,45 @@ import type { ScriptTurn, Objection } from "@/lib/content/types";
 
 const CLIENT_NAME_PLACEHOLDER = /_{2,}\s*aka\b/g;
 
+const UZ_WEEKDAYS = ["yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba"];
+const UZ_MONTHS = [
+  "yanvar", "fevral", "mart", "aprel", "may", "iyun",
+  "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr",
+];
+
+function formatUzDate(d: Date) {
+  return `${UZ_WEEKDAYS[d.getDay()]}, ${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
+}
+
+/** Computed from the viewer's own clock each render — same approach as
+ * DailyTimeline's date/time — so a script proposing a follow-up always
+ * suggests real near-future slots instead of a frozen placeholder. This is
+ * a mechanical default (next two calendar days, two fixed business hours)
+ * for the operator to read out and adjust verbally, not a scheduling rule. */
+function getSuggestedSlots() {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const dayAfter = new Date(now);
+  dayAfter.setDate(now.getDate() + 2);
+  return {
+    slot1: `${formatUzDate(tomorrow)}, soat 10:00`,
+    slot2: `${formatUzDate(dayAfter)}, soat 15:00`,
+    hour1: "10:00",
+    hour2: "15:00",
+  };
+}
+
 export function withClientName(text: string, clientName?: string) {
-  if (!clientName) return text;
-  return text.replace(CLIENT_NAME_PLACEHOLDER, `${clientName} aka`);
+  let out = clientName ? text.replace(CLIENT_NAME_PLACEHOLDER, `${clientName} aka`) : text;
+  if (out.includes("[Kun va Vaqt]") || out.includes("[Boshqa Kun va Vaqt]") || out.includes("[soat]")) {
+    const slots = getSuggestedSlots();
+    out = out.split("[Boshqa Kun va Vaqt]").join(slots.slot2);
+    out = out.split("[Kun va Vaqt]").join(slots.slot1);
+    let soatSeen = 0;
+    out = out.replace(/\[soat\]/g, () => (soatSeen++ === 0 ? slots.hour1 : slots.hour2));
+  }
+  return out;
 }
 
 /** Turns a shared Objection record into the same mijoz → operator → (note)
