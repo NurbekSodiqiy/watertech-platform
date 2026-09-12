@@ -207,14 +207,28 @@ function ScriptsPageContent() {
     return selectedScriptStage?.turns ?? null;
   }, [selectedObjection, selectedScriptStage]);
 
-  // Keyboard shortcuts — only while on the scripts tab, and never while the
-  // operator is typing somewhere (client-name field, a future search box).
+  // Keyboard shortcuts — never while the operator is typing somewhere
+  // (client-name field, the competitor search box, CommandPalette's own
+  // input). `/` works across all tabs of this page; 1-6/arrows/Esc stay
+  // scoped to the sales_scripts tab only.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       const isTyping =
         !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (isTyping || activeTab !== "sales_scripts") return;
+      if (isTyping) return;
+
+      // Opens the existing sitewide CommandPalette rather than a new local
+      // search box — dispatching the same synthetic Ctrl+K keydown its own
+      // listener (in AppShell.tsx) already reacts to, instead of adding a
+      // second copy of that open/close state here.
+      if (e.key === "/") {
+        e.preventDefault();
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+        return;
+      }
+
+      if (activeTab !== "sales_scripts") return;
 
       if (e.key >= "1" && e.key <= "6") {
         const stage = activeSalesScript.stages[Number(e.key) - 1];
