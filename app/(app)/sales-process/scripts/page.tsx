@@ -16,6 +16,7 @@ import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ClientNameProvider } from "@/components/ClientNameContext";
 import { ClientNameInput } from "@/components/ClientNameInput";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
+import { ObjectionCompetitorSearch } from "@/components/ObjectionCompetitorSearch";
 import { useTrack } from "@/hooks/useTrack";
 
 // FAQ Data
@@ -449,6 +450,7 @@ function ScriptsPageContent() {
                     {selectedObjection?.label || selectedScriptStage?.label}
                   </h2>
                 </div>
+                {selectedObjection && <ObjectionCompetitorSearch competitors={competitors} />}
                 {currentTurns && <ScriptTurnList turns={currentTurns} />}
               </div>
             )
