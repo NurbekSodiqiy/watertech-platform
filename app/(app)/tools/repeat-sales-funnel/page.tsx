@@ -1,8 +1,8 @@
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { Info, Zap, RefreshCw, XCircle } from "lucide-react";
 
-export default function RepeatSalesPage() {
-  const path = "/tools/software-list";
+export default function RepeatSalesFunnelPage() {
+  const path = "/tools/repeat-sales-funnel";
 
   const STAGES = [
     {

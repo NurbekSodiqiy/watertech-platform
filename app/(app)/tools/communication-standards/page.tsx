@@ -122,7 +122,7 @@ export default function AmoCRMPage() {
         {/* Keyingi bosqich tugmasi */}
         <div className="mt-8 flex justify-end border-t border-border pt-6">
           <Link
-            href="/tools/troubleshooting"
+            href="/tools/sales-funnel"
             className="group flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[14.5px] font-semibold text-surface shadow-soft transition-all hover:bg-primary-hover hover:shadow-elevated"
           >
             Sotuv varonkasi qadamlari

@@ -2,8 +2,8 @@ import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { findNode } from "@/lib/site-config";
 import { Info, Zap, CheckCircle2 } from "lucide-react";
 
-export default function StageTransitionPage() {
-  const path = "/tools/troubleshooting";
+export default function SalesFunnelPage() {
+  const path = "/tools/sales-funnel";
   const node = findNode(path);
 
   const STAGES = [

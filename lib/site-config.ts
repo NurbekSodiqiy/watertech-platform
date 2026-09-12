@@ -64,8 +64,8 @@ export const siteTree: NavNode[] = [
       },
       { title: "Google Sheets", path: "/tools/google-sheets", contentType: "doc" },
       { title: "amoCRM qo'llanmasi", path: "/tools/communication-standards", contentType: "doc" },
-      { title: "Sotuv varonkasi", path: "/tools/troubleshooting", contentType: "doc" },
-      { title: "Qayta sotuv", path: "/tools/software-list", contentType: "doc" },
+      { title: "Sotuv varonkasi", path: "/tools/sales-funnel", contentType: "doc" },
+      { title: "Qayta sotuv", path: "/tools/repeat-sales-funnel", contentType: "doc" },
     ],
   },
   {
