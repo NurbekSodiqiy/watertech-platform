@@ -223,13 +223,13 @@ export const scripts: Script[] = [
         ],
       },
       {
-        id: "sovuq-5",
+        id: "sovuq-4",
         label: "E'tiroz ustida ishlash",
         objectionIds: ALL_OBJECTION_IDS,
         turns: [],
       },
       {
-        id: "sovuq-4",
+        id: "sovuq-5",
         label: "Yakuniy harakat",
         objectionIds: [],
         turns: [
