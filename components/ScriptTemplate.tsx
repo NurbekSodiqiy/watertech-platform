@@ -7,13 +7,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { PageHeader } from "./DocPageTemplate";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { ScriptTurns, objectionToTurns } from "./ScriptTurns";
-import { objections } from "@/lib/content/objections";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Script, Stage } from "@/lib/content/types";
 import type { PageMeta } from "@/lib/types";
 
 function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; index: number; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const reduce = useReducedMotion();
+  const { objections } = useScriptsContent();
   const stageObjections = stage.objectionIds
     .map((id) => objections.find((o) => o.id === id))
     .filter((o): o is NonNullable<typeof o> => !!o);

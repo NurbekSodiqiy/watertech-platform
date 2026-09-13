@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerSession } from "@/lib/auth/server-session";
+import { getContentBundle } from "@/lib/content/loader";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { EmptyState } from "@/components/EmptyState";
 import {
   aggregatePerOperator,
   aggregateZeroResultSearches,
   aggregateHourly,
+  buildEntityLabelMaps,
   PLANNED_HOURS,
   TOTAL_ONBOARDING_ITEMS,
   todayInTashkent,
@@ -46,7 +48,8 @@ export default async function DashboardPage({
   const { data, error } = await supabase.from("telemetry_events").select("*").gte("ts", startUTC).lt("ts", endUTC);
 
   const rows = (data ?? []) as TelemetryRow[];
-  const operators = aggregatePerOperator(rows, TOTAL_ONBOARDING_ITEMS);
+  const labelMaps = buildEntityLabelMaps(await getContentBundle());
+  const operators = aggregatePerOperator(rows, TOTAL_ONBOARDING_ITEMS, labelMaps);
   const zeroResultSearches = aggregateZeroResultSearches(rows);
   const hourlyActual = aggregateHourly(rows);
 

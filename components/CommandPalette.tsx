@@ -7,7 +7,7 @@ import { Search } from "lucide-react";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
 import { useTrack } from "@/hooks/useTrack";
-import { searchAll, resolveSearchPath, type SearchResultType } from "@/lib/search";
+import { createSearcher, resolveSearchPath, type Searcher, type SearchDoc, type SearchResultType } from "@/lib/search";
 import { normalizeSearchText } from "@/lib/search/normalize";
 
 interface SearchItem {
@@ -47,6 +47,29 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const pathname = usePathname();
   const track = useTrack();
 
+  // Fetched once, on first open, and cached for the rest of the session —
+  // search-index docs don't change while an operator is using the app.
+  const searcherRef = useRef<Searcher | null>(null);
+  const [indexLoading, setIndexLoading] = useState(false);
+  const [, forceRerender] = useState(0);
+
+  useEffect(() => {
+    if (!open || searcherRef.current || indexLoading) return;
+    setIndexLoading(true);
+    fetch("/api/search-index")
+      .then((res) => (res.ok ? (res.json() as Promise<SearchDoc[]>) : Promise.reject(res)))
+      .then((docs) => {
+        searcherRef.current = createSearcher(docs);
+      })
+      .catch(() => {
+        // Falls back to page-title-only matches below if this never loads.
+      })
+      .finally(() => {
+        setIndexLoading(false);
+        forceRerender((n) => n + 1);
+      });
+  }, [open, indexLoading]);
+
   useEffect(() => {
     if (!open) return;
     setQuery("");
@@ -67,7 +90,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     if (!query.trim()) return null;
     const q = normalizeSearchText(query);
     const pageMatches: SearchItem[] = SEARCH_INDEX.filter((i) => normalizeSearchText(i.title).includes(q));
-    const contentMatches: SearchItem[] = searchAll(query, 8).map((r) => ({
+    const contentMatches: SearchItem[] = (searcherRef.current?.searchAll(query, 8) ?? []).map((r) => ({
       category: CONTENT_CATEGORY_LABEL[r.type],
       title: r.title,
       path: resolveSearchPath(r.nav),
@@ -82,7 +105,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       merged.push(item);
     }
     return merged.slice(0, 8);
-  }, [query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, searcherRef.current]);
 
   // Debounced so this logs once per pause in typing, not once per keystroke.
   useEffect(() => {
@@ -146,7 +170,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                     Natijalar
                   </p>
                   <div className="space-y-0.5">
-                    {results.length === 0 && (
+                    {results.length === 0 && indexLoading && (
+                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">Yuklanmoqda…</p>
+                    )}
+                    {results.length === 0 && !indexLoading && (
                       <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">Hech narsa topilmadi.</p>
                     )}
                     {results.map((item) => (

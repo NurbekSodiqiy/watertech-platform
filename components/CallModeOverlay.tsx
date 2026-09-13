@@ -9,7 +9,8 @@ import { ObjectionChipRow } from "@/components/ObjectionChipRow";
 import { CopyButton } from "@/components/CopyButton";
 import { collectOperatorText } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
-import { searchCallMode, type SearchNav } from "@/lib/search";
+import { buildSearchDocs, createSearcher, type SearchNav } from "@/lib/search";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { schedule, CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
 
 function formatElapsed(totalSeconds: number) {
@@ -46,6 +47,8 @@ export function CallModeOverlay({
   onClose: () => void;
 }) {
   const { clientName } = useClientName();
+  const content = useScriptsContent();
+  const searcher = useMemo(() => createSearcher(buildSearchDocs(content)), [content]);
   const [elapsed, setElapsed] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   // Read once, on open — this is a display-only glance at "how far into
@@ -93,7 +96,7 @@ export function CallModeOverlay({
   // Inline results only ever cover objections + stages of the script already
   // open in this Call Mode session — see searchCallMode's own comment for
   // why FAQ/competitor/package aren't offered here.
-  const searchResults = useMemo(() => searchCallMode(searchQuery, script.id), [searchQuery, script.id]);
+  const searchResults = useMemo(() => searcher.searchCallMode(searchQuery, script.id), [searcher, searchQuery, script.id]);
 
   function handleResultClick(nav: SearchNav) {
     if (nav.kind === "objection") {

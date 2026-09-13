@@ -1,8 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { objections } from "@/lib/content/objections";
-import { scripts } from "@/lib/content/scripts";
+import { getObjections, getScripts } from "@/lib/content/loader";
 
 interface ObjectionRow {
   id: string;
@@ -13,17 +12,6 @@ interface ObjectionRow {
   sourceScripts: string;
 }
 
-const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
-
-const rows: ObjectionRow[] = objections.map((o) => ({
-  id: o.id,
-  objection: `"${o.clientSays}"`,
-  realMeaning: o.realMeaning,
-  response: o.response,
-  followUp: o.followUp ?? "—",
-  sourceScripts: o.scriptIds.map((id) => scriptNameById.get(id) ?? id).join(", "),
-}));
-
 const columns: DbColumn<ObjectionRow>[] = [
   { key: "objection", label: "E'tiroz", sortable: true, type: "longtext" },
   { key: "realMeaning", label: "Nima demoqchi", type: "longtext" },
@@ -32,7 +20,18 @@ const columns: DbColumn<ObjectionRow>[] = [
   { key: "sourceScripts", label: "Qaysi skriptda" },
 ];
 
-export default function ObjectionsPage() {
+export default async function ObjectionsPage() {
+  const [objections, scripts] = await Promise.all([getObjections(), getScripts()]);
+  const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
+  const rows: ObjectionRow[] = objections.map((o) => ({
+    id: o.id,
+    objection: `"${o.clientSays}"`,
+    realMeaning: o.realMeaning,
+    response: o.response,
+    followUp: o.followUp ?? "—",
+    sourceScripts: o.scriptIds.map((id) => scriptNameById.get(id) ?? id).join(", "),
+  }));
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader

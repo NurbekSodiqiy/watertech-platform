@@ -1,7 +1,4 @@
-import { scripts } from "@/lib/content/scripts";
-import { objections } from "@/lib/content/objections";
-import { competitors } from "@/lib/content/competitors";
-import { packageGroups } from "@/lib/content/packages";
+import type { ContentBundle } from "@/lib/content/loader";
 import type { TelemetryEventType } from "./types";
 
 /** Shape of a row as it comes back from `telemetry_events` — snake_case,
@@ -44,25 +41,44 @@ export function tashkentDayRangeUTC(dateStr: string): { startUTC: string; endUTC
 // --- Human-readable labels for viewed entities, from data that already
 // exists (no new content) — a raw id like "obj-qimmat" means nothing to a
 // manager glancing at the dashboard.
-const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
-const stageLabelById = new Map(scripts.flatMap((s) => s.stages.map((st) => [st.id, `${s.name} — ${st.label}`] as const)));
-const objectionLabelById = new Map(objections.map((o) => [o.id, o.label]));
-const competitorNameById = new Map(competitors.map((c) => [c.id, c.name]));
-const packageNameById = new Map(packageGroups.flatMap((g) => g.packages.map((p) => [p.id, p.name] as const)));
+export interface EntityLabelMaps {
+  scriptNameById: Map<string, string>;
+  stageLabelById: Map<string, string>;
+  objectionLabelById: Map<string, string>;
+  competitorNameById: Map<string, string>;
+  packageNameById: Map<string, string>;
+}
 
-export function resolveEntityLabel(type: TelemetryEventType, entityId: string | null, path: string): string {
+export function buildEntityLabelMaps(bundle: ContentBundle): EntityLabelMaps {
+  return {
+    scriptNameById: new Map(bundle.scripts.map((s) => [s.id, s.name])),
+    stageLabelById: new Map(
+      bundle.scripts.flatMap((s) => s.stages.map((st) => [st.id, `${s.name} — ${st.label}`] as const))
+    ),
+    objectionLabelById: new Map(bundle.objections.map((o) => [o.id, o.label])),
+    competitorNameById: new Map(bundle.competitors.map((c) => [c.id, c.name])),
+    packageNameById: new Map(bundle.packageGroups.flatMap((g) => g.packages.map((p) => [p.id, p.name] as const))),
+  };
+}
+
+export function resolveEntityLabel(
+  type: TelemetryEventType,
+  entityId: string | null,
+  path: string,
+  maps: EntityLabelMaps
+): string {
   if (!entityId) return path;
   switch (type) {
     case "script_select":
-      return scriptNameById.get(entityId) ?? entityId;
+      return maps.scriptNameById.get(entityId) ?? entityId;
     case "stage_view":
-      return stageLabelById.get(entityId) ?? entityId;
+      return maps.stageLabelById.get(entityId) ?? entityId;
     case "objection_view":
-      return objectionLabelById.get(entityId) ?? entityId;
+      return maps.objectionLabelById.get(entityId) ?? entityId;
     case "competitor_view":
-      return competitorNameById.get(entityId) ?? entityId;
+      return maps.competitorNameById.get(entityId) ?? entityId;
     case "package_view":
-      return packageNameById.get(entityId) ?? entityId;
+      return maps.packageNameById.get(entityId) ?? entityId;
     case "faq_view":
       return entityId; // already the question text — see scripts/page.tsx tracking
     default:
@@ -122,7 +138,7 @@ function computeIdleMs(rows: TelemetryRow[]): number {
   return total;
 }
 
-export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: number): OperatorSummary[] {
+export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: number, maps: EntityLabelMaps): OperatorSummary[] {
   const byEmail = new Map<string, TelemetryRow[]>();
   for (const r of rows) {
     if (!byEmail.has(r.user_email)) byEmail.set(r.user_email, []);
@@ -138,7 +154,7 @@ export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: numbe
     for (const e of evs) {
       if (!VIEW_TYPES.has(e.type)) continue;
       const key = `${e.type}:${e.entity_id ?? e.path}`;
-      const label = resolveEntityLabel(e.type, e.entity_id, e.path);
+      const label = resolveEntityLabel(e.type, e.entity_id, e.path, maps);
       const existing = counts.get(key);
       if (existing) existing.count += 1;
       else counts.set(key, { label, count: 1 });

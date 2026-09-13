@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { competitors } from "@/lib/content/competitors";
+import { getCompetitors } from "@/lib/content/loader";
 import type { Competitor } from "@/lib/content/types";
 
 const columns: DbColumn<Competitor>[] = [
@@ -10,7 +10,8 @@ const columns: DbColumn<Competitor>[] = [
   { key: "threatLevel", label: "Raqobat darajasi", sortable: true },
 ];
 
-export default function BattleCardsPage() {
+export default async function BattleCardsPage() {
+  const competitors = await getCompetitors();
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader

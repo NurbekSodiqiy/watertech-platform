@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Package, CreditCard, Truck, type LucideIcon } from "lucide-react";
-import { faqs } from "@/lib/content/faq";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { useTrack } from "@/hooks/useTrack";
 import { CopyButton } from "@/components/CopyButton";
+import type { Faq } from "@/lib/content/types";
 
 type FAQItem = { question: string; answer: string };
 type FAQCategory = { id: string; name: string; questions: FAQItem[] };
 
-const faqData: FAQCategory[] = Array.from(new Set(faqs.map((f) => f.category))).map((category) => ({
-  id: category,
-  name: category,
-  questions: faqs.filter((f) => f.category === category).map((f) => ({ question: f.question, answer: f.answer })),
-}));
+function buildFaqData(faqs: Faq[]): FAQCategory[] {
+  return Array.from(new Set(faqs.map((f) => f.category))).map((category) => ({
+    id: category,
+    name: category,
+    questions: faqs.filter((f) => f.category === category).map((f) => ({ question: f.question, answer: f.answer })),
+  }));
+}
 
 const faqCategoryIcons: Record<string, LucideIcon> = {
   "Mahsulot haqida": Package,
@@ -25,6 +28,8 @@ const faqCategoryIcons: Record<string, LucideIcon> = {
  * own selection state; remounts (and so resets) whenever the operator
  * switches away and back, same as the inline ternary it replaced. */
 export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
+  const { faqs } = useScriptsContent();
+  const faqData = useMemo(() => buildFaqData(faqs), [faqs]);
   const [selectedFaqItem, setSelectedFaqItem] = useState<FAQItem | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const track = useTrack();

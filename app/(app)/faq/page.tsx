@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/DocPageTemplate";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { faqs } from "@/lib/content/faq";
+import { getFaqs } from "@/lib/content/loader";
 import type { Faq } from "@/lib/content/types";
 import { contacts } from "@/lib/mock-data/contacts";
 import { MessageCircle } from "lucide-react";
@@ -11,9 +11,10 @@ const columns: DbColumn<Faq>[] = [
   { key: "answer", label: "Javob" },
 ];
 
-const categories = Array.from(new Set(faqs.map((f) => f.category)));
+export default async function FaqPage() {
+  const faqs = await getFaqs();
+  const categories = Array.from(new Set(faqs.map((f) => f.category)));
 
-export default function FaqPage() {
   // Closest-matching contact for knowledge-base questions (topic explicitly
   // mentions "bilimlar bazasi bo'yicha so'rovlar") — read live from the
   // Kontaktlar page's own data rather than a hardcoded value.

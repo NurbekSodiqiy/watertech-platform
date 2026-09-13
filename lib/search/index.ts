@@ -1,9 +1,5 @@
 import Fuse from "fuse.js";
-import { scripts } from "@/lib/content/scripts";
-import { objections } from "@/lib/content/objections";
-import { faqs } from "@/lib/content/faq";
-import { competitors } from "@/lib/content/competitors";
-import { packageGroups } from "@/lib/content/packages";
+import type { ContentBundle } from "@/lib/content/loader";
 import { normalizeSearchText } from "@/lib/search/normalize";
 
 export type SearchResultType = "objection" | "script_stage" | "faq" | "competitor" | "package";
@@ -35,7 +31,7 @@ export interface SearchDoc {
   body: string;
 }
 
-function findStageFor(objectionId: string): { scriptId: string; stageId: string } | null {
+function findStageFor(scripts: ContentBundle["scripts"], objectionId: string): { scriptId: string; stageId: string } | null {
   for (const script of scripts) {
     const stage = script.stages.find((s) => s.objectionIds.includes(objectionId));
     if (stage) return { scriptId: script.id, stageId: stage.id };
@@ -43,11 +39,15 @@ function findStageFor(objectionId: string): { scriptId: string; stageId: string 
   return null;
 }
 
-function buildDocs(): SearchDoc[] {
+/** Builds the flat, Fuse-ready document set from a content bundle. Pure —
+ * no module-level cache here; callers (the /api/search-index route, Call
+ * Mode) decide their own caching strategy. */
+export function buildSearchDocs(bundle: ContentBundle): SearchDoc[] {
+  const { scripts, objections, faqs, competitors, packageGroups } = bundle;
   const docs: SearchDoc[] = [];
 
   for (const objection of objections) {
-    const stageRef = findStageFor(objection.id);
+    const stageRef = findStageFor(scripts, objection.id);
     if (!stageRef) continue; // no script currently surfaces it — nothing to navigate to
     docs.push({
       id: `objection:${objection.id}`,
@@ -127,25 +127,6 @@ function buildDocs(): SearchDoc[] {
   return docs;
 }
 
-let cache: { docs: SearchDoc[]; fuse: Fuse<SearchDoc> } | null = null;
-
-function getIndex(): { docs: SearchDoc[]; fuse: Fuse<SearchDoc> } {
-  if (!cache) {
-    const docs = buildDocs();
-    const fuse = new Fuse(docs, {
-      keys: [
-        { name: "keywords", weight: 0.5 },
-        { name: "searchTitle", weight: 0.3 },
-        { name: "body", weight: 0.2 },
-      ],
-      threshold: 0.35,
-      ignoreLocation: true,
-    });
-    cache = { docs, fuse };
-  }
-  return cache;
-}
-
 export interface SearchResult {
   id: string;
   type: SearchResultType;
@@ -158,33 +139,55 @@ function toResult(doc: SearchDoc): SearchResult {
   return { id: doc.id, type: doc.type, title: doc.title, snippet: doc.snippet, nav: doc.nav };
 }
 
-/** Site-wide search — used by CommandPalette. */
-export function searchAll(query: string, limit = 8): SearchResult[] {
-  const q = normalizeSearchText(query);
-  if (!q) return [];
-  return getIndex()
-    .fuse.search(q)
-    .slice(0, limit)
-    .map((r) => toResult(r.item));
+export interface Searcher {
+  /** Site-wide search — used by CommandPalette. */
+  searchAll(query: string, limit?: number): SearchResult[];
+  /** Call Mode's inline search: deliberately narrower than searchAll. Call
+   * Mode's fixed layout only ever renders an objection or the current
+   * script's stages (see CallModeOverlay.tsx) — it has no FAQ/competitor/
+   * package panel to navigate to without leaving that layout, so those
+   * types are left to Ctrl+K instead of being shown here as dead-end
+   * results. */
+  searchCallMode(query: string, currentScriptId: string, limit?: number): SearchResult[];
 }
 
-/** Call Mode's inline search: deliberately narrower than searchAll. Call
- * Mode's fixed layout only ever renders an objection or the current
- * script's stages (see CallModeOverlay.tsx) — it has no FAQ/competitor/
- * package panel to navigate to without leaving that layout, so those types
- * are left to Ctrl+K instead of being shown here as dead-end results. */
-export function searchCallMode(query: string, currentScriptId: string, limit = 6): SearchResult[] {
-  const q = normalizeSearchText(query);
-  if (!q) return [];
-  return getIndex()
-    .fuse.search(q)
-    .filter(
-      (r) =>
-        r.item.type === "objection" ||
-        (r.item.type === "script_stage" && r.item.nav.kind === "script_stage" && r.item.nav.scriptId === currentScriptId)
-    )
-    .slice(0, limit)
-    .map((r) => toResult(r.item));
+/** Builds a Fuse index once for the given docs — callers hold onto the
+ * returned Searcher (e.g. in a useMemo/useRef) rather than rebuilding it on
+ * every keystroke. */
+export function createSearcher(docs: SearchDoc[]): Searcher {
+  const fuse = new Fuse(docs, {
+    keys: [
+      { name: "keywords", weight: 0.5 },
+      { name: "searchTitle", weight: 0.3 },
+      { name: "body", weight: 0.2 },
+    ],
+    threshold: 0.35,
+    ignoreLocation: true,
+  });
+
+  return {
+    searchAll(query, limit = 8) {
+      const q = normalizeSearchText(query);
+      if (!q) return [];
+      return fuse
+        .search(q)
+        .slice(0, limit)
+        .map((r) => toResult(r.item));
+    },
+    searchCallMode(query, currentScriptId, limit = 6) {
+      const q = normalizeSearchText(query);
+      if (!q) return [];
+      return fuse
+        .search(q)
+        .filter(
+          (r) =>
+            r.item.type === "objection" ||
+            (r.item.type === "script_stage" && r.item.nav.kind === "script_stage" && r.item.nav.scriptId === currentScriptId)
+        )
+        .slice(0, limit)
+        .map((r) => toResult(r.item));
+    },
+  };
 }
 
 /** Resolves a result's nav target to a URL for CommandPalette, which can

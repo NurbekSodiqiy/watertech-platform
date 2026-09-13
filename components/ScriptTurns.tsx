@@ -4,9 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
 import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
-import { packageGroups } from "@/lib/content/packages";
-import { competitors } from "@/lib/content/competitors";
-import { faqs } from "@/lib/content/faq";
+import type { ContentBundle } from "@/lib/content/loader";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { CopyButton } from "@/components/CopyButton";
 import { useNow } from "@/hooks/useNow";
 
@@ -78,12 +77,15 @@ const LINK_TYPE_ICON: Record<ScriptTurnLink["type"], typeof Package> = {
   faq: HelpCircle,
 };
 
-/** Looks up the linked package/competitor/FAQ from the existing content
- * arrays — links only ever reference ids that already exist, no new content
- * is introduced here. */
-function resolveLinkDetail(link: ScriptTurnLink): { title: string; body: string; href?: string } | null {
+/** Looks up the linked package/competitor/FAQ from the content bundle — links
+ * only ever reference ids that already exist, no new content is introduced
+ * here. */
+function resolveLinkDetail(
+  link: ScriptTurnLink,
+  content: Pick<ContentBundle, "packageGroups" | "competitors" | "faqs">
+): { title: string; body: string; href?: string } | null {
   if (link.type === "competitor") {
-    const c = competitors.find((c) => c.id === link.id);
+    const c = content.competitors.find((c) => c.id === link.id);
     if (!c) return null;
     return {
       title: c.name,
@@ -92,11 +94,11 @@ function resolveLinkDetail(link: ScriptTurnLink): { title: string; body: string;
     };
   }
   if (link.type === "package") {
-    const p = packageGroups.flatMap((g) => g.packages).find((p) => p.id === link.id);
+    const p = content.packageGroups.flatMap((g) => g.packages).find((p) => p.id === link.id);
     if (!p) return null;
     return { title: p.name, body: `${p.orderVolume} · ${p.estimatedDiscount} chegirma` };
   }
-  const f = faqs.find((f) => f.id === link.id);
+  const f = content.faqs.find((f) => f.id === link.id);
   if (!f) return null;
   return { title: f.question, body: f.answer, href: "/faq" };
 }
@@ -109,7 +111,8 @@ function resolveLinkDetail(link: ScriptTurnLink): { title: string; body: string;
  * static per-script page. */
 function LinkChip({ link }: { link: ScriptTurnLink }) {
   const [open, setOpen] = useState(false);
-  const detail = resolveLinkDetail(link);
+  const content = useScriptsContent();
+  const detail = resolveLinkDetail(link, content);
   if (!detail) return null;
   const Icon = LINK_TYPE_ICON[link.type];
 

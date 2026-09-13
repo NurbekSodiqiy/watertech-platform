@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import { Search, ChevronRight } from "lucide-react";
-import { competitors } from "@/lib/content/competitors";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Competitor } from "@/lib/content/types";
 import { CompetitorDetailPanel } from "@/components/CompetitorDetailPanel";
 import { useTrack } from "@/hooks/useTrack";
@@ -11,6 +11,7 @@ import { useTrack } from "@/hooks/useTrack";
  * search state; remounts (and so resets) whenever the operator switches
  * away and back, same as the inline ternary it replaced. */
 export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
+  const { competitors } = useScriptsContent();
   const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
   const [competitorQuery, setCompetitorQuery] = useState("");
   const track = useTrack();
@@ -25,7 +26,7 @@ export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLD
 
   const filteredCompetitors = useMemo(
     () => competitors.filter((c) => c.name.toLowerCase().includes(competitorQuery.trim().toLowerCase())),
-    [competitorQuery]
+    [competitors, competitorQuery]
   );
 
   return (

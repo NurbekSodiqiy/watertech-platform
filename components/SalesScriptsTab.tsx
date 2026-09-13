@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, PhoneCall, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
-import { scripts } from "@/lib/content/scripts";
-import { objections } from "@/lib/content/objections";
-import { competitors } from "@/lib/content/competitors";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionCompetitorSearch } from "@/components/ObjectionCompetitorSearch";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
@@ -21,7 +19,7 @@ const salesScriptIcons: Record<string, LucideIcon> = {
   "qayta-aloqa": RotateCcw,
 };
 
-function objectionsForStage(stage: Stage): Objection[] {
+function objectionsForStage(stage: Stage, objections: Objection[]): Objection[] {
   return stage.objectionIds
     .map((id) => objections.find((o) => o.id === id))
     .filter((o): o is Objection => !!o);
@@ -57,6 +55,7 @@ export function SalesScriptsTab({
   onOpenCallMode: () => void;
 }) {
   const { clientName } = useClientName();
+  const { scripts, objections, competitors } = useScriptsContent();
   const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
 
@@ -175,7 +174,7 @@ export function SalesScriptsTab({
 
           <div className="rounded-xl border border-border overflow-hidden">
             {activeSalesScript.stages.map((stage, index) => {
-              const stageObjections = objectionsForStage(stage);
+              const stageObjections = objectionsForStage(stage, objections);
               const isAccordion = stageObjections.length > 0;
               return (
                 <div key={stage.id} className={index !== 0 ? "border-t border-border" : ""}>

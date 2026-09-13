@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type RefObject } from "react";
 import { Package, CreditCard, Percent, Truck, Clock, Star, ChevronRight } from "lucide-react";
-import { packageGroups } from "@/lib/content/packages";
+import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Package as PackageItem } from "@/lib/content/types";
 import { useTrack } from "@/hooks/useTrack";
 import { CopyButton } from "@/components/CopyButton";
@@ -24,6 +24,7 @@ function packageSummaryText(pkg: PackageItem): string {
  * state; remounts (and so resets) whenever the operator switches away and
  * back, same as the inline ternary it replaced. */
 export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
+  const { packageGroups } = useScriptsContent();
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
   const track = useTrack();
 
