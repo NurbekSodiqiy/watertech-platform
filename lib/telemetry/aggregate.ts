@@ -1,5 +1,8 @@
 import type { ContentBundle } from "@/lib/content/loader";
+import { dailySchedule } from "@/lib/content/daily-schedule";
 import type { TelemetryEventType } from "./types";
+
+export { TOTAL_ONBOARDING_ITEMS } from "@/lib/content/onboarding";
 
 /** Shape of a row as it comes back from `telemetry_events` — snake_case,
  * unlike the client-side TelemetryEvent. */
@@ -85,13 +88,6 @@ export function resolveEntityLabel(
       return entityId;
   }
 }
-
-// Mirrors app/company/onboarding/page.tsx's DAYS array (7+5+5+6 items).
-// Not imported from there directly — Next.js's generated page types only
-// allow a page.tsx module to export its recognized special names
-// (default, metadata, etc.), so an arbitrary named export from a page file
-// fails typechecking. Update this alongside DAYS if the checklist changes.
-export const TOTAL_ONBOARDING_ITEMS = 23;
 
 const VIEW_TYPES: ReadonlySet<TelemetryEventType> = new Set([
   "script_select",
@@ -202,18 +198,16 @@ export function aggregateZeroResultSearches(rows: TelemetryRow[]): { query: stri
     .sort((a, b) => b.count - a.count);
 }
 
-// Mirrors DailyTimeline's own `schedule` (components/DailyTimeline.tsx),
-// duplicated rather than imported since that array isn't exported and
-// touching that file isn't warranted just for this. Update both together
-// if the daily plan changes.
-export const PLANNED_HOURS: { startHour: number; endHour: number; task: string }[] = [
-  { startHour: 9, endHour: 10, task: "Kunni rejalashtirish" },
-  { startHour: 9, endHour: 11, task: "Yangi lidlarga qo'ng'iroq" },
-  { startHour: 11, endHour: 12, task: "CRM topshiriqlari" },
-  { startHour: 13, endHour: 14, task: "Yangi lidlarga qo'ng'iroq" },
-  { startHour: 14, endHour: 16, task: "Qayta aloqa" },
-  { startHour: 16, endHour: 17, task: "Hisobot va tekshiruv" },
-];
+export const PLANNED_HOURS: { startHour: number; endHour: number; task: string }[] = dailySchedule
+  .filter((item) => !item.isLunch)
+  .map((item) => {
+    const [endH, endM] = item.end.split(":").map(Number);
+    return {
+      startHour: parseInt(item.start, 10),
+      endHour: Math.ceil((endH * 60 + endM) / 60),
+      task: item.task,
+    };
+  });
 
 /** Actual event counts per Tashkent-local hour, for comparing against
  * PLANNED_HOURS. Server-side `Date#getHours()` follows the server's own

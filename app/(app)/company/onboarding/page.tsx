@@ -4,60 +4,7 @@ import { useState, useEffect } from "react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Lightbulb, CheckSquare, Square, ChevronDown, Calendar } from "lucide-react";
 import { useTrack } from "@/hooks/useTrack";
-
-const DAYS = [
-  {
-    day: 1,
-    title: "Biz haqimizda va mahsulot",
-    objective: "Kompaniyaning \"DNK\"sini tushunish va o'z o'rnini anglash.",
-    items: [
-      "Kompaniya haqida ma'lumot",
-      "Watertech'ning bozordagi o'rni: biz kimmiz va nima qilamiz?",
-      "Asosiy 3 ta mahsulotimizning qiymat taklifi (Value Proposition).",
-      "Eng asosiy raqobatchimiz va bizning undan farqimiz.",
-      "Jamoa bilan tushlik.",
-      "Mahsulot katalogi bilan tanishuv",
-      "Kompaniyaning operatorlari bilan suhbat. Ularning muvaffaqiyat sirlari, eng katta xatolari va amaliy maslahatlari."
-    ]
-  },
-  {
-    day: 2,
-    title: "Mahsulotni o'rganishga sho'ng'ish",
-    objective: "Mahsulotni shunday o'rganishki, uni mijozga ishonch bilan sota olsin.",
-    items: [
-      "<strong>\"Injener bilan suhbat\"</strong> Yetakchi texnik mutaxassis bilan amaliy sessiya.",
-      "Mahsulotlarning ishlash prinsipini jonli ko'rish (demo-stendda).",
-      "Mijozlar duch keladigan eng keng tarqalgan 5 ta texnik muammo va ularning yechimi.",
-      "Call operator bilishi shart bo'lgan eng muhim texnik parametrlar.",
-      "14:00 - 17:00: <strong>\"Raqobatchini \"yanchib tashlash\"\"</strong>. Raqobatchilarning mahsulotlari bilan biznikini yonma-yon taqqoslash. Mijozning e'tirozlariga tayyorlanish (\"Sizlarniki qimmat\", \"Raqobatchingizda bu funksiya bor\")."
-    ]
-  },
-  {
-    day: 3,
-    title: "Mijoz va CRM",
-    objective: "Ideal mijoz kimligini anglash va u bilan ishlash qurollarini o'zlashtirish.",
-    items: [
-      "<strong>\"Ideal mijoz portreti\"</strong>. CRM tizimini tahlil qilish.",
-      "CRM videodarsliklarini ko'rib chiqish",
-      "Eng daromadli 5 ta mijozning tarixini o'rganish: ular qanday kelgan, nima sotib olgan, qanday muammosi hal bo'lgan?",
-      "12:00 - 13:00: Tushlik.",
-      "14:00 - 17:00: <strong>\"Jonli efir\"</strong>. Tajribali operatorning mijoz bilan bo'layotgan jonli suhbatini (telefon yoki uchrashuv) kuzatish. Suhbatdan so'ng 30 daqiqalik \"tahlil\" sessiyasi: nima yaxshi bo'ldi, nimani boshqacha qilish mumkin edi?"
-    ]
-  },
-  {
-    day: 4,
-    title: "Savdo Qurollari va Amaliyot",
-    objective: "Bilimlarni amaliy ko'nikmaga aylantirish.",
-    items: [
-      "<strong>\"Menejerning \"chemodani\"\"</strong>. Savdo jarayonida ishlatiladigan barcha andoza va materiallarni o'rganish: tijorat taklifi (KP), shartnoma, taqdimot sladi, marketing materiallari.",
-      "Tushlik.",
-      "Standartlar bilan tanishish",
-      "<strong>\"Jang maydonida repetitsiya\"</strong>. Savdo Direktori bilan \"role-play\" (rolli o'yin).",
-      "Potensial mijoz bilan ilk qo'ng'iroq va uchrashuv simulyatsiyasi.",
-      "Konstruktiv fikr-mulohazalar olish."
-    ]
-  }
-];
+import { onboardingDays } from "@/lib/content/onboarding";
 
 export default function OnboardingPage() {
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
@@ -149,7 +96,7 @@ export default function OnboardingPage() {
 
         {/* Call operator 4-day program — merged in from the former /company/onboarding/call-operator page */}
         <section className="space-y-4">
-          {DAYS.map((dayData) => {
+          {onboardingDays.map((dayData) => {
             const isOpen = openDay === dayData.day;
             return (
               <div key={dayData.day} className="overflow-hidden rounded-2xl border border-border shadow-soft">
@@ -182,7 +129,10 @@ export default function OnboardingPage() {
                       {dayData.items.map((item, idx) => (
                         <li key={idx} className="flex gap-2.5 text-[14.5px] leading-relaxed text-text-secondary">
                           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                          <span dangerouslySetInnerHTML={{ __html: item }} />
+                          <span>
+                            {item.emphasis && <strong>{item.emphasis} </strong>}
+                            {item.text}
+                          </span>
                         </li>
                       ))}
                     </ul>

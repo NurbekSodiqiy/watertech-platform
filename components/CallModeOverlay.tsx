@@ -11,7 +11,8 @@ import { collectOperatorText } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
 import { buildSearchDocs, createSearcher, type SearchNav } from "@/lib/search";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
-import { schedule, CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
+import { CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
+import { dailySchedule } from "@/lib/content/daily-schedule";
 
 function formatElapsed(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
@@ -121,10 +122,10 @@ export function CallModeOverlay({
           <span className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-alt">
             <span
               className="block h-full rounded-full bg-accent transition-all"
-              style={{ width: `${schedule.length > 0 ? (checklistDone / schedule.length) * 100 : 0}%` }}
+              style={{ width: `${dailySchedule.length > 0 ? (checklistDone / dailySchedule.length) * 100 : 0}%` }}
             />
           </span>
-          {checklistDone}/{schedule.length} kunlik reja bajarildi
+          {checklistDone}/{dailySchedule.length} kunlik reja bajarildi
         </span>
         <button
           onClick={onClose}

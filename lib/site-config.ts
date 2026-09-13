@@ -105,18 +105,6 @@ export const siteTree: NavNode[] = [
   },
 ];
 
-/** Small count badges shown next to sidebar nav rows — only where the mock
- * data has a real number behind it (total FAQ entries, changelog items still
- * pending acknowledgement). Written here as static numbers (mirroring
- * `faqItems.length` and the unread count in `changelogEntries`) instead of
- * importing those mock-data arrays into the client sidebar bundle just to
- * read two integers off them. Update these if the underlying mock data in
- * lib/content/faq.ts or lib/mock-data/changelog.ts changes. */
-export const NAV_BADGES: Record<string, { count: number; tone: "ok" | "warning" }> = {
-  "/faq": { count: 12, tone: "ok" },
-  "/changelog": { count: 3, tone: "warning" },
-};
-
 export function flattenTree(nodes: NavNode[] = siteTree): NavNode[] {
   const out: NavNode[] = [];
   for (const node of nodes) {

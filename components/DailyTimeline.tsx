@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, CheckSquare, Square, type LucideIcon } from "lucide-react";
 import { useTrack } from "@/hooks/useTrack";
 import { useNow } from "@/hooks/useNow";
+import { dailySchedule } from "@/lib/content/daily-schedule";
 
 const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS_FULL = [
@@ -30,24 +31,14 @@ export function DailyDateLabel() {
   return <span className="text-[14px] text-text-secondary">{dateLabel}</span>;
 }
 
-type TimelineItem = {
-  id: number;
-  start: string;
-  end: string;
-  task: string;
-  icon: LucideIcon;
-  isLunch?: boolean;
+const scheduleIcons: Record<string, LucideIcon> = {
+  ListTodo,
+  PhoneCall,
+  Send,
+  Coffee,
+  Headset,
+  FileText,
 };
-
-export const schedule: TimelineItem[] = [
-  { id: 1, start: "09:00", end: "09:30", task: "Joriy kun uchun ishlarni rejalashtirish, yangiliklarni tekshirish", icon: ListTodo },
-  { id: 2, start: "09:30", end: "11:00", task: "Yangi tushgan lidlarga qo'ng'iroq qilish va ularga vazifalarni belgilash", icon: PhoneCall },
-  { id: 3, start: "11:00", end: "12:00", task: "CRM'da qo'yilgan topshiriqlarni bajarish (qayta aloqa, telegramdan ma'lumotlar yuborish)", icon: Send },
-  { id: 4, start: "12:00", end: "13:00", task: "Tushlik", icon: Coffee, isLunch: true },
-  { id: 5, start: "13:00", end: "14:00", task: "Yangi tushgan lidlarga qo'ng'iroq qilish va ularga vazifalarni belgilash", icon: PhoneCall },
-  { id: 6, start: "14:00", end: "15:30", task: "Telefon orqali sotuv bo'yicha qayta aloqa qilish va sotuv etaplari asosida ishlash", icon: Headset },
-  { id: 7, start: "15:30", end: "17:00", task: "CRM'da mijozlarga vazifalar belgilanganligini tekshirish va kunlik hisobot tayyorlash", icon: FileText },
-];
 
 function getTimeMinutes(timeStr: string) {
   const [h, m] = timeStr.split(":").map(Number);
@@ -116,10 +107,11 @@ export function DailyTimeline() {
         <div className="absolute bottom-0 left-8 top-0 hidden w-px bg-border sm:block" />
         <div className="absolute bottom-0 left-4 top-0 w-px bg-border sm:hidden" />
         
-        {schedule.map((item) => {
+        {dailySchedule.map((item) => {
           const startMins = getTimeMinutes(item.start);
           const endMins = getTimeMinutes(item.end);
-          
+          const Icon = scheduleIcons[item.icon];
+
           let state: "past" | "current" | "future" = "future";
           if (currentMinutes !== null) {
             if (currentMinutes >= endMins) state = "past";
@@ -149,7 +141,7 @@ export function DailyTimeline() {
                       : "border-border bg-surface text-text-primary"
                   }`}
                 >
-                  <item.icon size={16} />
+                  <Icon size={16} />
                 </div>
               </div>
 

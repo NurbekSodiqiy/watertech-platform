@@ -8,12 +8,13 @@ import { X } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
+import type { NavBadges } from "@/lib/types";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
   ssr: false,
 });
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, navBadges }: { children: React.ReactNode; navBadges?: NavBadges }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [paletteEverOpened, setPaletteEverOpened] = useState(false);
@@ -50,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar />
+      <Sidebar navBadges={navBadges} />
 
       <AnimatePresence>
         {mobileOpen && (
@@ -80,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <X size={18} />
                 </button>
               </div>
-              <SidebarNav scope="mobile" />
+              <SidebarNav scope="mobile" navBadges={navBadges} />
             </motion.div>
           </div>
         )}

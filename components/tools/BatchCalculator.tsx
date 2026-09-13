@@ -10,20 +10,6 @@ function formatSom(n: number): string {
   return `${Math.round(n).toLocaleString("ru-RU")} so'm`;
 }
 
-// Pulls the numeric discount/avans % that's already written into the
-// package's own text fields (e.g. "~15% gacha", "40% avans + 60% nasiya
-// (25 kun)") instead of a separate hardcoded number — so this can only ever
-// reflect what lib/content/packages.ts actually says.
-function parsePercent(text: string): number | null {
-  const m = text.match(/(\d+(?:[.,]\d+)?)\s*%/);
-  return m ? parseFloat(m[1].replace(",", ".")) : null;
-}
-
-function parseAdvancePercent(paymentTerms: string): number | null {
-  const m = paymentTerms.match(/(\d+(?:[.,]\d+)?)\s*%\s*avans/i);
-  return m ? parseFloat(m[1].replace(",", ".")) : null;
-}
-
 export function BatchCalculator({ products, packageGroups }: { products: Product[]; packageGroups: PackageGroup[] }) {
   const track = useTrack();
   const [productName, setProductName] = useState("");
@@ -48,10 +34,10 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
   const calc = useMemo(() => {
     if (!hasValidInput) return null;
     const subtotal = quantityNum * unitPriceNum;
-    const discountPercent = selectedPackage ? parsePercent(selectedPackage.estimatedDiscount) : null;
+    const discountPercent = selectedPackage ? selectedPackage.discountPct : null;
     const discountAmount = discountPercent ? subtotal * (discountPercent / 100) : 0;
     const total = subtotal - discountAmount;
-    const advancePercent = selectedPackage ? parseAdvancePercent(selectedPackage.paymentTerms) : null;
+    const advancePercent = selectedPackage ? selectedPackage.advancePct : null;
     const advanceAmount = advancePercent !== null ? total * (advancePercent / 100) : null;
     return { subtotal, discountPercent, discountAmount, total, advancePercent, advanceAmount };
   }, [hasValidInput, quantityNum, unitPriceNum, selectedPackage]);

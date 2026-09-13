@@ -93,6 +93,13 @@ export interface Package {
   orderVolume: string;
   paymentTerms: string;
   estimatedDiscount: string;
+  /** Numeric form of estimatedDiscount, e.g. 15 for "~15% gacha" — the field
+   * the calculator does arithmetic on. estimatedDiscount stays for display. */
+  discountPct: number;
+  /** Numeric advance % parsed out of paymentTerms (e.g. 40 for "40% avans +
+   * 60% nasiya"), or null when payment is 100% upfront/cash with no advance
+   * split (paymentTerms stays for display either way). */
+  advancePct: number | null;
   logistics: string;
   deliveryTime: string;
 }

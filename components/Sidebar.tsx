@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { memo, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, ChevronLeft, Home, type LucideIcon } from "lucide-react";
-import { siteTree, NAV_BADGES } from "@/lib/site-config";
+import { siteTree } from "@/lib/site-config";
 import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
-import type { NavNode } from "@/lib/types";
+import type { NavNode, NavBadges } from "@/lib/types";
 import { Logo } from "@/components/Logo";
 
 const COLLAPSE_KEY = "watertech-sidebar-collapsed";
@@ -92,11 +92,13 @@ const NavItem = memo(function NavItem({
   depth,
   scope,
   pathname,
+  navBadges,
 }: {
   node: NavNode;
   depth: number;
   scope: string;
   pathname: string;
+  navBadges?: NavBadges;
 }) {
   const isActive = pathname === node.path;
   const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
@@ -135,8 +137,8 @@ const NavItem = memo(function NavItem({
             />
             <span className="truncate">{node.title}</span>
             {node.locked && <LockIcon size={11} className="ml-auto shrink-0 text-status-warning" />}
-            {NAV_BADGES[node.path] && (
-              <NavCountBadge tone={NAV_BADGES[node.path].tone} count={NAV_BADGES[node.path].count} />
+            {navBadges?.[node.path] && (
+              <NavCountBadge tone={navBadges[node.path].tone} count={navBadges[node.path].count} />
             )}
           </Link>
           {hasChildren && (
@@ -169,7 +171,7 @@ const NavItem = memo(function NavItem({
                   style={{ left: `${guideLeft}px`, width: `${16 + (depth + 1) * 16 - guideLeft}px`, height: "2px" }}
                   aria-hidden
                 />
-                <NavItem node={child} depth={depth + 1} scope={scope} pathname={pathname} />
+                <NavItem node={child} depth={depth + 1} scope={scope} pathname={pathname} navBadges={navBadges} />
               </div>
             ))}
           </div>
@@ -257,9 +259,11 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
 export function SidebarNav({
   scope = "desktop",
   collapsed = false,
+  navBadges,
 }: {
   scope?: string;
   collapsed?: boolean;
+  navBadges?: NavBadges;
 }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -311,7 +315,7 @@ export function SidebarNav({
       {groups.map((group, gi) => (
         <div key={gi} className="mb-6 space-y-1 last:mb-0">
           {group.map((node) => (
-            <NavItem key={node.path} node={node} depth={0} scope={scope} pathname={pathname} />
+            <NavItem key={node.path} node={node} depth={0} scope={scope} pathname={pathname} navBadges={navBadges} />
           ))}
         </div>
       ))}
@@ -319,7 +323,7 @@ export function SidebarNav({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const reduce = useReducedMotion();
@@ -365,7 +369,7 @@ export function Sidebar() {
         <ChevronLeft size={13} className={collapsed ? "rotate-180" : ""} />
       </button>
 
-      <SidebarNav collapsed={collapsed} />
+      <SidebarNav collapsed={collapsed} navBadges={navBadges} />
 
       {!collapsed && (
         <div className="shrink-0 border-t border-border p-3 text-[11px] text-text-secondary">
