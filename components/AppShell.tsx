@@ -2,16 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
-import { CommandPalette } from "./CommandPalette";
+
+const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
+  ssr: false,
+});
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [paletteEverOpened, setPaletteEverOpened] = useState(false);
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
@@ -28,6 +33,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (commandOpen) setPaletteEverOpened(true);
+  }, [commandOpen]);
+
+  useEffect(() => {
+    // warms the chunk after the page is idle so Ctrl+K opens instantly
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => setTimeout(cb, 1500));
+    const id = idle(() => {
+      void import("./CommandPalette");
+    });
+    return () => (window.cancelIdleCallback ?? clearTimeout)(id as never);
   }, []);
 
   return (
@@ -78,7 +96,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      {paletteEverOpened && (
+        <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      )}
     </div>
   );
 }

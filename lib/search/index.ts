@@ -127,17 +127,24 @@ function buildDocs(): SearchDoc[] {
   return docs;
 }
 
-const DOCS = buildDocs();
+let cache: { docs: SearchDoc[]; fuse: Fuse<SearchDoc> } | null = null;
 
-const fuse = new Fuse(DOCS, {
-  keys: [
-    { name: "keywords", weight: 0.5 },
-    { name: "searchTitle", weight: 0.3 },
-    { name: "body", weight: 0.2 },
-  ],
-  threshold: 0.35,
-  ignoreLocation: true,
-});
+function getIndex(): { docs: SearchDoc[]; fuse: Fuse<SearchDoc> } {
+  if (!cache) {
+    const docs = buildDocs();
+    const fuse = new Fuse(docs, {
+      keys: [
+        { name: "keywords", weight: 0.5 },
+        { name: "searchTitle", weight: 0.3 },
+        { name: "body", weight: 0.2 },
+      ],
+      threshold: 0.35,
+      ignoreLocation: true,
+    });
+    cache = { docs, fuse };
+  }
+  return cache;
+}
 
 export interface SearchResult {
   id: string;
@@ -155,8 +162,8 @@ function toResult(doc: SearchDoc): SearchResult {
 export function searchAll(query: string, limit = 8): SearchResult[] {
   const q = normalizeSearchText(query);
   if (!q) return [];
-  return fuse
-    .search(q)
+  return getIndex()
+    .fuse.search(q)
     .slice(0, limit)
     .map((r) => toResult(r.item));
 }
@@ -169,8 +176,8 @@ export function searchAll(query: string, limit = 8): SearchResult[] {
 export function searchCallMode(query: string, currentScriptId: string, limit = 6): SearchResult[] {
   const q = normalizeSearchText(query);
   if (!q) return [];
-  return fuse
-    .search(q)
+  return getIndex()
+    .fuse.search(q)
     .filter(
       (r) =>
         r.item.type === "objection" ||

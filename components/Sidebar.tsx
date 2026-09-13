@@ -348,7 +348,7 @@ export function Sidebar() {
       initial={{ width: 256 }}
       animate={{ width: collapsed ? 76 : 256 }}
       transition={{ duration: mounted && !reduce ? 0.2 : 0, ease: "easeOut" }}
-      className="relative hidden shrink-0 border-r border-border bg-surface lg:flex lg:flex-col"
+      className="relative hidden shrink-0 overflow-visible border-r border-border bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start"
     >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
         <Logo className="h-8 w-8 shrink-0" />
@@ -368,7 +368,7 @@ export function Sidebar() {
       <SidebarNav collapsed={collapsed} />
 
       {!collapsed && (
-        <div className="border-t border-border p-3 text-[11px] text-text-secondary">
+        <div className="shrink-0 border-t border-border p-3 text-[11px] text-text-secondary">
           WaterTech Bilimlar Bazasi · Ishlanma versiya
         </div>
       )}
