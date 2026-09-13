@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { createClient } from "@/lib/supabase/client";
+import { signOutAndRedirect } from "@/lib/auth/sign-out";
 
 // Independent header for the manager-only monitoring area — deliberately
 // not TopBar/AvatarMenu (those are design-locked, AGENTS.md), so this is a
@@ -14,10 +14,7 @@ export function ManagerMonitoringHeader() {
   const router = useRouter();
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutAndRedirect(router);
   }
 
   return (

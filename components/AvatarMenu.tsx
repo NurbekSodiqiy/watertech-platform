@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useSessionUser } from "@/hooks/useSessionUser";
+import { signOutAndRedirect } from "@/lib/auth/sign-out";
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -18,19 +19,9 @@ function getInitials(name: string) {
 // sabab avval olib tashlangan edi.
 export function AvatarMenu() {
   const router = useRouter();
+  const { user } = useSessionUser();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const u = data.user;
-      if (!u) return;
-      const name = (u.user_metadata?.full_name as string) || (u.user_metadata?.name as string) || u.email || "Foydalanuvchi";
-      setUser({ name, email: u.email ?? "" });
-    });
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -42,10 +33,7 @@ export function AvatarMenu() {
   }, [open]);
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await signOutAndRedirect(router);
   }
 
   return (
