@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { siteTree } from "@/lib/site-config";
@@ -44,6 +44,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const track = useTrack();
 
   useEffect(() => {
@@ -94,7 +95,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   function go(path: string) {
     onClose();
-    router.push(path);
+    // Same route, only search params changing (e.g. jumping to another
+    // script/stage/tab on the scripts page) → pushState, not router.push:
+    // Next keeps useSearchParams in sync without a server RSC fetch (see
+    // CLAUDE.md section 4). A different route still needs router.push.
+    if (path.startsWith(`${pathname}?`)) {
+      window.history.pushState(null, "", path);
+    } else {
+      router.push(path);
+    }
   }
 
   return (

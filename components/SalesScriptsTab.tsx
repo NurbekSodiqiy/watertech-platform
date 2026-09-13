@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, PhoneCall, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
 import { scripts } from "@/lib/content/scripts";
 import { objections } from "@/lib/content/objections";
@@ -27,50 +27,38 @@ function objectionsForStage(stage: Stage): Objection[] {
     .filter((o): o is Objection => !!o);
 }
 
-/** Sotuv skriptlari tab — left+right panel pair. Unlike the other three
- * tabs, its state (active script, stage, objection, dropdown/accordion
- * open state) stays lifted in the parent page: keyboard shortcuts, URL
- * sync, Call Mode, and the objection chip row all need to read and drive
- * it too, so it isn't actually tab-local. This component is the render +
- * a thin layer of purely-local UI toggles (the script dropdown, which
- * stage accordion is open). */
+/** Sotuv skriptlari tab — left+right panel pair. The active script/stage/
+ * objection is URL-driven and lives in the parent page (keyboard shortcuts,
+ * Call Mode, and the objection chip row all need to read and drive it too),
+ * so this component only owns purely-local UI toggles: the script dropdown,
+ * and which stage accordion is open. */
 export function SalesScriptsTab({
   leftPanelRef,
   activeSalesScript,
-  activeSalesScriptId,
   selectedScriptStage,
   selectedObjection,
-  expandedScriptStageId,
-  isScriptDropdownOpen,
   currentTurns,
-  setActiveSalesScriptId,
-  setSelectedScriptStage,
-  setSelectedObjection,
-  setExpandedScriptStageId,
-  setIsScriptDropdownOpen,
+  onSelectScript,
   onSelectStage,
+  onSelectObjection,
   onOpenCallMode,
 }: {
   leftPanelRef: RefObject<HTMLDivElement>;
   activeSalesScript: Script;
-  activeSalesScriptId: string;
   selectedScriptStage: Stage | null;
   selectedObjection: Objection | null;
-  expandedScriptStageId: string | null;
-  isScriptDropdownOpen: boolean;
   currentTurns: ScriptTurn[] | null;
-  setActiveSalesScriptId: Dispatch<SetStateAction<string>>;
-  setSelectedScriptStage: Dispatch<SetStateAction<Stage | null>>;
-  setSelectedObjection: Dispatch<SetStateAction<Objection | null>>;
-  setExpandedScriptStageId: Dispatch<SetStateAction<string | null>>;
-  setIsScriptDropdownOpen: Dispatch<SetStateAction<boolean>>;
+  onSelectScript: (id: string) => void;
   onSelectStage: (stage: Stage) => void;
+  onSelectObjection: (o: Objection) => void;
   /** Same open-Call-Mode function F2 already calls — a clickable entry
    * point for operators whose laptop maps F2 to a hardware function
    * (screen brightness etc.) before it ever reaches the browser. */
   onOpenCallMode: () => void;
 }) {
   const { clientName } = useClientName();
+  const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
+  const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
 
   function toggleScriptStage(stageId: string) {
     setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
@@ -152,14 +140,12 @@ export function SalesScriptsTab({
               <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30 animate-fade-slide-down">
                 {scripts.map((script, idx) => {
                   const ItemIcon = salesScriptIcons[script.id] ?? Target;
-                  const isActive = activeSalesScriptId === script.id;
+                  const isActive = activeSalesScript.id === script.id;
                   return (
                     <button
                       key={script.id}
                       onClick={() => {
-                        setActiveSalesScriptId(script.id);
-                        setSelectedScriptStage(null);
-                        setSelectedObjection(null);
+                        onSelectScript(script.id);
                         setExpandedScriptStageId(null);
                         setIsScriptDropdownOpen(false);
                       }}
@@ -196,8 +182,7 @@ export function SalesScriptsTab({
                   <button
                     onClick={() => {
                       if (!isAccordion) {
-                        setSelectedScriptStage(stage);
-                        setSelectedObjection(null);
+                        onSelectStage(stage);
                         setExpandedScriptStageId(null);
                       } else {
                         toggleScriptStage(stage.id);
@@ -226,10 +211,7 @@ export function SalesScriptsTab({
                       {stageObjections.map((o) => (
                         <button
                           key={o.id}
-                          onClick={() => {
-                            setSelectedObjection(o);
-                            setSelectedScriptStage(stage);
-                          }}
+                          onClick={() => onSelectObjection(o)}
                           className={`text-left w-full p-3 rounded-lg hover:bg-surface text-sm transition-colors pl-6 font-medium ${
                             selectedObjection?.id === o.id
                               ? "text-primary bg-surface shadow-sm"

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Compass } from "lucide-react";
 import { scripts } from "@/lib/content/scripts";
 import { objections } from "@/lib/content/objections";
@@ -24,6 +24,10 @@ import { useTrack } from "@/hooks/useTrack";
 const STORAGE_SCRIPT_KEY = "watertech-scripts-last-script";
 const STORAGE_STAGE_KEY = "watertech-scripts-last-stage";
 
+type ScriptsTab = "faq" | "packages" | "competitors" | "sales_scripts";
+
+type UrlStatePatch = { script?: string; stage?: string | null; objection?: string | null; tab?: string | null };
+
 export default function ScriptsPage() {
   return (
     <Suspense fallback={null}>
@@ -33,50 +37,57 @@ export default function ScriptsPage() {
 }
 
 function ScriptsPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const urlScriptId = searchParams.get("script");
-  const urlStageId = searchParams.get("stage");
-  const urlTab = searchParams.get("tab");
+  const scriptParam = searchParams.get("script");
+  const stageParam = searchParams.get("stage");
+  const objectionParam = searchParams.get("objection");
+  const tabParam = searchParams.get("tab");
 
-  // Only read on mount (like activeSalesScriptId/selectedScriptStage below) —
-  // this is an entry point for search results linking straight to a tab
-  // (e.g. "?tab=faq"), not a two-way sync; switching tabs afterwards behaves
-  // exactly as before.
-  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">(() =>
-    urlTab === "faq" || urlTab === "packages" || urlTab === "competitors" ? urlTab : "sales_scripts"
-  );
+  const activeTab: ScriptsTab =
+    tabParam === "faq" || tabParam === "packages" || tabParam === "competitors" ? tabParam : "sales_scripts";
 
-  // Sotuv skriptlari state — initial value comes straight from the URL query
-  // when present (identical on server and client, so this is hydration-safe
-  // unlike reading localStorage during render).
-  const [activeSalesScriptId, setActiveSalesScriptId] = useState<string>(() =>
-    urlScriptId && scripts.some((s) => s.id === urlScriptId) ? urlScriptId : scripts[0].id
-  );
-  const activeSalesScript = scripts.find((s) => s.id === activeSalesScriptId) || scripts[0];
-  const [selectedScriptStage, setSelectedScriptStage] = useState<Stage | null>(() => {
-    if (!urlScriptId || !urlStageId) return null;
-    const script = scripts.find((s) => s.id === urlScriptId);
-    return script?.stages.find((s) => s.id === urlStageId) ?? null;
-  });
-  const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
-  const [selectedObjection, setSelectedObjection] = useState<Objection | null>(null);
-  const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+  const activeSalesScript = (scriptParam && scripts.find((s) => s.id === scriptParam)) || scripts[0];
+
+  const selectedScriptStage: Stage | null = stageParam
+    ? activeSalesScript.stages.find((s) => s.id === stageParam) ?? null
+    : null;
+
+  const selectedObjection: Objection | null = (() => {
+    if (!objectionParam) return null;
+    const objection = objections.find((o) => o.id === objectionParam);
+    if (!objection) return null;
+    const belongsToActiveScript = activeSalesScript.stages.some((s) => s.objectionIds.includes(objection.id));
+    return belongsToActiveScript ? objection : null;
+  })();
+
   const [callModeOn, setCallModeOn] = useState(false);
 
-  // Set right before a URL->state sync below writes state, so the
-  // state->URL push effect (further down) can tell "this state change came
-  // from Back/Forward" apart from "the operator just clicked something" and
-  // skip re-pushing the same URL it just read.
-  const isSyncingFromUrl = useRef(false);
+  // The one function used both to navigate to a new script/stage/objection/
+  // tab and to restore a saved position — never `router.push` here (that
+  // would trigger a server RSC fetch for a same-route search-param change,
+  // see CLAUDE.md section 4). `pushState`/`replaceState` on the same route
+  // keep `useSearchParams()` in sync on their own (Next >=14.1).
+  const setUrlState = useCallback(
+    (next: UrlStatePatch, mode: "push" | "replace" = "push") => {
+      const params = new URLSearchParams(searchParams.toString());
+      (Object.entries(next) as [string, string | null | undefined][]).forEach(([key, value]) => {
+        if (value === null) params.delete(key);
+        else if (value !== undefined) params.set(key, value);
+      });
+      const url = `/sales-process/scripts?${params.toString()}`;
+      if (mode === "push") window.history.pushState(null, "", url);
+      else window.history.replaceState(null, "", url);
+    },
+    [searchParams]
+  );
 
   // Telemetry — one small effect per "thing being viewed" instead of a
   // track() call duplicated at every place each piece of state can change
   // (direct click, keyboard shortcut, objection nav buttons, URL restore).
   const track = useTrack();
   useEffect(() => {
-    track("script_select", { entityType: "script", entityId: activeSalesScriptId });
-  }, [activeSalesScriptId, track]);
+    track("script_select", { entityType: "script", entityId: activeSalesScript.id });
+  }, [activeSalesScript.id, track]);
   useEffect(() => {
     if (selectedScriptStage) track("stage_view", { entityType: "stage", entityId: selectedScriptStage.id });
   }, [selectedScriptStage, track]);
@@ -97,65 +108,36 @@ function ScriptsPageContent() {
   // Fallback restore from localStorage — only when the URL didn't already
   // specify a position (e.g. the operator navigated here fresh from the
   // sidebar rather than reloading/returning to a specific stage's link).
+  // Mount-only: a `replace` so it doesn't create an extra history entry.
   useEffect(() => {
-    if (urlScriptId) return;
+    if (scriptParam) return;
     try {
       const savedScriptId = localStorage.getItem(STORAGE_SCRIPT_KEY);
       const savedStageId = localStorage.getItem(STORAGE_STAGE_KEY);
       const script = savedScriptId ? scripts.find((s) => s.id === savedScriptId) : undefined;
       if (!script) return;
-      setActiveSalesScriptId(script.id);
-      setSelectedScriptStage(savedStageId ? script.stages.find((s) => s.id === savedStageId) ?? null : null);
+      const stage = savedStageId ? script.stages.find((s) => s.id === savedStageId) : undefined;
+      setUrlState({ script: script.id, stage: stage?.id ?? null }, "replace");
     } catch {
       // localStorage unavailable — position just won't be restored
     }
-    // Restoring is a one-time, mount-only concern.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-derive script/stage state when the URL changes out from under us —
-  // i.e. the operator pressed Back/Forward. Without this, pushing a new
-  // history entry per stage (below) would change the address bar on Back
-  // but leave the visible stage exactly as it was, since state only ever
-  // read the URL once, at mount.
-  useEffect(() => {
-    const script = urlScriptId ? scripts.find((s) => s.id === urlScriptId) : undefined;
-    if (!script) return;
-    const stage = urlStageId ? script.stages.find((s) => s.id === urlStageId) ?? null : null;
-    const unchanged = script.id === activeSalesScriptId && (stage?.id ?? null) === (selectedScriptStage?.id ?? null);
-    if (unchanged) return;
-    isSyncingFromUrl.current = true;
-    setActiveSalesScriptId(script.id);
-    setSelectedScriptStage(stage);
-    setSelectedObjection(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlScriptId, urlStageId]);
-
-  // Keep the URL and localStorage in sync with the current script/stage
-  // whenever the operator is on the scripts tab, so both a reload and a
-  // later visit land back in the same place. `push` (not `replace`) is
-  // deliberate — each script/stage change gets its own history entry so the
-  // browser's Back button steps back through them one at a time. Skipped
-  // when the change just came FROM the URL (the effect above) so pressing
-  // Back doesn't immediately push a duplicate forward entry.
+  // Keep localStorage in sync with the current script/stage whenever the
+  // operator is on the scripts tab, so a later fresh visit (no URL params
+  // yet) lands back in the same place. No URL work here — the URL is
+  // already authoritative and kept up to date by setUrlState.
   useEffect(() => {
     if (activeTab !== "sales_scripts") return;
-    if (isSyncingFromUrl.current) {
-      isSyncingFromUrl.current = false;
-      return;
-    }
     try {
-      localStorage.setItem(STORAGE_SCRIPT_KEY, activeSalesScriptId);
+      localStorage.setItem(STORAGE_SCRIPT_KEY, activeSalesScript.id);
       if (selectedScriptStage) localStorage.setItem(STORAGE_STAGE_KEY, selectedScriptStage.id);
       else localStorage.removeItem(STORAGE_STAGE_KEY);
     } catch {
       // localStorage unavailable — position just won't persist
     }
-    const params = new URLSearchParams();
-    params.set("script", activeSalesScriptId);
-    if (selectedScriptStage) params.set("stage", selectedScriptStage.id);
-    router.push(`/sales-process/scripts?${params.toString()}`, { scroll: false });
-  }, [activeTab, activeSalesScriptId, selectedScriptStage, router]);
+  }, [activeTab, activeSalesScript.id, selectedScriptStage]);
 
   // The left ("TV screen") panel scrolls internally now instead of the
   // whole window — resetting it to the top on selection change no longer
@@ -163,7 +145,7 @@ function ScriptsPageContent() {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (leftPanelRef.current) leftPanelRef.current.scrollTop = 0;
-  }, [activeTab, activeSalesScriptId, selectedScriptStage, selectedObjection]);
+  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection]);
 
   // Stable reference for ScriptTurnList's memo to actually bail on —
   // objectionToTurns(...) builds a fresh array every call otherwise.
@@ -179,6 +161,34 @@ function ScriptsPageContent() {
   const openCallMode = useCallback(() => {
     if (selectedScriptStage || selectedObjection) setCallModeOn(true);
   }, [selectedScriptStage, selectedObjection]);
+
+  const selectScript = useCallback(
+    (id: string) => setUrlState({ script: id, stage: null, objection: null }),
+    [setUrlState]
+  );
+
+  // Shared by ObjectionNavButtons (back/forward out of an objection) and
+  // Call Mode's "Keyingi bosqich" button — picking a stage always leaves
+  // any objection view.
+  const handleSelectStage = useCallback(
+    (stage: Stage) => setUrlState({ stage: stage.id, objection: null }),
+    [setUrlState]
+  );
+
+  // Used by the always-visible objection chip row — jumps straight to an
+  // objection's response from anywhere, one click, no accordion digging.
+  const selectObjection = useCallback(
+    (o: Objection) => {
+      const stage = activeSalesScript.stages.find((s) => s.objectionIds.includes(o.id));
+      setUrlState({ tab: null, stage: stage?.id ?? null, objection: o.id });
+    },
+    [activeSalesScript, setUrlState]
+  );
+
+  function handleTabClick(tab: ScriptsTab) {
+    if (tab === "sales_scripts") setUrlState({ tab: null, stage: null, objection: null }, "replace");
+    else setUrlState({ tab }, "replace");
+  }
 
   // Keyboard shortcuts — never while the operator is typing somewhere
   // (client-name field, the competitor search box, CommandPalette's own
@@ -214,11 +224,7 @@ function ScriptsPageContent() {
 
       if (e.key >= "1" && e.key <= "6") {
         const stage = activeSalesScript.stages[Number(e.key) - 1];
-        if (stage) {
-          setSelectedObjection(null);
-          setSelectedScriptStage(stage);
-          setExpandedScriptStageId(null);
-        }
+        if (stage) handleSelectStage(stage);
         return;
       }
 
@@ -232,9 +238,7 @@ function ScriptsPageContent() {
         const stage = stages[nextIndex];
         if (stage) {
           e.preventDefault();
-          setSelectedObjection(null);
-          setSelectedScriptStage(stage);
-          setExpandedScriptStageId(null);
+          handleSelectStage(stage);
         }
         return;
       }
@@ -243,31 +247,13 @@ function ScriptsPageContent() {
         if (callModeOn) {
           setCallModeOn(false);
         } else if (selectedObjection || selectedScriptStage) {
-          setSelectedObjection(null);
-          setSelectedScriptStage(null);
+          setUrlState({ stage: null, objection: null });
         }
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection, callModeOn, openCallMode]);
-
-  // Used by the always-visible objection chip row — jumps straight to an
-  // objection's response from anywhere, one click, no accordion digging.
-  const selectObjection = (o: Objection) => {
-    setActiveTab("sales_scripts");
-    setSelectedObjection(o);
-    const stage = activeSalesScript.stages.find((s) => s.objectionIds.includes(o.id));
-    if (stage) setSelectedScriptStage(stage);
-  };
-
-  // Shared by ObjectionNavButtons (back/forward out of an objection) and
-  // Call Mode's "Keyingi bosqich" button — picking a stage always leaves
-  // any objection view.
-  const handleSelectStage = (stage: Stage) => {
-    setSelectedObjection(null);
-    setSelectedScriptStage(stage);
-  };
+  }, [activeTab, activeSalesScript, selectedScriptStage, selectedObjection, callModeOn, openCallMode, handleSelectStage, setUrlState]);
 
   return (
     <ClientNameProvider>
@@ -285,12 +271,7 @@ function ScriptsPageContent() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
           <button
-            onClick={() => {
-              setActiveTab("sales_scripts");
-              setSelectedScriptStage(null);
-              setSelectedObjection(null);
-              setExpandedScriptStageId(null);
-            }}
+            onClick={() => handleTabClick("sales_scripts")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
@@ -298,7 +279,7 @@ function ScriptsPageContent() {
             Sotuv skriptlari
           </button>
           <button
-            onClick={() => setActiveTab("packages")}
+            onClick={() => handleTabClick("packages")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
@@ -306,7 +287,7 @@ function ScriptsPageContent() {
             Hamkorlik paketlari
           </button>
           <button
-            onClick={() => setActiveTab("competitors")}
+            onClick={() => handleTabClick("competitors")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "competitors" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
@@ -314,7 +295,7 @@ function ScriptsPageContent() {
             Raqobatchilar
           </button>
           <button
-            onClick={() => setActiveTab("faq")}
+            onClick={() => handleTabClick("faq")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
@@ -337,18 +318,12 @@ function ScriptsPageContent() {
           <SalesScriptsTab
             leftPanelRef={leftPanelRef}
             activeSalesScript={activeSalesScript}
-            activeSalesScriptId={activeSalesScriptId}
             selectedScriptStage={selectedScriptStage}
             selectedObjection={selectedObjection}
-            expandedScriptStageId={expandedScriptStageId}
-            isScriptDropdownOpen={isScriptDropdownOpen}
             currentTurns={currentTurns}
-            setActiveSalesScriptId={setActiveSalesScriptId}
-            setSelectedScriptStage={setSelectedScriptStage}
-            setSelectedObjection={setSelectedObjection}
-            setExpandedScriptStageId={setExpandedScriptStageId}
-            setIsScriptDropdownOpen={setIsScriptDropdownOpen}
+            onSelectScript={selectScript}
             onSelectStage={handleSelectStage}
+            onSelectObjection={selectObjection}
             onOpenCallMode={openCallMode}
           />
         )}

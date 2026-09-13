@@ -189,7 +189,7 @@ export function resolveSearchPath(nav: SearchNav): string {
     case "script_stage":
       return `/sales-process/scripts?script=${nav.scriptId}&stage=${nav.stageId}`;
     case "objection":
-      return `/sales-process/scripts?script=${nav.scriptId}&stage=${nav.stageId}`;
+      return `/sales-process/scripts?script=${nav.scriptId}&stage=${nav.stageId}&objection=${nav.objectionId}`;
     case "faq":
       return "/sales-process/scripts?tab=faq";
     case "package":
