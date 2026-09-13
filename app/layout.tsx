@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeScript } from "@/components/ThemeScript";
 import { TelemetryProvider } from "@/components/TelemetryProvider";
+import { WebVitalsReporter } from "@/components/providers/WebVitalsReporter";
 
 const inter = localFont({
   src: "./fonts/InterVariable.woff2",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.variable} font-sans text-primary-dark`}>
         <TelemetryProvider />
+        <WebVitalsReporter />
         {children}
       </body>
     </html>

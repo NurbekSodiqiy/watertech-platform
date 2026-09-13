@@ -84,4 +84,26 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Windows has no bare `VAR=value cmd` syntax like the "analyze" script uses —
+// run `set ANALYZE=true&& next build` instead when analyzing locally there.
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
+
+let exportedConfig = withBundleAnalyzer(nextConfig);
+
+// Only wraps (and uploads source maps) when a Sentry auth token is present —
+// unset in local dev, so local builds are unaffected.
+if (process.env.SENTRY_AUTH_TOKEN) {
+  const { withSentryConfig } = require("@sentry/nextjs");
+  exportedConfig = withSentryConfig(exportedConfig, {
+    silent: true,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    widenClientFileUpload: true,
+    disableLogger: true,
+  });
+}
+
+module.exports = exportedConfig;

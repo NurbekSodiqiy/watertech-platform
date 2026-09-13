@@ -3,6 +3,9 @@ import { z } from "zod";
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20),
+  // Optional and unvalidated as a URL: unset/empty means Sentry is disabled
+  // (checked via truthiness in the sentry.*.config.ts files), not an error.
+  NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
 });
 
 function parseEnv<T extends z.ZodRawShape>(schema: z.ZodObject<T>, values: Record<string, string | undefined>) {
@@ -17,6 +20,7 @@ function parseEnv<T extends z.ZodRawShape>(schema: z.ZodObject<T>, values: Recor
 export const clientEnv = parseEnv(clientEnvSchema, {
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
 
 const serverEnvSchema = z.object({

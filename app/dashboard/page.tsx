@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks } from "lucide-react";
+import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks, Gauge } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerSession } from "@/lib/auth/server-session";
 import { getContentBundle } from "@/lib/content/loader";
@@ -9,6 +9,7 @@ import {
   aggregatePerOperator,
   aggregateZeroResultSearches,
   aggregateHourly,
+  aggregateWebVitals,
   buildEntityLabelMaps,
   PLANNED_HOURS,
   TOTAL_ONBOARDING_ITEMS,
@@ -52,6 +53,7 @@ export default async function DashboardPage({
   const operators = aggregatePerOperator(rows, TOTAL_ONBOARDING_ITEMS, labelMaps);
   const zeroResultSearches = aggregateZeroResultSearches(rows);
   const hourlyActual = aggregateHourly(rows);
+  const webVitals = aggregateWebVitals(rows);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
@@ -204,6 +206,40 @@ export default async function DashboardPage({
                   <tr key={s.query} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 text-primary-dark">{s.query}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{s.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-[15px] font-bold text-primary-dark">Web Vitals (p50 / p75)</h2>
+        {webVitals.length === 0 ? (
+          <EmptyState
+            icon={Gauge}
+            title="Web Vitals ma'lumoti yo'q"
+            description="Tanlangan kunda hech qanday Web Vitals o'lchovi qayd etilmagan."
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
+            <table className="w-full min-w-[360px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-alt/60">
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">Metrika</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">p50</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">p75</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">Namunalar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {webVitals.map((v) => (
+                  <tr key={v.name} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2.5 font-semibold text-primary-dark">{v.name}</td>
+                    <td className="px-4 py-2.5 text-primary-dark">{v.p50}</td>
+                    <td className="px-4 py-2.5 text-primary-dark">{v.p75}</td>
+                    <td className="px-4 py-2.5 text-text-secondary">{v.samples}</td>
                   </tr>
                 ))}
               </tbody>

@@ -209,6 +209,39 @@ export const PLANNED_HOURS: { startHour: number; endHour: number; task: string }
     };
   });
 
+export interface WebVitalSummary {
+  name: string;
+  p50: number;
+  p75: number;
+  samples: number;
+}
+
+function percentile(sortedValues: number[], p: number): number {
+  const idx = Math.min(sortedValues.length - 1, Math.floor(p * sortedValues.length));
+  return sortedValues[idx];
+}
+
+/** Per-metric p50/p75 across a day's `web_vital` rows (meta: { name, value,
+ * rating } — see TelemetryEvent). Metrics with no samples that day are
+ * simply absent from the result, not zero-filled. */
+export function aggregateWebVitals(rows: TelemetryRow[]): WebVitalSummary[] {
+  const valuesByName = new Map<string, number[]>();
+  for (const r of rows) {
+    if (r.type !== "web_vital") continue;
+    const meta = r.meta as { name?: string; value?: number } | null;
+    if (!meta?.name || typeof meta.value !== "number") continue;
+    if (!valuesByName.has(meta.name)) valuesByName.set(meta.name, []);
+    valuesByName.get(meta.name)!.push(meta.value);
+  }
+
+  return [...valuesByName.entries()]
+    .map(([name, values]) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      return { name, p50: percentile(sorted, 0.5), p75: percentile(sorted, 0.75), samples: sorted.length };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** Actual event counts per Tashkent-local hour, for comparing against
  * PLANNED_HOURS. Server-side `Date#getHours()` follows the server's own
  * timezone, not Tashkent's, so the offset is applied explicitly first. */
