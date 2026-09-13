@@ -15,6 +15,9 @@ function GoogleIcon() {
 
 export function GoogleSignInButton() {
   async function handleSignIn() {
+    // Top-level redirect to accounts.google.com (window.location, not a frame or
+    // same-origin form POST), so the CSP's frame-ancestors 'none' / form-action
+    // 'self' directives (next.config.js) do not block this flow.
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
