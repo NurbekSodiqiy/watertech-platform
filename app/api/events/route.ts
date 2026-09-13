@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getServerSession } from "@/lib/auth/server-session";
-import type { TelemetryEvent } from "@/lib/telemetry/types";
+import { rateLimit } from "@/lib/security/rate-limit";
+import { telemetryBatchSchema } from "@/lib/telemetry/schema";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const MAX_CONTENT_LENGTH_BYTES = 16_384;
 
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -10,18 +16,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let events: TelemetryEvent[];
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_CONTENT_LENGTH_BYTES) {
+    return NextResponse.json({ error: "payload too large" }, { status: 413 });
+  }
+
+  const rl = rateLimit(`events:${session.email}`, { limit: 60, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    if (!Array.isArray(body)) throw new Error("expected an array");
-    events = body;
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
-  if (events.length === 0) {
-    return NextResponse.json({ ok: true, inserted: 0 });
+  const parsed = telemetryBatchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "invalid body", issues: parsed.error.issues.slice(0, 3).map((i) => i.path) },
+      { status: 400 }
+    );
   }
+  const events = parsed.data;
 
   // Server determines user_email from the authenticated session — never
   // trust an email the client might send in the event payload itself.
@@ -37,6 +59,9 @@ export async function POST(request: Request) {
     meta: e.meta ?? null,
   }));
 
+  // Admin client bypasses RLS here because RLS forbids operators inserting
+  // rows for arbitrary emails — the server (not the client payload) sets
+  // user_email above, so this is safe.
   const admin = createAdminClient();
   const { error } = await admin.from("telemetry_events").insert(rows);
 

@@ -3,11 +3,13 @@ import type { TelemetryEvent, TelemetryEventType } from "./types";
 const ENDPOINT = "/api/events";
 const SESSION_KEY = "wt-session-id";
 const BUFFER_KEY = "wt-events-buffer";
-const MAX_BUFFER = 500;
+const MAX_BUFFER = 200;
+const MAX_META_BYTES = 500;
 const FLUSH_INTERVAL_MS = 20000;
 const FLUSH_BATCH_SIZE = 25;
 const MAX_BATCH_BYTES = 4000;
 const IDLE_THRESHOLD_MS = 60000;
+const PERSIST_DEBOUNCE_MS = 2000;
 
 let queue: TelemetryEvent[] = [];
 let initialized = false;
@@ -32,7 +34,20 @@ function getSessionId(): string {
   return sessionId;
 }
 
+let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelScheduledPersist() {
+  if (persistDebounceTimer !== null) {
+    clearTimeout(persistDebounceTimer);
+    persistDebounceTimer = null;
+  }
+}
+
+/** Synchronous serialise+write — only called where the page may not get
+ * another chance to run (unload paths) or where the queue just shrank after
+ * a send. Cancels any pending debounced persist so the two never race. */
 function persistBuffer() {
+  cancelScheduledPersist();
   // Newest MAX_BUFFER events win — oldest are dropped first when full.
   if (queue.length > MAX_BUFFER) queue = queue.slice(queue.length - MAX_BUFFER);
   try {
@@ -49,6 +64,17 @@ function runWhenIdle(fn: () => void) {
   } else {
     setTimeout(fn, 0);
   }
+}
+
+/** Trailing debounce around persistBuffer() so a burst of enqueue() calls
+ * (e.g. rapid clicks) writes to localStorage once, off the main thread via
+ * requestIdleCallback, instead of synchronously on every event. */
+function schedulePersist() {
+  cancelScheduledPersist();
+  persistDebounceTimer = setTimeout(() => {
+    persistDebounceTimer = null;
+    runWhenIdle(persistBuffer);
+  }, PERSIST_DEBOUNCE_MS);
 }
 
 /** Oldest-first slice capped at FLUSH_BATCH_SIZE events and ~MAX_BATCH_BYTES
@@ -160,8 +186,12 @@ function checkIdle() {
 }
 
 function enqueue(partial: Omit<TelemetryEvent, "sessionId" | "ts">) {
-  queue.push({ sessionId: getSessionId(), ts: Date.now(), ...partial });
-  persistBuffer();
+  let meta = partial.meta;
+  if (meta && JSON.stringify(meta).length > MAX_META_BYTES) {
+    meta = { truncated: true };
+  }
+  queue.push({ sessionId: getSessionId(), ts: Date.now(), ...partial, meta });
+  schedulePersist();
   if (queue.length >= FLUSH_BATCH_SIZE) runWhenIdle(flush);
 }
 
@@ -187,9 +217,15 @@ function ensureInitialized() {
   }, FLUSH_INTERVAL_MS);
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushViaBeacon();
+    if (document.visibilityState === "hidden") {
+      flushViaBeacon();
+      persistBuffer();
+    }
   });
-  window.addEventListener("pagehide", flushViaBeacon);
+  window.addEventListener("pagehide", () => {
+    flushViaBeacon();
+    persistBuffer();
+  });
 }
 
 /** Queues a telemetry event (in memory + localStorage) for the next flush.
