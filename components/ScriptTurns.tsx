@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
 import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
@@ -8,6 +8,7 @@ import { packageGroups } from "@/lib/content/packages";
 import { competitors } from "@/lib/content/competitors";
 import { faqs } from "@/lib/content/faq";
 import { CopyButton } from "@/components/CopyButton";
+import { useNow } from "@/hooks/useNow";
 
 const CLIENT_NAME_PLACEHOLDER = /_{2,}\s*aka\b/g;
 
@@ -21,13 +22,20 @@ function formatUzDate(d: Date) {
   return `${UZ_WEEKDAYS[d.getDay()]}, ${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
 }
 
-/** Computed from the viewer's own clock each render — same approach as
- * DailyTimeline's date/time — so a script proposing a follow-up always
- * suggests real near-future slots instead of a frozen placeholder. This is
- * a mechanical default (next two calendar days, two fixed business hours)
- * for the operator to read out and adjust verbally, not a scheduling rule. */
-function getSuggestedSlots() {
-  const now = new Date();
+export type SuggestedSlots = {
+  slot1: string;
+  slot2: string;
+  hour1: string;
+  hour2: string;
+};
+
+/** Derived from a caller-supplied `now` (never computed internally) — same
+ * approach as DailyTimeline's date/time — so a script proposing a follow-up
+ * always suggests real near-future slots instead of a frozen placeholder.
+ * This is a mechanical default (next two calendar days, two fixed business
+ * hours) for the operator to read out and adjust verbally, not a scheduling
+ * rule. */
+export function getSuggestedSlots(now: Date): SuggestedSlots {
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
   const dayAfter = new Date(now);
@@ -40,14 +48,26 @@ function getSuggestedSlots() {
   };
 }
 
-export function withClientName(text: string, clientName?: string) {
+/** `"use client"` hook: resolves the current suggested follow-up slots from
+ * the viewer's own clock, `null` until mounted (see `useNow`). */
+export function useSuggestedSlots(): SuggestedSlots | null {
+  const now = useNow();
+  return useMemo(() => (now ? getSuggestedSlots(now) : null), [now]);
+}
+
+export function withClientName(text: string, clientName?: string, slots?: SuggestedSlots | null) {
   let out = clientName ? text.replace(CLIENT_NAME_PLACEHOLDER, `${clientName} aka`) : text;
   if (out.includes("[Kun va Vaqt]") || out.includes("[Boshqa Kun va Vaqt]") || out.includes("[soat]")) {
-    const slots = getSuggestedSlots();
-    out = out.split("[Boshqa Kun va Vaqt]").join(slots.slot2);
-    out = out.split("[Kun va Vaqt]").join(slots.slot1);
-    let soatSeen = 0;
-    out = out.replace(/\[soat\]/g, () => (soatSeen++ === 0 ? slots.hour1 : slots.hour2));
+    if (slots) {
+      out = out.split("[Boshqa Kun va Vaqt]").join(slots.slot2);
+      out = out.split("[Kun va Vaqt]").join(slots.slot1);
+      let soatSeen = 0;
+      out = out.replace(/\[soat\]/g, () => (soatSeen++ === 0 ? slots.hour1 : slots.hour2));
+    } else {
+      out = out.split("[Boshqa Kun va Vaqt]").join("boshqa kun va vaqt");
+      out = out.split("[Kun va Vaqt]").join("kun va vaqt");
+      out = out.replace(/\[soat\]/g, "soat");
+    }
   }
   return out;
 }
@@ -141,7 +161,17 @@ function TurnLinks({ links }: { links: ScriptTurnLink[] }) {
  * auto-formatted text — closed by default, click to reveal which of the
  * two situations applies and what to say. No new content: still just
  * `turn.condition` and `turn.text` as already written. */
-function ConditionNote({ condition, text, clientName }: { condition: string; text: string; clientName?: string }) {
+function ConditionNote({
+  condition,
+  text,
+  clientName,
+  slots,
+}: {
+  condition: string;
+  text: string;
+  clientName?: string;
+  slots: SuggestedSlots | null;
+}) {
   const [show, setShow] = useState(false);
   return (
     <div className="mt-1 ml-10 flex flex-col items-start gap-1.5">
@@ -160,7 +190,7 @@ function ConditionNote({ condition, text, clientName }: { condition: string; tex
       </button>
       {show && (
         <div className="flex gap-2 text-sm italic text-text-secondary">
-          <span>{withClientName(text, clientName)}</span>
+          <span>{withClientName(text, clientName, slots)}</span>
         </div>
       )}
     </div>
@@ -187,9 +217,11 @@ export function objectionToTurns(o: Objection): ScriptTurn[] {
  * `speaker: "note"`, never "operator", so they're excluded automatically —
  * nothing to filter out separately. */
 export function collectOperatorText(turns: ScriptTurn[], clientName?: string): string {
+  // Event time (invoked from a copy-button click handler), not render time.
+  const slots = getSuggestedSlots(new Date());
   return turns
     .filter((t) => t.speaker === "operator")
-    .map((t) => withClientName(t.text, clientName))
+    .map((t) => withClientName(t.text, clientName, slots))
     .join("\n\n");
 }
 
@@ -204,17 +236,21 @@ export function ScriptTurns({
    * 1.6x the normal turn text size, nothing else scales. */
   large?: boolean;
 }) {
+  const slots = useSuggestedSlots();
+
   return (
     <div className="space-y-4">
       {turns.map((turn, idx) => {
         if (turn.speaker === "note") {
           if (turn.condition) {
-            return <ConditionNote key={idx} condition={turn.condition} text={turn.text} clientName={clientName} />;
+            return (
+              <ConditionNote key={idx} condition={turn.condition} text={turn.text} clientName={clientName} slots={slots} />
+            );
           }
           return (
             <div key={idx} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
               <Info size={16} className="shrink-0 mt-0.5 opacity-70" />
-              <span>{withClientName(turn.text, clientName)}</span>
+              <span>{withClientName(turn.text, clientName, slots)}</span>
             </div>
           );
         }
@@ -239,7 +275,7 @@ export function ScriptTurns({
                   </span>
                   {isOperator && (
                     <CopyButton
-                      value={withClientName(turn.text, clientName)}
+                      value={withClientName(turn.text, clientName, slots)}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
                     />
                   )}
@@ -247,7 +283,7 @@ export function ScriptTurns({
                 <div
                   className={`leading-relaxed text-primary-dark whitespace-pre-wrap ${large ? "text-[26px]" : "text-base"}`}
                 >
-                  {withClientName(turn.text, clientName)}
+                  {withClientName(turn.text, clientName, slots)}
                 </div>
               </div>
             </div>

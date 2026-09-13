@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, CheckSquare, Square, type LucideIcon } from "lucide-react";
 import { useTrack } from "@/hooks/useTrack";
+import { useNow } from "@/hooks/useNow";
 
 const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
 const UZ_MONTHS_FULL = [
@@ -15,11 +16,17 @@ const UZ_MONTHS_FULL = [
 // the server happened to render at — the page that hosts this no longer
 // needs to force per-request dynamic rendering just for this label.
 export function DailyDateLabel() {
-  const [dateLabel] = useState(() => {
-    const now = new Date();
-    return `${now.getDate()}-${UZ_MONTHS_FULL[now.getMonth()]}, ${UZ_WEEKDAYS[now.getDay()]}`;
-  });
+  const now = useNow();
 
+  if (!now) {
+    return (
+      <span className="text-[14px] text-text-secondary">
+        <span className="invisible" aria-hidden="true">13-Sentabr, Yakshanba</span>
+      </span>
+    );
+  }
+
+  const dateLabel = `${now.getDate()}-${UZ_MONTHS_FULL[now.getMonth()]}, ${UZ_WEEKDAYS[now.getDay()]}`;
   return <span className="text-[14px] text-text-secondary">{dateLabel}</span>;
 }
 
@@ -63,21 +70,11 @@ export const CHECKLIST_KEY_PREFIX = "watertech-daily-checklist-";
 const CALL_COUNT_KEY_PREFIX = "watertech-daily-callcount-";
 
 export function DailyTimeline() {
-  const [currentMinutes, setCurrentMinutes] = useState(() => {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  });
+  const now = useNow(60_000);
+  const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : null;
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
   const [callCounts, setCallCounts] = useState<Record<number, string>>({});
   const track = useTrack();
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentMinutes(now.getHours() * 60 + now.getMinutes());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     try {
@@ -124,8 +121,10 @@ export function DailyTimeline() {
           const endMins = getTimeMinutes(item.end);
           
           let state: "past" | "current" | "future" = "future";
-          if (currentMinutes >= endMins) state = "past";
-          else if (currentMinutes >= startMins && currentMinutes < endMins) state = "current";
+          if (currentMinutes !== null) {
+            if (currentMinutes >= endMins) state = "past";
+            else if (currentMinutes >= startMins && currentMinutes < endMins) state = "current";
+          }
 
           return (
             <div key={item.id} className="relative flex items-start gap-4 pb-6 sm:gap-6">
