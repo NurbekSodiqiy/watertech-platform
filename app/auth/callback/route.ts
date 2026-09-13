@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { homeForRole, roleFromClaims } from "@/lib/auth/claims";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -12,43 +12,26 @@ export async function GET(request: Request) {
   }
 
   const supabase = createClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    // Redirecting to the same ?error=not_allowed as the allow-list check
-    // below is deliberate (don't reveal *why* to the client), but that
-    // means this branch — the code/PKCE exchange itself failing, unrelated
-    // to the allow-list — would otherwise look identical from the browser.
+    // Redirecting to the same ?error=not_allowed as the role check below is
+    // deliberate (don't reveal *why* to the client), but that means this
+    // branch — the code/PKCE exchange itself failing, unrelated to the
+    // allow-list — would otherwise look identical from the browser.
     console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
     return NextResponse.redirect(`${origin}/login?error=not_allowed`);
   }
 
-  const email = data.user?.email;
-  if (!email) {
-    console.error("[auth/callback] session has no email on user:", data.user?.id);
+  // The allow-list lookup already happened in the Custom Access Token Hook
+  // when this session's JWT was issued — the role claim on it is the answer.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const role = roleFromClaims(claimsData?.claims);
+
+  if (!role) {
+    await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/login?error=not_allowed`);
   }
 
-  // Service-role client — the user's own session isn't trusted for this
-  // check yet, since that's exactly what we're deciding here.
-  const admin = createAdminClient();
-  const { data: allowedRow, error: allowedError } = await admin
-    .from("allowed_users")
-    .select("email, role")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (allowedError) {
-    console.error("[auth/callback] allow-list query failed:", allowedError.message);
-  } else {
-    console.log(`[auth/callback] ${email}: ${allowedRow ? "allowed" : "not on allow-list"}`);
-  }
-
-  if (allowedRow) {
-    const destination = allowedRow.role === "manager" ? "/dashboard" : "/";
-    return NextResponse.redirect(`${origin}${destination}`);
-  }
-
-  await supabase.auth.signOut();
-  return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+  return NextResponse.redirect(`${origin}${homeForRole(role)}`);
 }

@@ -101,13 +101,10 @@ async function flush() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(batch),
           keepalive: true,
-          // If the session is missing/expired, middleware.ts redirects
-          // (unauthenticated) requests to /login instead of the route
-          // returning 401. Default fetch behavior silently follows that
-          // redirect and reports the login page's 200 as success, which
-          // would make us drop undelivered events. "manual" makes a
-          // same-origin redirect show up as an opaque, not-ok response
-          // instead, so it's correctly treated as a failed attempt below.
+          // Middleware no longer intercepts /api/* — this endpoint returns
+          // 401 itself when the session is missing/expired, so there's no
+          // redirect for a normal fetch to silently follow here. "manual" is
+          // kept anyway (harmless) in case that ever changes.
           redirect: "manual",
         });
       } catch {

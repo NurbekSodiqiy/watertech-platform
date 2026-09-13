@@ -1,12 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/lib/env";
+import { homeForRole, isManagerArea, roleFromClaims } from "@/lib/auth/claims";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
+// Logged once per process, not per request — a symmetric (HS256) project
+// makes getClaims() fall back to a network call on every request, which
+// defeats the point of this middleware.
+let warnedAboutSymmetricKeys = false;
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -28,45 +34,62 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims ?? null;
+
+  if (process.env.NODE_ENV !== "production" && !warnedAboutSymmetricKeys && data?.header?.alg === "HS256") {
+    warnedAboutSymmetricKeys = true;
+    console.warn(
+      "Supabase project still uses symmetric JWT keys — getClaims() falls back to a network call. Migrate to ECC signing keys."
+    );
+  }
 
   const pathname = request.nextUrl.pathname;
+  const role = roleFromClaims(claims);
 
-  if (!user && !isPublicPath(pathname)) {
+  const isPublic = isPublicPath(pathname);
+
+  if (isPublic) {
+    if (pathname === "/login" && role !== null) {
+      const url = request.nextUrl.clone();
+      url.pathname = homeForRole(role);
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
+
+  if (!claims) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  // Managers are confined to /dashboard, and /dashboard is confined to
-  // managers — this is the one role check for both directions, so a
-  // request already sitting on /dashboard doesn't skip it. API routes are
-  // excluded so this never turns a fetch (e.g. telemetry) into a redirect
-  // response instead of JSON.
-  const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  const isApi = pathname.startsWith("/api/");
-  if (user?.email && !isApi && !isPublicPath(pathname)) {
-    const { data: allowedRow } = await supabase
-      .from("allowed_users")
-      .select("role")
-      .eq("email", user.email)
-      .maybeSingle();
-    const isManager = allowedRow?.role === "manager";
+  if (role === null) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "error=not_allowed";
+    return NextResponse.redirect(url);
+  }
 
-    if (isManager !== isDashboard) {
-      const url = request.nextUrl.clone();
-      url.pathname = isManager ? "/dashboard" : "/";
-      url.search = "";
-      return NextResponse.redirect(url);
-    }
+  // Managers are confined to manager areas, and manager areas are confined
+  // to managers — this is the one role check for both directions, so a
+  // request already sitting on /dashboard doesn't skip it.
+  const wantsManagerArea = isManagerArea(pathname);
+  const isManager = role === "manager";
+  if (isManager !== wantsManagerArea) {
+    const url = request.nextUrl.clone();
+    url.pathname = homeForRole(role);
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!api/|_next/static|_next/image|favicon.ico|products/|fonts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json)$).*)",
+  ],
 };

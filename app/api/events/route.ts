@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getServerSession } from "@/lib/auth/server-session";
 import type { TelemetryEvent } from "@/lib/telemetry/types";
 
 export async function POST(request: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getServerSession();
 
-  if (!user?.email) {
+  if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +26,7 @@ export async function POST(request: Request) {
   // Server determines user_email from the authenticated session — never
   // trust an email the client might send in the event payload itself.
   const rows = events.map((e) => ({
-    user_email: user.email,
+    user_email: session.email,
     session_id: e.sessionId,
     ts: new Date(e.ts).toISOString(),
     type: e.type,

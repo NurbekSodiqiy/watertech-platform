@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getServerSession } from "@/lib/auth/server-session";
 import { PageHeader } from "@/components/DocPageTemplate";
 import { EmptyState } from "@/components/EmptyState";
 import {
@@ -29,27 +30,12 @@ export default async function DashboardPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/");
 
-  // Access check happens here, in the page itself — email from the
-  // session, role looked up from allowed_users. Not a manager -> home,
-  // no error shown (this route also isn't linked from the sidebar yet).
-  const { data: allowedRow, error: roleCheckError } = await supabase
-    .from("allowed_users")
-    .select("role")
-    .eq("email", user.email)
-    .maybeSingle();
-  if (roleCheckError) {
-    console.error("[dashboard] role check query failed:", {
-      message: roleCheckError.message,
-      code: roleCheckError.code,
-      hint: roleCheckError.hint,
-    });
-  }
-  if (allowedRow?.role !== "manager") redirect("/");
+  // Access check happens here, in the page itself — role comes from the
+  // JWT claim (no DB round trip). Not a manager -> home, no error shown
+  // (this route also isn't linked from the sidebar yet).
+  const session = await getServerSession();
+  if (!session || session.role !== "manager") redirect("/");
 
   const rawDate = Array.isArray(searchParams.date) ? searchParams.date[0] : searchParams.date;
   const selectedDate = isValidDateString(rawDate) ? rawDate : todayInTashkent();
