@@ -32,7 +32,7 @@ type TimelineItem = {
   isLunch?: boolean;
 };
 
-const schedule: TimelineItem[] = [
+export const schedule: TimelineItem[] = [
   { id: 1, start: "09:00", end: "09:30", task: "Joriy kun uchun ishlarni rejalashtirish, yangiliklarni tekshirish", icon: ListTodo },
   { id: 2, start: "09:30", end: "11:00", task: "Yangi tushgan lidlarga qo'ng'iroq qilish va ularga vazifalarni belgilash", icon: PhoneCall },
   { id: 3, start: "11:00", end: "12:00", task: "CRM'da qo'yilgan topshiriqlarni bajarish (qayta aloqa, telegramdan ma'lumotlar yuborish)", icon: Send },
@@ -50,12 +50,17 @@ function getTimeMinutes(timeStr: string) {
 // Local calendar date (not UTC) so the key rolls over at the viewer's own
 // midnight — checked items from a prior day are simply under a different
 // key, never explicitly cleared.
-function getTodayKey() {
+export function getTodayKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-const CHECKLIST_KEY_PREFIX = "watertech-daily-checklist-";
+// Exported so CallModeOverlay's progress indicator can read the same
+// per-day checklist state straight out of localStorage — the simplest way
+// to share a "done today" number across two components with no existing
+// state channel between them, instead of adding a new provider/store.
+export const CHECKLIST_KEY_PREFIX = "watertech-daily-checklist-";
+const CALL_COUNT_KEY_PREFIX = "watertech-daily-callcount-";
 
 export function DailyTimeline() {
   const [currentMinutes, setCurrentMinutes] = useState(() => {
@@ -63,6 +68,7 @@ export function DailyTimeline() {
     return now.getHours() * 60 + now.getMinutes();
   });
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+  const [callCounts, setCallCounts] = useState<Record<number, string>>({});
   const track = useTrack();
 
   useEffect(() => {
@@ -77,8 +83,10 @@ export function DailyTimeline() {
     try {
       const saved = localStorage.getItem(CHECKLIST_KEY_PREFIX + getTodayKey());
       if (saved) setCheckedItems(JSON.parse(saved));
+      const savedCounts = localStorage.getItem(CALL_COUNT_KEY_PREFIX + getTodayKey());
+      if (savedCounts) setCallCounts(JSON.parse(savedCounts));
     } catch {
-      // localStorage unavailable/corrupt — start unchecked
+      // localStorage unavailable/corrupt — start unchecked/empty
     }
   }, []);
 
@@ -91,6 +99,17 @@ export function DailyTimeline() {
       // localStorage unavailable — state just won't persist across reloads
     }
     track("checklist_toggle", { entityType: "daily_task", entityId: String(id), meta: { checked: next[id] } });
+  }
+
+  function setCallCount(id: number, value: string) {
+    const next = { ...callCounts, [id]: value };
+    setCallCounts(next);
+    try {
+      localStorage.setItem(CALL_COUNT_KEY_PREFIX + getTodayKey(), JSON.stringify(next));
+    } catch {
+      // localStorage unavailable — state just won't persist across reloads
+    }
+    track("call_count_log", { entityType: "daily_task", entityId: String(id), meta: { count: value } });
   }
 
   return (
@@ -176,14 +195,33 @@ export function DailyTimeline() {
                       {item.task}
                     </p>
                   </div>
-                  {state === "current" && (
-                    <span className="shrink-0 rounded-md bg-accent/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
-                      Hozir
-                    </span>
-                  )}
-                  {state === "past" && !item.isLunch && (
-                    <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-status-ok opacity-50" />
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <label
+                      htmlFor={`call-count-${item.id}`}
+                      className="hidden text-[11px] font-medium text-text-secondary whitespace-nowrap sm:inline"
+                    >
+                      Qo&apos;ng&apos;iroqlar:
+                    </label>
+                    <input
+                      id={`call-count-${item.id}`}
+                      type="number"
+                      min="0"
+                      inputMode="numeric"
+                      value={callCounts[item.id] ?? ""}
+                      onChange={(e) => setCallCount(item.id, e.target.value)}
+                      placeholder="0"
+                      aria-label="Qo'ng'iroqlar soni"
+                      className="w-14 rounded-lg border border-border bg-surface-alt px-2 py-1 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+                    />
+                    {state === "current" && (
+                      <span className="shrink-0 rounded-md bg-accent/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
+                        Hozir
+                      </span>
+                    )}
+                    {state === "past" && !item.isLunch && (
+                      <CheckCircle2 size={16} className="shrink-0 text-status-ok opacity-50" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
