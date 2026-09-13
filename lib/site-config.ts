@@ -62,6 +62,7 @@ export const siteTree: NavNode[] = [
           { title: "Hisobotlar", path: "/tools/amocrm/reports", contentType: "doc" },
         ],
       },
+      { title: "Partiya kalkulyatori", path: "/tools/calculator", contentType: "doc" },
       { title: "Google Sheets", path: "/tools/google-sheets", contentType: "doc" },
       { title: "amoCRM qo'llanmasi", path: "/tools/communication-standards", contentType: "doc" },
       { title: "Sotuv varonkasi", path: "/tools/sales-funnel", contentType: "doc" },

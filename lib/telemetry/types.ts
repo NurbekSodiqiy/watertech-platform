@@ -12,6 +12,7 @@ export type TelemetryEventType =
   | "call_mode_on"
   | "call_mode_off"
   | "checklist_toggle"
+  | "calculator_use"
   | "feedback"
   | "idle_start"
   | "idle_end";
