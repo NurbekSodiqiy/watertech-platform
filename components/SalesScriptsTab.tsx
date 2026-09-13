@@ -10,6 +10,9 @@ import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionCompetitorSearch } from "@/components/ObjectionCompetitorSearch";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
+import { CopyButton } from "@/components/CopyButton";
+import { collectOperatorText } from "@/components/ScriptTurns";
+import { useClientName } from "@/components/ClientNameContext";
 
 const salesScriptIcons: Record<string, LucideIcon> = {
   "lead-orqali-tushgan": Target,
@@ -67,6 +70,8 @@ export function SalesScriptsTab({
    * (screen brightness etc.) before it ever reaches the browser. */
   onOpenCallMode: () => void;
 }) {
+  const { clientName } = useClientName();
+
   function toggleScriptStage(stageId: string) {
     setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
   }
@@ -101,14 +106,22 @@ export function SalesScriptsTab({
                 <h2 className="text-2xl font-bold text-primary-dark">
                   {selectedObjection?.label || selectedScriptStage?.label}
                 </h2>
-                <button
-                  type="button"
-                  onClick={onOpenCallMode}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/20"
-                >
-                  <PhoneCall size={15} />
-                  Qo&apos;ng&apos;iroq rejimi
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {currentTurns && currentTurns.some((t) => t.speaker === "operator") && (
+                    <CopyButton
+                      value={collectOperatorText(currentTurns, clientName)}
+                      label="Barchasini nusxalash"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={onOpenCallMode}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/20"
+                  >
+                    <PhoneCall size={15} />
+                    Qo&apos;ng&apos;iroq rejimi
+                  </button>
+                </div>
               </div>
             </div>
             {selectedObjection && <ObjectionCompetitorSearch competitors={competitors} />}

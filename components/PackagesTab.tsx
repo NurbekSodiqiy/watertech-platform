@@ -5,6 +5,20 @@ import { Package, CreditCard, Percent, Truck, Clock, Star, ChevronRight } from "
 import { packageGroups } from "@/lib/content/packages";
 import type { Package as PackageItem } from "@/lib/content/types";
 import { useTrack } from "@/hooks/useTrack";
+import { CopyButton } from "@/components/CopyButton";
+
+// One line per real field already shown in the card below — no new content,
+// just the same values joined for the clipboard.
+function packageSummaryText(pkg: PackageItem): string {
+  return [
+    pkg.name,
+    `Buyurtma hajmi: ${pkg.orderVolume}`,
+    `To'lov turi va sharti: ${pkg.paymentTerms}`,
+    `Taxminiy chegirma: ${pkg.estimatedDiscount}`,
+    `Logistika: ${pkg.logistics}`,
+    `Yetkazish muddati: ${pkg.deliveryTime}`,
+  ].join("\n");
+}
 
 /** Hamkorlik paketlari tab — left+right panel pair. Owns its own selection
  * state; remounts (and so resets) whenever the operator switches away and
@@ -35,13 +49,14 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
           </div>
         ) : (
           <div className={`rounded-xl border ${selectedPackage.isFeatured ? "border-primary" : "border-border"} bg-surface p-6 shadow-sm flex flex-col`}>
-            <div className="mb-6 flex items-center justify-between border-b border-border pb-4">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
               <h2 className="text-2xl font-bold text-primary-dark flex items-center gap-2">
                 {selectedPackage.name}
                 {selectedPackage.isFeatured && (
                   <Star size={20} className="text-accent" fill="currentColor" aria-label="Tavsiya etiladi" />
                 )}
               </h2>
+              <CopyButton value={packageSummaryText(selectedPackage)} label="Nusxalash" />
             </div>
 
             <div className="space-y-4">

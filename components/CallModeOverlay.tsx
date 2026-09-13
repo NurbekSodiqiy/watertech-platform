@@ -6,7 +6,11 @@ import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionChipRow } from "@/components/ObjectionChipRow";
+import { CopyButton } from "@/components/CopyButton";
+import { collectOperatorText } from "@/components/ScriptTurns";
+import { useClientName } from "@/components/ClientNameContext";
 import { searchCallMode, type SearchNav } from "@/lib/search";
+import { schedule, CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
 
 function formatElapsed(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
@@ -41,13 +45,30 @@ export function CallModeOverlay({
   onSelectObjection: (objection: Objection) => void;
   onClose: () => void;
 }) {
+  const { clientName } = useClientName();
   const [elapsed, setElapsed] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  // Read once, on open — this is a display-only glance at "how far into
+  // today's plan am I", not a live subscription to DailyTimeline's own
+  // state (which lives in a different part of the tree entirely, on the
+  // dashboard page). Same localStorage key DailyTimeline itself reads/
+  // writes, so it reflects whatever was last saved there.
+  const [checklistDone, setChecklistDone] = useState(0);
 
   useEffect(() => {
     const startedAt = Date.now();
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CHECKLIST_KEY_PREFIX + getTodayKey());
+      const checked: Record<number, boolean> = saved ? JSON.parse(saved) : {};
+      setChecklistDone(Object.values(checked).filter(Boolean).length);
+    } catch {
+      // localStorage unavailable/corrupt — progress just shows 0
+    }
   }, []);
 
   useEffect(() => {
@@ -92,6 +113,16 @@ export function CallModeOverlay({
           <Clock size={18} className="text-accent" />
           {formatElapsed(elapsed)}
         </span>
+
+        <span className="hidden items-center gap-2 text-[12px] font-medium text-text-secondary sm:flex">
+          <span className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-alt">
+            <span
+              className="block h-full rounded-full bg-accent transition-all"
+              style={{ width: `${schedule.length > 0 ? (checklistDone / schedule.length) * 100 : 0}%` }}
+            />
+          </span>
+          {checklistDone}/{schedule.length} kunlik reja bajarildi
+        </span>
         <button
           onClick={onClose}
           className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-alt"
@@ -134,9 +165,14 @@ export function CallModeOverlay({
           {currentObjection && currentStage && (
             <ObjectionNavButtons script={script} currentStage={currentStage} onSelectStage={onSelectStage} />
           )}
-          <h2 className="text-[28px] font-bold text-primary-dark">
-            {currentObjection?.label || currentStage?.label}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[28px] font-bold text-primary-dark">
+              {currentObjection?.label || currentStage?.label}
+            </h2>
+            {turns.some((t) => t.speaker === "operator") && (
+              <CopyButton value={collectOperatorText(turns, clientName)} label="Barchasini nusxalash" />
+            )}
+          </div>
           <ScriptTurnList turns={turns} large />
           <ObjectionChipRow
             objections={objections}

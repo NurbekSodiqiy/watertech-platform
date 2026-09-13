@@ -4,6 +4,7 @@ import { useEffect, useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Package, CreditCard, Truck, type LucideIcon } from "lucide-react";
 import { faqs } from "@/lib/content/faq";
 import { useTrack } from "@/hooks/useTrack";
+import { CopyButton } from "@/components/CopyButton";
 
 type FAQItem = { question: string; answer: string };
 type FAQCategory = { id: string; name: string; questions: FAQItem[] };
@@ -54,7 +55,10 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
+              <CopyButton value={selectedFaqItem.answer} label="Nusxalash" />
+            </div>
             <div className="relative rounded-2xl rounded-tl-sm border border-primary/20 border-l-[3px] border-l-primary bg-primary-light/25 px-6 py-5">
               <span aria-hidden className="absolute left-4 top-2 text-5xl leading-none text-accent/25 select-none">&#8220;</span>
               <p className="relative pl-4 text-base leading-relaxed text-primary-dark whitespace-pre-wrap">

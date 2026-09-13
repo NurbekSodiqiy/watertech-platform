@@ -7,6 +7,7 @@ import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types"
 import { packageGroups } from "@/lib/content/packages";
 import { competitors } from "@/lib/content/competitors";
 import { faqs } from "@/lib/content/faq";
+import { CopyButton } from "@/components/CopyButton";
 
 const CLIENT_NAME_PLACEHOLDER = /_{2,}\s*aka\b/g;
 
@@ -179,6 +180,19 @@ export function objectionToTurns(o: Objection): ScriptTurn[] {
   return turns;
 }
 
+/** Every operator line in `turns`, client-name filled in, joined with a
+ * blank line between each — the same "copy everything for Telegram" shape
+ * as an individual bubble's own copy button, just concatenated. Notes
+ * (operator-only instructions like a condition's alternate text) are
+ * `speaker: "note"`, never "operator", so they're excluded automatically —
+ * nothing to filter out separately. */
+export function collectOperatorText(turns: ScriptTurn[], clientName?: string): string {
+  return turns
+    .filter((t) => t.speaker === "operator")
+    .map((t) => withClientName(t.text, clientName))
+    .join("\n\n");
+}
+
 export function ScriptTurns({
   turns,
   clientName,
@@ -219,9 +233,17 @@ export function ScriptTurns({
                 {isOperator ? <Headset size={16} /> : <User size={16} />}
               </div>
               <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl rounded-tl-sm border ${isOperator ? "bg-surface border-border border-l-[3px] border-l-primary" : "bg-primary-light/25 border-primary/20"}`}>
-                <span className="text-[11px] font-bold uppercase tracking-widest mb-1 text-text-secondary">
-                  {isOperator ? "Operator" : "Mijoz"}
-                </span>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">
+                    {isOperator ? "Operator" : "Mijoz"}
+                  </span>
+                  {isOperator && (
+                    <CopyButton
+                      value={withClientName(turn.text, clientName)}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
+                    />
+                  )}
+                </div>
                 <div
                   className={`leading-relaxed text-primary-dark whitespace-pre-wrap ${large ? "text-[26px]" : "text-base"}`}
                 >
