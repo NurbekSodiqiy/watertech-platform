@@ -199,13 +199,13 @@ export default function ProductsPage() {
               transition={{ duration: 0.15 }}
             />
             <motion.div
-              className="relative max-h-[85vh] max-w-3xl overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
+              className="relative flex h-[520px] w-[640px] max-h-[85vh] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
             >
-              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
                 <h3 className="text-[15px] font-semibold text-primary-dark leading-snug pr-4">
                   {lightbox.alt}
                 </h3>
@@ -217,12 +217,15 @@ export default function ProductsPage() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="relative h-[70vh] w-full bg-surface-alt p-4">
+              {/* Har bir mahsulot uchun bir xil qat'iy o'lcham — rasmning
+                  o'zi (turlicha en-bo'y nisbatiga qaramay) shu ramka ichida
+                  object-contain bilan joylashadi, cho'zilmaydi/kesilmaydi. */}
+              <div className="relative w-full flex-1 bg-surface-alt p-4">
                 <Image
                   src={lightbox.src}
                   alt={lightbox.alt}
                   fill
-                  sizes="(min-width: 1024px) 60vw, 90vw"
+                  sizes="640px"
                   className="object-contain"
                 />
               </div>

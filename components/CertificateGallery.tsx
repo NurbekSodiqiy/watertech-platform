@@ -27,7 +27,7 @@ export function CertificateGallery() {
       onClick={close}
     >
       <div
-        className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-elevated"
+        className="relative flex h-[640px] max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-elevated"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal bosh qismi */}
