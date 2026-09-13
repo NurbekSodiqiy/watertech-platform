@@ -8,7 +8,7 @@ export const objections: Objection[] = [
   {
     id: "obj-qimmat",
     label: "Narxi qimmat",
-    keywords: ["narx", "qimmat", "chegirma"],
+    keywords: ["narx", "qimmat", "chegirma", "arzon", "boshqalar arzon"],
     clientSays: "Narxi qimmat",
     realMeaning: "Boshqa takliflar bilan solishtiryapti, qiymatni ko'rmayapti",
     response:
@@ -20,7 +20,7 @@ export const objections: Objection[] = [
   {
     id: "obj-fitting",
     label: "Fitinglar mos kelmaydi",
-    keywords: ["fiting", "mos kelmaydi", "kalibrovka"],
+    keywords: ["fiting", "mos kelmaydi", "kalibrovka", "tushmaydi", "sifatsiz"],
     clientSays: "Fitinglar bir-biriga tushmaydi",
     realMeaning: "Oldingi tajribasida sifatsiz mahsulotdan xafa bo'lgan",
     response:
@@ -31,7 +31,7 @@ export const objections: Objection[] = [
   {
     id: "obj-think",
     label: "O'ylab ko'raman",
-    keywords: ["o'ylab ko'raman", "keyinroq", "vaqt kerak"],
+    keywords: ["o'ylab ko'raman", "keyinroq", "vaqt kerak", "keyin o'ylayman"],
     clientSays: "Mayli, rahmat, hozir o'ylab ko'ray...",
     realMeaning: "Aniq to'xtatuvchi sabab bor, lekin aytishni istamayapti",
     response:
@@ -42,7 +42,7 @@ export const objections: Objection[] = [
   {
     id: "obj-risk",
     label: "Risk qila olmayman",
-    keywords: ["risk", "yangi mahsulot", "ishonch"],
+    keywords: ["risk", "yangi mahsulot", "ishonch", "sotilmay qoladi", "qo'rqaman"],
     clientSays: "Risk qila olmayman",
     realMeaning: "Talab bo'lmay qolishidan yoki sotilmay qolishidan qo'rqyapti",
     response:

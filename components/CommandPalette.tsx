@@ -7,6 +7,8 @@ import { Search } from "lucide-react";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
 import { useTrack } from "@/hooks/useTrack";
+import { searchAll, resolveSearchPath, type SearchResultType } from "@/lib/search";
+import { normalizeSearchText } from "@/lib/search/normalize";
 
 interface SearchItem {
   category: string;
@@ -25,6 +27,18 @@ function buildIndex(nodes: NavNode[], category?: string): SearchItem[] {
 }
 
 const SEARCH_INDEX = buildIndex(siteTree);
+
+// Page-title matches (above) point straight at a URL already, so they're
+// kept as-is; content matches (objection/script-stage/faq/competitor/
+// package text — not just titles) come from the unified lib/search index
+// and get a category label here purely for display grouping.
+const CONTENT_CATEGORY_LABEL: Record<SearchResultType, string> = {
+  objection: "E'tiroz",
+  script_stage: "Skript bosqichi",
+  faq: "FAQ",
+  competitor: "Raqobatchi",
+  package: "Paket",
+};
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [query, setQuery] = useState("");
@@ -50,8 +64,23 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   const results = useMemo(() => {
     if (!query.trim()) return null;
-    const q = query.trim().toLowerCase();
-    return SEARCH_INDEX.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 8);
+    const q = normalizeSearchText(query);
+    const pageMatches: SearchItem[] = SEARCH_INDEX.filter((i) => normalizeSearchText(i.title).includes(q));
+    const contentMatches: SearchItem[] = searchAll(query, 8).map((r) => ({
+      category: CONTENT_CATEGORY_LABEL[r.type],
+      title: r.title,
+      path: resolveSearchPath(r.nav),
+    }));
+    // Page-title matches first (they're exact substring hits, so more
+    // confident than a fuzzy content match), de-duplicated by path.
+    const seen = new Set<string>();
+    const merged: SearchItem[] = [];
+    for (const item of [...pageMatches, ...contentMatches]) {
+      if (seen.has(item.path)) continue;
+      seen.add(item.path);
+      merged.push(item);
+    }
+    return merged.slice(0, 8);
   }, [query]);
 
   // Debounced so this logs once per pause in typing, not once per keystroke.

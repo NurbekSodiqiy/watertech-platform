@@ -37,8 +37,15 @@ function ScriptsPageContent() {
   const searchParams = useSearchParams();
   const urlScriptId = searchParams.get("script");
   const urlStageId = searchParams.get("stage");
+  const urlTab = searchParams.get("tab");
 
-  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">("sales_scripts");
+  // Only read on mount (like activeSalesScriptId/selectedScriptStage below) —
+  // this is an entry point for search results linking straight to a tab
+  // (e.g. "?tab=faq"), not a two-way sync; switching tabs afterwards behaves
+  // exactly as before.
+  const [activeTab, setActiveTab] = useState<"faq" | "packages" | "competitors" | "sales_scripts">(() =>
+    urlTab === "faq" || urlTab === "packages" || urlTab === "competitors" ? urlTab : "sales_scripts"
+  );
 
   // Sotuv skriptlari state — initial value comes straight from the URL query
   // when present (identical on server and client, so this is hydration-safe

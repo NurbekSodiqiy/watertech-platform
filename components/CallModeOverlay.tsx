@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Clock, ArrowRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, Clock, ArrowRight, Search } from "lucide-react";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionChipRow } from "@/components/ObjectionChipRow";
+import { searchCallMode, type SearchNav } from "@/lib/search";
 
 function formatElapsed(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
@@ -41,6 +42,7 @@ export function CallModeOverlay({
   onClose: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const startedAt = Date.now();
@@ -50,6 +52,11 @@ export function CallModeOverlay({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      // While typing in the inline search box, Escape should clear/blur the
+      // search — not close the whole overlay and lose the call's context.
+      const target = e.target as HTMLElement | null;
+      const isTyping = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+      if (isTyping && e.key === "Escape") return;
       if (e.key === "F2" || e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -61,6 +68,22 @@ export function CallModeOverlay({
 
   const currentIndex = currentStage ? script.stages.findIndex((s) => s.id === currentStage.id) : -1;
   const nextStage = currentIndex >= 0 ? script.stages[currentIndex + 1] : undefined;
+
+  // Inline results only ever cover objections + stages of the script already
+  // open in this Call Mode session — see searchCallMode's own comment for
+  // why FAQ/competitor/package aren't offered here.
+  const searchResults = useMemo(() => searchCallMode(searchQuery, script.id), [searchQuery, script.id]);
+
+  function handleResultClick(nav: SearchNav) {
+    if (nav.kind === "objection") {
+      const objection = objections.find((o) => o.id === nav.objectionId);
+      if (objection) onSelectObjection(objection);
+    } else if (nav.kind === "script_stage") {
+      const stage = script.stages.find((s) => s.id === nav.stageId);
+      if (stage) onSelectStage(stage);
+    }
+    setSearchQuery("");
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
@@ -76,6 +99,34 @@ export function CallModeOverlay({
           <X size={16} />
           Call Mode&apos;ni yopish (F2 / Esc)
         </button>
+      </div>
+
+      <div className="shrink-0 border-b border-border px-6 py-3">
+        <div className="relative mx-auto max-w-3xl">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Qo'ng'iroq davomida qidirish — e'tiroz yoki bosqich…"
+            className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+          />
+          {searchResults.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {searchResults.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => handleResultClick(r.nav)}
+                  className="flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-medium text-primary-dark transition-colors hover:border-primary/40"
+                >
+                  {r.title}
+                </button>
+              ))}
+            </div>
+          )}
+          {searchQuery.trim() && searchResults.length === 0 && (
+            <p className="mt-2 px-1 text-[12.5px] text-text-secondary">Mos natija topilmadi.</p>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-8">
