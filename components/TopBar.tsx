@@ -15,6 +15,8 @@ export function TopBar({
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
+      <ThemeToggle />
+
       <button
         onClick={onMenuClick}
         className="rounded-lg p-1.5 text-primary-dark hover:bg-primary/10 lg:hidden"
@@ -45,8 +47,6 @@ export function TopBar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
-        <ThemeToggle />
-
         {/* TODO: bildirishnomalar funksiyasi qo'shilganda bu yerga qaytariladi —
             avval saqlash (bookmarks) va bildirishnoma tugmalari hech qanday
             real funksiyaga ega emas edi, shu sabab olib tashlandi. */}
