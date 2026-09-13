@@ -1,18 +1,8 @@
-"use client";
-
-import { useRef } from "react";
-import dynamic from "next/dynamic";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AccentIconVisual } from "@/components/AccentIconVisual";
 import { AccentTextPanel } from "@/components/AccentTextPanel";
-
-// GSAP + ScrollTrigger (~70KB) is only needed once this page has mounted in
-// the browser, not for the initial render — loading it via next/dynamic with
-// ssr:false keeps it out of this route's initial client bundle.
-const MissionValuesScrollAnimations = dynamic(
-  () => import("@/components/MissionValuesScrollAnimations").then((m) => m.MissionValuesScrollAnimations),
-  { ssr: false }
-);
+import { Reveal } from "@/components/ui/Reveal";
+import { Parallax } from "@/components/ui/Parallax";
 
 // Icons are inlined (stroke="currentColor") rather than referenced via
 // <img src>, because currentColor in an externally-loaded SVG resolves
@@ -96,30 +86,8 @@ function XavfsizlikIcon({ size = 40 }: { size?: number | string }) {
 }
 
 export default function MissionValuesPage() {
-  const pageRef = useRef<HTMLDivElement>(null);
-  // This page is unusually tall (6 large blocks with generous spacing) —
-  // taller than the shared AppShell sidebar's own nav content. Since the
-  // sidebar isn't independently sticky, letting this page grow the shared
-  // document height (like a normal page would) stretches the sidebar's
-  // <aside> to match via the layout's default flex align-items:stretch,
-  // leaving a big blank strip once you scroll past the sidebar's real
-  // (much shorter) content. Scrolling is contained to this local element
-  // instead, so the page's height never leaks into that shared layout —
-  // no changes needed to Sidebar/AppShell themselves.
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={scrollerRef} className="mv-scroll-hide h-[calc(100vh-3.5rem)] overflow-y-auto">
-    <MissionValuesScrollAnimations pageRef={pageRef} scrollerRef={scrollerRef} />
-    {/* This container still scrolls (needed for the height-containment fix
-        and as the GSAP ScrollTrigger scroller) — only its own visual
-        scrollbar is hidden, so the page shows just the one (window)
-        scrollbar the rest of the site already uses. */}
-    <style>{`
-      .mv-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
-      .mv-scroll-hide::-webkit-scrollbar { display: none; }
-    `}</style>
-    <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
         <Breadcrumbs path="/company/mission-values" />
@@ -132,8 +100,10 @@ export default function MissionValuesPage() {
 
         {/* Mission Section — image left, text right */}
         <section>
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentIconVisual icon={MissiyaIcon} visualClassName="mv-visual" dataParallax={10} />
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+            <Parallax rangePx={10}>
+              <AccentIconVisual icon={MissiyaIcon} />
+            </Parallax>
             <AccentTextPanel>
               <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-white">Missiya</h2>
               <p className="mb-3 text-[18px] font-medium leading-relaxed text-white md:text-[22px]">
@@ -143,7 +113,7 @@ export default function MissionValuesPage() {
                 Suv hayot manbai, biz esa uning xavfsiz oqimini ta&apos;minlaymiz.
               </p>
             </AccentTextPanel>
-          </div>
+          </Reveal>
         </section>
 
         {/* Vision Section */}
@@ -151,7 +121,7 @@ export default function MissionValuesPage() {
           <h2 className="text-[20px] font-bold text-primary-dark">Vizyon 2030</h2>
 
           {/* "2030" — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
@@ -159,12 +129,16 @@ export default function MissionValuesPage() {
                 2030-yilga kelib O&apos;zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o&apos;rnatilgan bo&apos;lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
             </AccentTextPanel>
-            <AccentIconVisual icon={Vizyon2030Icon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
-          </div>
+            <Parallax rangePx={10} className="md:order-2">
+              <AccentIconVisual icon={Vizyon2030Icon} />
+            </Parallax>
+          </Reveal>
 
           {/* "№1" — image left, text right */}
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentIconVisual icon={No1Icon} visualClassName="mv-visual" dataParallax={10} />
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+            <Parallax rangePx={10}>
+              <AccentIconVisual icon={No1Icon} />
+            </Parallax>
             <AccentTextPanel>
               <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
               <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">№1</span>
@@ -172,7 +146,7 @@ export default function MissionValuesPage() {
                 Markaziy Osiyoda muhandislik santexnikasi bo&apos;yicha №1 ekspert-hamkorga aylanish.
               </p>
             </AccentTextPanel>
-          </div>
+          </Reveal>
         </section>
 
         {/* Values Section */}
@@ -180,41 +154,46 @@ export default function MissionValuesPage() {
           <h2 className="text-[20px] font-bold text-primary-dark">Qadriyatlarimiz</h2>
 
           {/* Sifat — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Sifat – bu vijdon</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
                 Quvur devorlarining ichida nima borligini mijoz ko&apos;rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
             </AccentTextPanel>
-            <AccentIconVisual icon={SifatIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
-          </div>
+            <Parallax rangePx={10} className="md:order-2">
+              <AccentIconVisual icon={SifatIcon} />
+            </Parallax>
+          </Reveal>
 
           {/* Innovatsiya — image left, text right */}
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentIconVisual icon={InnovatsiyaIcon} visualClassName="mv-visual" dataParallax={10} />
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+            <Parallax rangePx={10}>
+              <AccentIconVisual icon={InnovatsiyaIcon} />
+            </Parallax>
             <AccentTextPanel>
               <h3 className="mb-2 text-[16px] font-bold text-white">Innovatsiya</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
                 Biz kechagi texnologiya bilan bugungi bozorni egallay olmaymiz.
               </p>
             </AccentTextPanel>
-          </div>
+          </Reveal>
 
           {/* Xavfsizlik — text left, image right */}
-          <div className="mv-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
+          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
               <h3 className="mb-2 text-[16px] font-bold text-white">Xavfsizlik</h3>
               <p className="text-[14px] leading-relaxed text-white/80">
                 Bizning mahsulotimiz o&apos;rnatilgan joyda suv toshqini bo&apos;lmasligi kerak.
               </p>
             </AccentTextPanel>
-            <AccentIconVisual icon={XavfsizlikIcon} visualClassName="mv-visual" dataParallax={10} className="md:order-2" />
-          </div>
+            <Parallax rangePx={10} className="md:order-2">
+              <AccentIconVisual icon={XavfsizlikIcon} />
+            </Parallax>
+          </Reveal>
         </section>
 
       </div>
-    </div>
     </div>
   );
 }

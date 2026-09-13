@@ -1,5 +1,3 @@
-"use client";
-
 import type { ElementType } from "react";
 
 /**
@@ -15,21 +13,15 @@ import type { ElementType } from "react";
 export function AccentIconVisual({
   icon: Icon,
   size = 40,
-  visualClassName,
-  dataParallax,
   className = "",
 }: {
   icon: ElementType<{ size?: number | string }>;
   size?: number;
-  /** Class the page's own GSAP query targets (".mv-visual" or ".about-visual"). */
-  visualClassName: string;
-  /** Parallax range read via visual.dataset.parallax — matches this page's existing tuned value. */
-  dataParallax: number;
   className?: string;
 }) {
   return (
     <div className={`flex h-full min-h-48 w-full items-center justify-center bg-surface md:min-h-64 ${className}`}>
-      <div data-parallax={dataParallax} className={`flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent ${visualClassName}`}>
+      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/10 text-accent">
         <Icon size={size} />
       </div>
     </div>

@@ -1,19 +1,9 @@
-"use client";
-
-import { useRef } from "react";
-import dynamic from "next/dynamic";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AccentIconVisual } from "@/components/AccentIconVisual";
 import { AccentTextPanel } from "@/components/AccentTextPanel";
+import { Reveal } from "@/components/ui/Reveal";
+import { Parallax } from "@/components/ui/Parallax";
 import { CalendarDays, Settings, ShieldCheck, Globe, Factory, Cog, Target, Award, type LucideIcon } from "lucide-react";
-
-// GSAP + ScrollTrigger (~70KB) is only needed once this page has mounted in
-// the browser, not for the initial render — loading it via next/dynamic with
-// ssr:false keeps it out of this route's initial client bundle.
-const AboutScrollAnimations = dynamic(
-  () => import("@/components/AboutScrollAnimations").then((m) => m.AboutScrollAnimations),
-  { ssr: false }
-);
 
 const BADGES = [
   { Icon: CalendarDays, label: "2021-yildan buyon" },
@@ -48,82 +38,58 @@ const SECTIONS: { Icon: LucideIcon; title: string; body: string }[] = [
 ];
 
 export default function AboutPage() {
-  const pageRef = useRef<HTMLDivElement>(null);
-  // This page is taller than the AppShell sidebar's own nav content (same
-  // situation already solved on /company/mission-values). Since the sidebar
-  // isn't sticky, it stretches to match whichever column is tallest via the
-  // layout's default flex align-items:stretch — so this page's own scroll
-  // is kept inside a bounded, local element instead of the shared document,
-  // and that element's own scrollbar is hidden so only the window's shows.
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={scrollerRef} className="about-scroll-hide h-[calc(100vh-3.5rem)] overflow-y-auto">
-      {/* Scrolls internally (keeps this page's height off the shared
-          AppShell layout) — only its own visual scrollbar is hidden, so the
-          page still shows just the one (window) scrollbar the rest of the
-          site uses. */}
-      <style>{`
-        .about-scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
-        .about-scroll-hide::-webkit-scrollbar { display: none; }
-      `}</style>
-      <AboutScrollAnimations pageRef={pageRef} scrollerRef={scrollerRef} />
-      <div ref={pageRef} className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        {/* Header */}
-        <div className="space-y-4">
-          <Breadcrumbs path="/company/about" />
-          <div>
-            <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Kompaniya haqida</h1>
-          </div>
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+      {/* Header */}
+      <div className="space-y-4">
+        <Breadcrumbs path="/company/about" />
+        <div>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Kompaniya haqida</h1>
         </div>
+      </div>
 
-        {/* Compact badge row (original layout) */}
-        <div className="about-badges-row grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {BADGES.map(({ Icon, label }) => (
-            <div
-              key={label}
-              className="about-badge-item flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center shadow-soft"
-            >
+      {/* Compact badge row (original layout) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {BADGES.map(({ Icon, label }, i) => (
+          <Reveal key={label} delay={i * 0.08}>
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center shadow-soft">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/20 bg-accent/[0.08] text-accent dark:bg-accent/[0.12]">
                 <Icon size={20} />
               </span>
               <span className="text-[13px] font-semibold leading-tight text-primary-dark">{label}</span>
             </div>
-          ))}
-        </div>
+          </Reveal>
+        ))}
+      </div>
 
-        {/* Paragraph sections: zigzag two-column blocks */}
-        <div className="space-y-8 rounded-2xl border border-border bg-surface p-6 shadow-soft">
-          {SECTIONS.map(({ Icon, title, body }, i) => {
-            const iconLeft = i % 2 === 0;
+      {/* Paragraph sections: zigzag two-column blocks */}
+      <div className="space-y-8 rounded-2xl border border-border bg-surface p-6 shadow-soft">
+        {SECTIONS.map(({ Icon, title, body }, i) => {
+          const iconLeft = i % 2 === 0;
 
-            const iconColumn = (
-              <AccentIconVisual
-                icon={Icon}
-                visualClassName="about-visual"
-                dataParallax={20}
-                className={iconLeft ? "" : "md:order-2"}
-              />
-            );
+          const iconColumn = (
+            <Parallax rangePx={20} className={iconLeft ? "" : "md:order-2"}>
+              <AccentIconVisual icon={Icon} />
+            </Parallax>
+          );
 
-            const textColumn = (
-              <AccentTextPanel className={iconLeft ? "" : "md:order-1"}>
-                <h2 className="mb-3 text-[18px] font-bold text-white">{title}</h2>
-                <p className="text-[15px] leading-relaxed text-white/80">{body}</p>
-              </AccentTextPanel>
-            );
+          const textColumn = (
+            <AccentTextPanel className={iconLeft ? "" : "md:order-1"}>
+              <h2 className="mb-3 text-[18px] font-bold text-white">{title}</h2>
+              <p className="text-[15px] leading-relaxed text-white/80">{body}</p>
+            </AccentTextPanel>
+          );
 
-            return (
-              <div
-                key={title}
-                className="about-reveal grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2"
-              >
-                {iconColumn}
-                {textColumn}
-              </div>
-            );
-          })}
-        </div>
+          return (
+            <Reveal
+              key={title}
+              className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2"
+            >
+              {iconColumn}
+              {textColumn}
+            </Reveal>
+          );
+        })}
       </div>
     </div>
   );
