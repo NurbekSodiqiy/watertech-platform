@@ -21,6 +21,12 @@ export async function listScriptRows(): Promise<ScriptRow[]> {
   return data as ScriptRow[];
 }
 
+export async function getScriptRow(id: string): Promise<ScriptRow | null> {
+  const { data, error } = await createClient().from("content_scripts").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`content_scripts: ${error.message}`);
+  return data as ScriptRow | null;
+}
+
 export async function listObjectionRows(): Promise<ObjectionRow[]> {
   const { data, error } = await createClient().from("content_objections").select("*").order("sort_order");
   if (error) throw new Error(`content_objections: ${error.message}`);

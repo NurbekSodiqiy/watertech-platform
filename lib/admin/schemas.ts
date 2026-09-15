@@ -6,6 +6,8 @@ import {
   packageSchema,
   packageGroupSchema,
   productSchema,
+  scriptSchema,
+  stageSchema,
 } from "@/lib/content/schemas";
 
 /** Content table ids are stable slugs — telemetry and script/objection cross
@@ -49,6 +51,30 @@ const optionalNumberField = z
 // (arrays, numbers, booleans) a submitted form or a version restore
 // produces, reusing the same field rules as the public content schemas. ===
 
+/** Stage ids follow the same slug rule as every other content id — the
+ * editor auto-fills one from the stage label, but a manager can still type
+ * one by hand. Uniqueness across a script's stages can't be expressed by the
+ * shape alone, hence the superRefine below. */
+export const scriptWriteSchema = scriptSchema
+  .extend({
+    id: idSchema,
+    status: statusSchema,
+    stages: z.array(stageSchema.extend({ id: idSchema })),
+  })
+  .superRefine((script, ctx) => {
+    const seen = new Set<string>();
+    script.stages.forEach((stage, index) => {
+      if (seen.has(stage.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bosqich ID takrorlanmoqda",
+          path: ["stages", index, "id"],
+        });
+      }
+      seen.add(stage.id);
+    });
+  });
+
 export const faqWriteSchema = faqSchema.extend({ id: idSchema, status: statusSchema });
 export const objectionWriteSchema = objectionSchema.extend({ id: idSchema, status: statusSchema });
 export const competitorWriteSchema = competitorSchema.extend({ id: idSchema, status: statusSchema });
@@ -86,6 +112,8 @@ export const productFormSchema = productWriteSchema.extend({ sizes: csvArrayFiel
 // arrays, numbers, etc). Input types — what EntityForm/react-hook-form bind
 // to (raw strings for csv/number fields) and what a page's defaultValues
 // must match.
+
+export type ScriptFormValues = z.infer<typeof scriptWriteSchema>;
 
 export type FaqFormValues = z.output<typeof faqFormSchema>;
 export type ObjectionFormValues = z.output<typeof objectionFormSchema>;

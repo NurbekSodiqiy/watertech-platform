@@ -89,6 +89,14 @@ export interface ProductRow extends ContentCommonRow {
 
 // === Row -> domain ==============================================================
 
+/** Fills in nextStageId from array order instead of hand-typing it per stage.
+ * Shared by the seed literal (lib/content/scripts.ts) and the admin
+ * upsertScript action, which recomputes it the same way from the stages
+ * array's saved order rather than trusting a client-submitted value. */
+export function chain(stages: Array<Omit<Stage, "nextStageId">>): Stage[] {
+  return stages.map((s, i) => ({ ...s, nextStageId: stages[i + 1]?.id }));
+}
+
 export function rowToScript(row: ScriptRow): Script {
   return {
     id: row.id,

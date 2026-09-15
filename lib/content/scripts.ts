@@ -1,11 +1,7 @@
-import type { Script, Stage } from "./types";
+import type { Script } from "./types";
+import { chain } from "./db";
 
 const ALL_OBJECTION_IDS = ["obj-qimmat", "obj-fitting", "obj-think", "obj-risk"];
-
-/** Fills in nextStageId from array order instead of hand-typing it per stage. */
-function chain(stages: Array<Omit<Stage, "nextStageId">>): Stage[] {
-  return stages.map((s, i) => ({ ...s, nextStageId: stages[i + 1]?.id }));
-}
 
 export const scripts: Script[] = [
   {
