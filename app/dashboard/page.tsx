@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks, Gauge } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerSession } from "@/lib/auth/server-session";
@@ -119,7 +120,13 @@ export default async function DashboardPage({
                     <ul className="space-y-1">
                       {op.topViewed.map((v, i) => (
                         <li key={i} className="flex items-center justify-between gap-2 text-[13px]">
-                          <span className="truncate text-primary-dark">{v.label}</span>
+                          {v.adminHref ? (
+                            <Link href={v.adminHref} className="truncate text-primary hover:underline">
+                              {v.label}
+                            </Link>
+                          ) : (
+                            <span className="truncate text-primary-dark">{v.label}</span>
+                          )}
                           <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                             {v.count}
                           </span>

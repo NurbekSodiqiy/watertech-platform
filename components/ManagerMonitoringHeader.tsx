@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -25,6 +26,12 @@ export function ManagerMonitoringHeader() {
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
+        <Link
+          href="/admin"
+          className="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
+        >
+          Kontent
+        </Link>
         <ThemeToggle />
         <button
           onClick={handleSignOut}

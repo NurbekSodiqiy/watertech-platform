@@ -1,6 +1,6 @@
 export type Role = "operator" | "manager";
 
-export const MANAGER_AREAS = ["/dashboard"] as const;
+export const MANAGER_AREAS = ["/dashboard", "/admin"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

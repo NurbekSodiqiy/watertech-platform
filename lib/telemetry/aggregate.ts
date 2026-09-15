@@ -89,6 +89,30 @@ export function resolveEntityLabel(
   }
 }
 
+/** Admin CRUD edit route for a viewed entity, when one exists. Objection,
+ * competitor and package each have a dedicated editor and are tracked with
+ * the content id itself as entity_id, so the route is a direct lookup;
+ * faq_view is tracked with the question text as entity_id instead (see
+ * components/FaqTab.tsx), which doesn't identify a row, so it has no link.
+ * Scripts don't have an editor yet (nested stage/turn structure — see
+ * app/(admin)/admin/scripts/page.tsx), so both script types point at that
+ * section's read-only overview instead of a specific row. */
+export function resolveAdminHref(type: TelemetryEventType, entityId: string | null): string | null {
+  switch (type) {
+    case "objection_view":
+      return entityId ? `/admin/objections/${entityId}` : null;
+    case "competitor_view":
+      return entityId ? `/admin/competitors/${entityId}` : null;
+    case "package_view":
+      return entityId ? `/admin/packages/${entityId}` : null;
+    case "script_select":
+    case "stage_view":
+      return "/admin/scripts";
+    default:
+      return null;
+  }
+}
+
 const VIEW_TYPES: ReadonlySet<TelemetryEventType> = new Set([
   "script_select",
   "stage_view",
@@ -101,7 +125,7 @@ const VIEW_TYPES: ReadonlySet<TelemetryEventType> = new Set([
 export interface OperatorSummary {
   email: string;
   activeMs: number;
-  topViewed: { label: string; count: number }[];
+  topViewed: { label: string; count: number; adminHref: string | null }[];
   copyCount: number;
   checklistCompleted: number;
   checklistTotal: number;
@@ -146,14 +170,14 @@ export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: numbe
     const pageLeaveMs = evs.filter((e) => e.type === "page_leave").reduce((sum, e) => sum + (e.duration_ms ?? 0), 0);
     const activeMs = Math.max(0, pageLeaveMs - computeIdleMs(evs));
 
-    const counts = new Map<string, { label: string; count: number }>();
+    const counts = new Map<string, { label: string; count: number; adminHref: string | null }>();
     for (const e of evs) {
       if (!VIEW_TYPES.has(e.type)) continue;
       const key = `${e.type}:${e.entity_id ?? e.path}`;
       const label = resolveEntityLabel(e.type, e.entity_id, e.path, maps);
       const existing = counts.get(key);
       if (existing) existing.count += 1;
-      else counts.set(key, { label, count: 1 });
+      else counts.set(key, { label, count: 1, adminHref: resolveAdminHref(e.type, e.entity_id) });
     }
     const topViewed = [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 5);
 
