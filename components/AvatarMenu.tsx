@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/routing";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { signOutAndRedirect } from "@/lib/auth/sign-out";
 
@@ -22,6 +23,7 @@ export function AvatarMenu() {
   const { user } = useSessionUser();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("avatarMenu");
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +42,7 @@ export function AvatarMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Foydalanuvchi menyusi"
+        aria-label={t("menuLabel")}
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-surface shadow-softer"
       >
         {user ? getInitials(user.name) : "?"}
@@ -59,7 +61,7 @@ export function AvatarMenu() {
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-medium text-primary-dark hover:bg-surface-alt"
           >
             <LogOut size={15} className="text-text-secondary" />
-            Chiqish
+            {t("signOut")}
           </button>
         </div>
       )}

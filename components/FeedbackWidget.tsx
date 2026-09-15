@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
 
 // TODO: "Tahrir taklif qilish" tugmasi tahrir-yuborish funksiyasi
@@ -10,11 +11,12 @@ import { useTrack } from "@/hooks/useTrack";
 export function FeedbackWidget() {
   const [vote, setVote] = useState<"up" | "down" | null>(null);
   const track = useTrack();
+  const t = useTranslations("feedback");
 
   return (
     <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
       <div className="flex items-center gap-2 text-[13px] text-text-secondary">
-        <span>Bu sahifa foydali bo&apos;ldimi?</span>
+        <span>{t("question")}</span>
         <button
           onClick={() => {
             setVote("up");
@@ -23,7 +25,7 @@ export function FeedbackWidget() {
           className={`rounded-lg border border-border p-1.5 hover:bg-primary/5 ${
             vote === "up" ? "border-status-ok bg-status-ok/10 text-status-ok" : "text-text-secondary"
           }`}
-          aria-label="Foydali"
+          aria-label={t("helpfulLabel")}
         >
           <ThumbsUp size={14} />
         </button>
@@ -37,11 +39,11 @@ export function FeedbackWidget() {
               ? "border-status-outdated bg-status-outdated/10 text-status-outdated"
               : "text-text-secondary"
           }`}
-          aria-label="Foydali emas"
+          aria-label={t("notHelpfulLabel")}
         >
           <ThumbsDown size={14} />
         </button>
-        {vote && <span className="text-[12px] italic text-text-secondary">Fikringiz uchun rahmat.</span>}
+        {vote && <span className="text-[12px] italic text-text-secondary">{t("thanks")}</span>}
       </div>
     </div>
   );

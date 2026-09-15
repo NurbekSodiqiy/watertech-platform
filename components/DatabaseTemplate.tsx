@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/routing";
+import { useRouter } from "@/i18n/routing";
 import { ArrowUpDown, ChevronRight, Search } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { CopyButton } from "./CopyButton";

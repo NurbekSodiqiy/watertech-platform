@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, CheckSquare, Square, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
 import { useNow } from "@/hooks/useNow";
 import { dailySchedule } from "@/lib/content/daily-schedule";
@@ -66,6 +67,7 @@ export function DailyTimeline() {
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
   const [callCounts, setCallCounts] = useState<Record<number, string>>({});
   const track = useTrack();
+  const t = useTranslations("dailyTimeline");
 
   useEffect(() => {
     try {
@@ -102,7 +104,7 @@ export function DailyTimeline() {
 
   return (
     <div className="mt-8">
-      <h2 className="mb-4 text-lg font-bold text-primary-dark">Kunlik reja</h2>
+      <h2 className="mb-4 text-lg font-bold text-primary-dark">{t("heading")}</h2>
       <div className="relative space-y-0 pl-4 sm:pl-0">
         <div className="absolute bottom-0 left-8 top-0 hidden w-px bg-border sm:block" />
         <div className="absolute bottom-0 left-4 top-0 w-px bg-border sm:hidden" />
@@ -167,7 +169,7 @@ export function DailyTimeline() {
                     <button
                       type="button"
                       onClick={() => toggleCheck(item.id)}
-                      aria-label={checkedItems[item.id] ? "Bajarilmagan deb belgilash" : "Bajarildi deb belgilash"}
+                      aria-label={checkedItems[item.id] ? t("markUndone") : t("markDone")}
                       className={`mt-0.5 shrink-0 ${checkedItems[item.id] ? "text-status-ok" : "text-text-secondary/50 hover:text-primary"}`}
                     >
                       {checkedItems[item.id] ? <CheckSquare size={16} /> : <Square size={16} />}
@@ -191,7 +193,7 @@ export function DailyTimeline() {
                       htmlFor={`call-count-${item.id}`}
                       className="hidden text-[11px] font-medium text-text-secondary whitespace-nowrap sm:inline"
                     >
-                      Qo&apos;ng&apos;iroqlar:
+                      {t("callsLabel")}
                     </label>
                     <input
                       id={`call-count-${item.id}`}
@@ -201,12 +203,12 @@ export function DailyTimeline() {
                       value={callCounts[item.id] ?? ""}
                       onChange={(e) => setCallCount(item.id, e.target.value)}
                       placeholder="0"
-                      aria-label="Qo'ng'iroqlar soni"
+                      aria-label={t("callsAriaLabel")}
                       className="w-14 rounded-lg border border-border bg-surface-alt px-2 py-1 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                     {state === "current" && (
                       <span className="shrink-0 rounded-md bg-accent/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
-                        Hozir
+                        {t("current")}
                       </span>
                     )}
                     {state === "past" && !item.isLunch && (

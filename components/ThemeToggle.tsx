@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const THEME_KEY = "watertech-theme";
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
+  const t = useTranslations("theme");
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -32,7 +34,7 @@ export function ThemeToggle() {
         }`}
       >
         <Sun size={13} />
-        <span className="hidden sm:inline">Yorug&apos;</span>
+        <span className="hidden sm:inline">{t("light")}</span>
       </button>
       <button
         onClick={() => setTheme(true)}
@@ -42,7 +44,7 @@ export function ThemeToggle() {
         }`}
       >
         <Moon size={13} />
-        <span className="hidden sm:inline">Qorong&apos;i</span>
+        <span className="hidden sm:inline">{t("dark")}</span>
       </button>
     </div>
   );

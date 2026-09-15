@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { Search, ChevronDown, ArrowUpRight } from "lucide-react";
 import type { Competitor } from "@/lib/content/types";
 import { CompetitorDetailPanel } from "@/components/CompetitorDetailPanel";

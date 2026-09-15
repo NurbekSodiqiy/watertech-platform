@@ -3,13 +3,16 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { track } from "@/lib/telemetry/client";
+import { stripLocalePrefix } from "@/lib/i18n/strip-locale";
 
 /** Tracks page_enter/page_leave purely off route changes — no visible UI.
- * Mounted once in app/layout.tsx, as a sibling of AppShell (not inside it —
- * AppShell.tsx is design-locked, AGENTS.md), so it still sees every
- * navigation across the whole app. */
+ * Mounted once in app/[locale]/layout.tsx, as a sibling of AppShell (not
+ * inside it — AppShell.tsx is design-locked, AGENTS.md), so it still sees
+ * every navigation across the whole app. Uses next/navigation's raw
+ * usePathname (not next-intl's) and strips the locale prefix itself, so
+ * `path` values stay locale-less for dashboard aggregation. */
 export function TelemetryProvider() {
-  const pathname = usePathname();
+  const pathname = stripLocalePrefix(usePathname());
   const prevPath = useRef<string | null>(null);
   const enteredAt = useRef<number>(Date.now());
 

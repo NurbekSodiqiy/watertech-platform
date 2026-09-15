@@ -1,25 +1,15 @@
-import Link from "next/link";
-import { FileQuestion, Home } from "lucide-react";
-
-export default function NotFound() {
+// Untranslated root fallback — only reachable before a locale can be resolved
+// (e.g. an invalid `[locale]` segment calling notFound() from the layout
+// itself, before it renders <html>/<body>). The real, translated 404 page is
+// app/[locale]/not-found.tsx.
+export default function RootNotFound() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-6 py-24 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <FileQuestion size={32} />
-      </span>
-      <div className="space-y-2">
-        <h1 className="text-[24px] font-bold text-primary-dark">Sahifa topilmadi</h1>
-        <p className="text-[14px] text-text-secondary">
-          Siz izlagan sahifa mavjud emas yoki ko&apos;chirilgan bo&apos;lishi mumkin.
-        </p>
-      </div>
-      <Link
-        href="/"
-        className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-medium text-surface shadow-softer transition-colors hover:bg-primary-hover"
-      >
-        <Home size={16} />
-        Bosh sahifaga qaytish
-      </Link>
-    </div>
+    <html>
+      <body>
+        <div style={{ padding: 48, textAlign: "center", fontFamily: "sans-serif" }}>
+          <p>Page not found.</p>
+        </div>
+      </body>
+    </html>
   );
 }

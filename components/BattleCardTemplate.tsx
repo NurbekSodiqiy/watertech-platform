@@ -1,4 +1,4 @@
-import { PageHeader } from "./DocPageTemplate";
+import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { CompetitorDetailPanel } from "./CompetitorDetailPanel";
 import type { Competitor } from "@/lib/content/types";

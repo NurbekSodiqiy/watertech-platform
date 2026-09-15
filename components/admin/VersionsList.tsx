@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { History, RotateCcw } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { restoreVersion } from "@/lib/admin/actions/versions";

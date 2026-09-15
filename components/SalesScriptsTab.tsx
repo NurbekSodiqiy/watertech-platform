@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, PhoneCall, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
@@ -58,6 +59,8 @@ export function SalesScriptsTab({
   const { scripts, objections, competitors } = useScriptsContent();
   const [expandedScriptStageId, setExpandedScriptStageId] = useState<string | null>(null);
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
+  const t = useTranslations("scripts");
+  const tCommon = useTranslations("common");
 
   function toggleScriptStage(stageId: string) {
     setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
@@ -76,7 +79,7 @@ export function SalesScriptsTab({
         {!selectedScriptStage && !selectedObjection ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-center text-text-secondary text-lg">
-              O&apos;ng paneldan skript bosqichini tanlang...
+              {t("selectPrompt")}
             </p>
           </div>
         ) : (
@@ -94,10 +97,10 @@ export function SalesScriptsTab({
                   {selectedObjection?.label || selectedScriptStage?.label}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2">
-                  {currentTurns && currentTurns.some((t) => t.speaker === "operator") && (
+                  {currentTurns && currentTurns.some((turn) => turn.speaker === "operator") && (
                     <CopyButton
                       value={collectOperatorText(currentTurns, clientName)}
-                      label="Barchasini nusxalash"
+                      label={tCommon("copyAll")}
                     />
                   )}
                   <button
@@ -106,7 +109,7 @@ export function SalesScriptsTab({
                     className="flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/20"
                   >
                     <PhoneCall size={15} />
-                    Qo&apos;ng&apos;iroq rejimi
+                    {t("callModeButton")}
                   </button>
                 </div>
               </div>

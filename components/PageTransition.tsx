@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/routing";
 
 // Enter-only: no exit animation, so the incoming page mounts immediately
 // instead of waiting on an outgoing one to finish, and Suspense boundaries

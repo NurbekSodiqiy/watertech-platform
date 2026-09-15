@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { memo, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { ChevronRight, ChevronLeft, Home, type LucideIcon } from "lucide-react";
+import { Link, usePathname } from "@/i18n/routing";
 import { siteTree } from "@/lib/site-config";
 import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
 import type { NavNode, NavBadges } from "@/lib/types";
@@ -93,12 +93,16 @@ const NavItem = memo(function NavItem({
   scope,
   pathname,
   navBadges,
+  t,
+  tSidebar,
 }: {
   node: NavNode;
   depth: number;
   scope: string;
   pathname: string;
   navBadges?: NavBadges;
+  t: ReturnType<typeof useTranslations>;
+  tSidebar: ReturnType<typeof useTranslations>;
 }) {
   const isActive = pathname === node.path;
   const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
@@ -135,7 +139,7 @@ const NavItem = memo(function NavItem({
               size={depth === 0 ? 40 : 28}
               iconSize={depth === 0 ? 18 : 14}
             />
-            <span className="truncate">{node.title}</span>
+            <span className="truncate">{t(node.title)}</span>
             {node.locked && <LockIcon size={11} className="ml-auto shrink-0 text-status-warning" />}
             {navBadges?.[node.path] && (
               <NavCountBadge tone={navBadges[node.path].tone} count={navBadges[node.path].count} />
@@ -144,7 +148,7 @@ const NavItem = memo(function NavItem({
           {hasChildren && (
             <button
               onClick={() => setOpen((v) => !v)}
-              aria-label={open ? "Yig'ish" : "Yoyish"}
+              aria-label={open ? tSidebar("collapseChild") : tSidebar("expandChild")}
               className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-primary/10 hover:text-primary-dark"
             >
               <ChevronRight
@@ -171,7 +175,15 @@ const NavItem = memo(function NavItem({
                   style={{ left: `${guideLeft}px`, width: `${16 + (depth + 1) * 16 - guideLeft}px`, height: "2px" }}
                   aria-hidden
                 />
-                <NavItem node={child} depth={depth + 1} scope={scope} pathname={pathname} navBadges={navBadges} />
+                <NavItem
+                  node={child}
+                  depth={depth + 1}
+                  scope={scope}
+                  pathname={pathname}
+                  navBadges={navBadges}
+                  t={t}
+                  tSidebar={tSidebar}
+                />
               </div>
             ))}
           </div>
@@ -184,7 +196,17 @@ const NavItem = memo(function NavItem({
 /** Icon-only rail row used when the desktop sidebar is collapsed. Children
  * appear in a floating flyout instead of an inline accordion. `pathname` is
  * threaded down from SidebarNav's single usePathname() call, same as NavItem. */
-function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: string; pathname: string }) {
+function CollapsedNavItem({
+  node,
+  scope,
+  pathname,
+  t,
+}: {
+  node: NavNode;
+  scope: string;
+  pathname: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
   const isActive = pathname === node.path;
   const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
   const active = isActive || isAncestor;
@@ -203,7 +225,7 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
       )}
       <Link
         href={node.path}
-        title={node.title}
+        title={t(node.title)}
         className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl hover:bg-primary/5"
       >
         <IconBadge Icon={Icon} active={active} size={40} iconSize={18} />
@@ -221,7 +243,7 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
       {hasChildren && (
         <div className="invisible absolute left-full top-0 z-50 ml-3 w-56 rounded-2xl border border-border bg-surface p-2 opacity-0 shadow-soft transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
           <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-            {node.title}
+            {t(node.title)}
           </p>
           <div className="relative">
             <div className="absolute bottom-2 top-1 w-0.5 bg-primary/40" style={{ left: "10px" }} aria-hidden />
@@ -243,7 +265,7 @@ function CollapsedNavItem({ node, scope, pathname }: { node: NavNode; scope: str
                           : "text-text-secondary hover:bg-primary/5 hover:text-primary-dark"
                       }`}
                     >
-                      {child.title}
+                      {t(child.title)}
                     </Link>
                   </div>
                 );
@@ -268,6 +290,8 @@ export function SidebarNav({
   const pathname = usePathname();
   const isHome = pathname === "/";
   const groups = chunk(siteTree, NAV_GROUP_SIZES);
+  const t = useTranslations("nav");
+  const tSidebar = useTranslations("chrome.sidebar");
 
   if (collapsed) {
     return (
@@ -280,14 +304,14 @@ export function SidebarNav({
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             />
           )}
-          <Link href="/" title="Bugun" className="relative z-10 flex h-12 w-12 items-center justify-center">
+          <Link href="/" title={t("home")} className="relative z-10 flex h-12 w-12 items-center justify-center">
             <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
           </Link>
         </div>
         {groups.map((group, gi) => (
           <div key={gi} className="mb-5 space-y-1.5 last:mb-0">
             {group.map((node) => (
-              <CollapsedNavItem key={node.path} node={node} scope={scope} pathname={pathname} />
+              <CollapsedNavItem key={node.path} node={node} scope={scope} pathname={pathname} t={t} />
             ))}
           </div>
         ))}
@@ -308,14 +332,23 @@ export function SidebarNav({
           }`}
         >
           <IconBadge Icon={Home} active={isHome} size={40} iconSize={18} />
-          Bugun
+          {t("home")}
         </Link>
       </div>
 
       {groups.map((group, gi) => (
         <div key={gi} className="mb-6 space-y-1 last:mb-0">
           {group.map((node) => (
-            <NavItem key={node.path} node={node} depth={0} scope={scope} pathname={pathname} navBadges={navBadges} />
+            <NavItem
+              key={node.path}
+              node={node}
+              depth={0}
+              scope={scope}
+              pathname={pathname}
+              navBadges={navBadges}
+              t={t}
+              tSidebar={tSidebar}
+            />
           ))}
         </div>
       ))}
@@ -327,6 +360,7 @@ export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const reduce = useReducedMotion();
+  const tSidebar = useTranslations("chrome.sidebar");
 
   useEffect(() => {
     try {
@@ -363,7 +397,7 @@ export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
 
       <button
         onClick={toggle}
-        aria-label={collapsed ? "Yon panelni yoyish" : "Yon panelni yig'ish"}
+        aria-label={collapsed ? tSidebar("expand") : tSidebar("collapse")}
         className="absolute -right-3 top-6 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface text-text-secondary shadow-soft hover:text-primary-dark"
       >
         <ChevronLeft size={13} className={collapsed ? "rotate-180" : ""} />
@@ -373,7 +407,7 @@ export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
 
       {!collapsed && (
         <div className="shrink-0 border-t border-border p-3 text-[11px] text-text-secondary">
-          WaterTech Bilimlar Bazasi · Ishlanma versiya
+          {tSidebar("footer")}
         </div>
       )}
     </motion.aside>

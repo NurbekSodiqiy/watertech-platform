@@ -1,0 +1,166 @@
+{
+  "metadata": {
+    "title": "WaterTech Savdo Bilimlar Bazasi",
+    "description": "WaterTech uchun ichki savdo bilimlar bazasi va wiki skeleti."
+  },
+  "nav": {
+    "home": "Bugun",
+    "childCount": "{count} ta quyi sahifa",
+    "salesProcess": {
+      "title": "Savdo jarayoni",
+      "description": "Voronka, skriptlar, e'tirozlar bilan ishlash va bitim mexanikasi.",
+      "scripts": {
+        "title": "Jonli skript va yordamchi",
+        "description": "Faol qo'ng'iroq paytida tez kirish uchun eng yuqorida — skriptlar, e'tirozlar, paketlar va raqobatchilar bir joyda."
+      },
+      "objections": { "title": "E'tirozlar" },
+      "battleCards": { "title": "Raqobat kartalari" }
+    },
+    "company": {
+      "title": "Kompaniya",
+      "description": "Biz kimmiz, qanday ishlaymiz va ichki ma'lumotlarni qayerdan topish mumkin.",
+      "about": { "title": "Kompaniya haqida" },
+      "missionValues": { "title": "Missiya va qadriyatlar" },
+      "onboarding": { "title": "Onboarding" },
+      "contacts": { "title": "Kontaktlar" },
+      "internalRules": { "title": "Ichki qoidalar" },
+      "factoryTour": { "title": "Zavod bo'ylab sayohat" }
+    },
+    "products": {
+      "title": "Mahsulot va narx",
+      "description": "To'liq katalog, texnik hujjatlar, narxlar va taqqoslashlar.",
+      "catalog": { "title": "Katalog" },
+      "comparisons": { "title": "Taqqoslash" },
+      "technicalDocs": { "title": "Texnik hujjatlar" },
+      "roadmap": { "title": "Rivojlanish rejasi" }
+    },
+    "tools": {
+      "title": "Dasturlar va vositalar",
+      "description": "Dasturiy ta'minot, CRM standart tartib-qoidalari va muammolarni bartaraf etish.",
+      "amocrm": {
+        "title": "amoCRM",
+        "leadCreation": { "title": "Lid yaratish" },
+        "stageTransition": { "title": "Bosqichni almashtirish" },
+        "taskSetting": { "title": "Vazifa belgilash" },
+        "cardStandard": { "title": "Karta standarti" },
+        "lossReasons": { "title": "Yo'qotish sabablari" },
+        "reports": { "title": "Hisobotlar" }
+      },
+      "calculator": { "title": "Partiya kalkulyatori" },
+      "googleSheets": { "title": "Google Sheets" },
+      "communicationStandards": { "title": "amoCRM qo'llanmasi" },
+      "salesFunnel": { "title": "Sotuv varonkasi" },
+      "repeatSalesFunnel": { "title": "Qayta sotuv" }
+    },
+    "logistics": {
+      "title": "Logistika",
+      "description": "Yetkazib berish, transport, qaytarish va ombor ma'lumotlari.",
+      "sampleShipping": { "title": "Namuna yuborish" },
+      "returnsPolicy": { "title": "Qaytarish siyosati" }
+    },
+    "standards": {
+      "title": "Standartlar, KPI va motivatsiya",
+      "description": "Natijalar qanday o'lchanadi, taqdirlanadi va rivojlantiriladi.",
+      "communicationStandards": { "title": "Muloqot standartlari" },
+      "kpiSystem": { "title": "KPI tizimi" },
+      "motivationBonus": { "title": "Motivatsiya va bonus" },
+      "careerPath": { "title": "Karyera yo'li" }
+    },
+    "faq": {
+      "title": "Savol-javob",
+      "description": "Barcha mavzular bo'yicha ko'p beriladigan savollar."
+    },
+    "changelog": {
+      "title": "O'zgarishlar tarixi",
+      "description": "Nima o'zgardi, qachon o'zgardi va kim bilishi kerak."
+    }
+  },
+  "chrome": {
+    "appShell": {
+      "mobileNavTitle": "Navigatsiya",
+      "closeMobileNav": "Navigatsiyani yopish"
+    },
+    "sidebar": {
+      "collapse": "Yon panelni yig'ish",
+      "expand": "Yon panelni yoyish",
+      "collapseChild": "Yig'ish",
+      "expandChild": "Yoyish",
+      "footer": "WaterTech Bilimlar Bazasi · Ishlanma versiya"
+    },
+    "topBar": {
+      "toggleNav": "Navigatsiyani ochish/yopish",
+      "mobileTitle": "Savdo bilimlar bazasi",
+      "searchPlaceholder": "Bilimlar bazasidan qidirish…"
+    },
+    "commandPalette": {
+      "results": "Natijalar",
+      "loading": "Yuklanmoqda…",
+      "noResults": "Hech narsa topilmadi.",
+      "startTyping": "Qidirish uchun yozishni boshlang.",
+      "categories": {
+        "objection": "E'tiroz",
+        "script_stage": "Skript bosqichi",
+        "faq": "FAQ",
+        "competitor": "Raqobatchi",
+        "package": "Paket"
+      }
+    }
+  },
+  "theme": {
+    "light": "Yorug'",
+    "dark": "Qorong'i"
+  },
+  "avatarMenu": {
+    "menuLabel": "Foydalanuvchi menyusi",
+    "signOut": "Chiqish"
+  },
+  "emptyState": {
+    "title": "Hozircha kontent yo'q",
+    "description": "Bu bo'lim joy egallovchi sifatida qo'yilgan. Haqiqiy kontent bilan almashtiring."
+  },
+  "errors": {
+    "errorTitle": "Xatolik yuz berdi",
+    "errorDescription": "Sahifani yuklashda kutilmagan xatolik yuz berdi. Qayta urinib ko'ring.",
+    "retry": "Qayta urinib ko'ring",
+    "notFoundTitle": "Sahifa topilmadi",
+    "notFoundDescription": "Siz izlagan sahifa mavjud emas yoki ko'chirilgan bo'lishi mumkin.",
+    "backHome": "Bosh sahifaga qaytish"
+  },
+  "login": {
+    "title": "WaterTech Bilimlar Bazasi",
+    "subtitle": "Davom etish uchun tizimga kiring",
+    "notAllowed": "Sizga kirish huquqi berilmagan, administrator bilan bog'laning.",
+    "googleSignIn": "Google bilan kirish"
+  },
+  "docPage": {
+    "placeholder": "[Kontent shu yerga qo'yiladi — bu bo'lim tarkibiy joy egallovchi. “{title}” uchun haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]"
+  },
+  "feedback": {
+    "question": "Bu sahifa foydali bo'ldimi?",
+    "helpfulLabel": "Foydali",
+    "notHelpfulLabel": "Foydali emas",
+    "thanks": "Fikringiz uchun rahmat."
+  },
+  "dailyTimeline": {
+    "heading": "Kunlik reja",
+    "callsLabel": "Qo'ng'iroqlar:",
+    "callsAriaLabel": "Qo'ng'iroqlar soni",
+    "current": "Hozir",
+    "markDone": "Bajarildi deb belgilash",
+    "markUndone": "Bajarilmagan deb belgilash"
+  },
+  "callMode": {
+    "closeButton": "Call Mode'ni yopish (F2 / Esc)",
+    "planProgress": "{done}/{total} kunlik reja bajarildi",
+    "searchPlaceholder": "Qo'ng'iroq davomida qidirish — e'tiroz yoki bosqich…",
+    "noResults": "Mos natija topilmadi.",
+    "nextStage": "Keyingi bosqich: {stage}"
+  },
+  "scripts": {
+    "selectPrompt": "O'ng paneldan skript bosqichini tanlang...",
+    "callModeButton": "Qo'ng'iroq rejimi"
+  },
+  "common": {
+    "copyAll": "Barchasini nusxalash"
+  }
+}

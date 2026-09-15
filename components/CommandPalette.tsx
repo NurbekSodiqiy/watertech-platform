@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/routing";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
 import { useTrack } from "@/hooks/useTrack";
@@ -11,16 +12,22 @@ import { createSearcher, resolveSearchPath, type Searcher, type SearchDoc, type 
 import { normalizeSearchText } from "@/lib/search/normalize";
 
 interface SearchItem {
+  categoryKey: string;
+  titleKey: string;
+  path: string;
+}
+
+interface ResolvedItem {
   category: string;
   title: string;
   path: string;
 }
 
-function buildIndex(nodes: NavNode[], category?: string): SearchItem[] {
+function buildIndex(nodes: NavNode[], categoryKey?: string): SearchItem[] {
   const items: SearchItem[] = [];
   for (const node of nodes) {
-    const cat = category ?? node.title;
-    items.push({ category: cat, title: node.title, path: node.path });
+    const cat = categoryKey ?? node.title;
+    items.push({ categoryKey: cat, titleKey: node.title, path: node.path });
     if (node.children) items.push(...buildIndex(node.children, cat));
   }
   return items;
@@ -28,24 +35,26 @@ function buildIndex(nodes: NavNode[], category?: string): SearchItem[] {
 
 const SEARCH_INDEX = buildIndex(siteTree);
 
-// Page-title matches (above) point straight at a URL already, so they're
-// kept as-is; content matches (objection/script-stage/faq/competitor/
-// package text — not just titles) come from the unified lib/search index
-// and get a category label here purely for display grouping.
-const CONTENT_CATEGORY_LABEL: Record<SearchResultType, string> = {
-  objection: "E'tiroz",
-  script_stage: "Skript bosqichi",
-  faq: "FAQ",
-  competitor: "Raqobatchi",
-  package: "Paket",
-};
-
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const track = useTrack();
+  const t = useTranslations("nav");
+  const tChrome = useTranslations("chrome");
+
+  // Page-title matches (above) point straight at a URL already, so they're
+  // kept as-is; content matches (objection/script-stage/faq/competitor/
+  // package text — not just titles) come from the unified lib/search index
+  // and get a category label here purely for display grouping.
+  const contentCategoryLabel: Record<SearchResultType, string> = {
+    objection: tChrome("commandPalette.categories.objection"),
+    script_stage: tChrome("commandPalette.categories.script_stage"),
+    faq: tChrome("commandPalette.categories.faq"),
+    competitor: tChrome("commandPalette.categories.competitor"),
+    package: tChrome("commandPalette.categories.package"),
+  };
 
   // Fetched once, on first open, and cached for the rest of the session —
   // search-index docs don't change while an operator is using the app.
@@ -89,16 +98,20 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const results = useMemo(() => {
     if (!query.trim()) return null;
     const q = normalizeSearchText(query);
-    const pageMatches: SearchItem[] = SEARCH_INDEX.filter((i) => normalizeSearchText(i.title).includes(q));
-    const contentMatches: SearchItem[] = (searcherRef.current?.searchAll(query, 8) ?? []).map((r) => ({
-      category: CONTENT_CATEGORY_LABEL[r.type],
+    const pageMatches: ResolvedItem[] = SEARCH_INDEX.map((i) => ({
+      category: t(i.categoryKey),
+      title: t(i.titleKey),
+      path: i.path,
+    })).filter((i) => normalizeSearchText(i.title).includes(q));
+    const contentMatches: ResolvedItem[] = (searcherRef.current?.searchAll(query, 8) ?? []).map((r) => ({
+      category: contentCategoryLabel[r.type],
       title: r.title,
       path: resolveSearchPath(r.nav),
     }));
     // Page-title matches first (they're exact substring hits, so more
     // confident than a fuzzy content match), de-duplicated by path.
     const seen = new Set<string>();
-    const merged: SearchItem[] = [];
+    const merged: ResolvedItem[] = [];
     for (const item of [...pageMatches, ...contentMatches]) {
       if (seen.has(item.path)) continue;
       seen.add(item.path);
@@ -155,7 +168,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Bilimlar bazasidan qidirish…"
+                placeholder={tChrome("topBar.searchPlaceholder")}
                 className="min-w-0 flex-1 bg-transparent text-[15px] text-primary-dark placeholder:text-text-secondary focus:outline-none"
               />
               <span className="shrink-0 rounded-md border border-border bg-surface-alt px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">
@@ -167,14 +180,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               {results ? (
                 <>
                   <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-                    Natijalar
+                    {tChrome("commandPalette.results")}
                   </p>
                   <div className="space-y-0.5">
                     {results.length === 0 && indexLoading && (
-                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">Yuklanmoqda…</p>
+                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
                     )}
                     {results.length === 0 && !indexLoading && (
-                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">Hech narsa topilmadi.</p>
+                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.noResults")}</p>
                     )}
                     {results.map((item) => (
                       <button
@@ -191,9 +204,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   </div>
                 </>
               ) : (
-                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">
-                  Qidirish uchun yozishni boshlang.
-                </p>
+                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.startTyping")}</p>
               )}
             </div>
           </motion.div>

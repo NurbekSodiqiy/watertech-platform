@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { X, Clock, ArrowRight, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
@@ -49,6 +50,8 @@ export function CallModeOverlay({
 }) {
   const { clientName } = useClientName();
   const content = useScriptsContent();
+  const t = useTranslations("callMode");
+  const tCommon = useTranslations("common");
   const searcher = useMemo(() => createSearcher(buildSearchDocs(content)), [content]);
   const [elapsed, setElapsed] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,14 +128,14 @@ export function CallModeOverlay({
               style={{ width: `${dailySchedule.length > 0 ? (checklistDone / dailySchedule.length) * 100 : 0}%` }}
             />
           </span>
-          {checklistDone}/{dailySchedule.length} kunlik reja bajarildi
+          {t("planProgress", { done: checklistDone, total: dailySchedule.length })}
         </span>
         <button
           onClick={onClose}
           className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-surface-alt"
         >
           <X size={16} />
-          Call Mode&apos;ni yopish (F2 / Esc)
+          {t("closeButton")}
         </button>
       </div>
 
@@ -142,7 +145,7 @@ export function CallModeOverlay({
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Qo'ng'iroq davomida qidirish — e'tiroz yoki bosqich…"
+            placeholder={t("searchPlaceholder")}
             className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
           {searchResults.length > 0 && (
@@ -159,7 +162,7 @@ export function CallModeOverlay({
             </div>
           )}
           {searchQuery.trim() && searchResults.length === 0 && (
-            <p className="mt-2 px-1 text-[12.5px] text-text-secondary">Mos natija topilmadi.</p>
+            <p className="mt-2 px-1 text-[12.5px] text-text-secondary">{t("noResults")}</p>
           )}
         </div>
       </div>
@@ -173,8 +176,8 @@ export function CallModeOverlay({
             <h2 className="text-[28px] font-bold text-primary-dark">
               {currentObjection?.label || currentStage?.label}
             </h2>
-            {turns.some((t) => t.speaker === "operator") && (
-              <CopyButton value={collectOperatorText(turns, clientName)} label="Barchasini nusxalash" />
+            {turns.some((turn) => turn.speaker === "operator") && (
+              <CopyButton value={collectOperatorText(turns, clientName)} label={tCommon("copyAll")} />
             )}
           </div>
           <ScriptTurnList turns={turns} large />
@@ -192,7 +195,7 @@ export function CallModeOverlay({
             onClick={() => onSelectStage(nextStage)}
             className="mx-auto flex w-full max-w-3xl items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-[16px] font-semibold text-surface shadow-soft transition-colors hover:bg-primary-hover"
           >
-            Keyingi bosqich: {nextStage.label}
+            {t("nextStage", { stage: nextStage.label })}
             <ArrowRight size={18} />
           </button>
         </div>

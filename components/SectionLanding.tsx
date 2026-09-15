@@ -1,16 +1,19 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/routing";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
 import type { NavNode } from "@/lib/types";
 
-export function SectionLanding({ node }: { node: NavNode }) {
+export async function SectionLanding({ node }: { node: NavNode }) {
+  const t = await getTranslations("nav");
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <Breadcrumbs path={node.path} />
       <div>
-        <h1 className="text-[32px] font-extrabold tracking-tight text-primary-dark">{node.title}</h1>
-        {node.description && <p className="mt-1 text-[15px] text-text-secondary">{node.description}</p>}
+        <h1 className="text-[32px] font-extrabold tracking-tight text-primary-dark">{t(node.title)}</h1>
+        {node.description && <p className="mt-1 text-[15px] text-text-secondary">{t(node.description)}</p>}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -27,12 +30,12 @@ export function SectionLanding({ node }: { node: NavNode }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 text-[14px] font-medium text-primary-dark">
-                  {child.title}
+                  {t(child.title)}
                   {child.locked && <LockIcon size={11} className="text-status-warning" />}
                 </span>
                 {child.children && (
                   <span className="block text-[12px] text-text-secondary">
-                    {child.children.length} ta quyi sahifa
+                    {t("childCount", { count: child.children.length })}
                   </span>
                 )}
               </span>

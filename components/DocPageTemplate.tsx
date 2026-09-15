@@ -1,38 +1,9 @@
-import { Breadcrumbs } from "./Breadcrumbs";
-import { MetadataBadgeRow } from "./MetadataBadgeRow";
-import { StatusLockBadge } from "./StatusLockBadge";
+import { getTranslations } from "next-intl/server";
+import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
 import type { PageMeta } from "@/lib/types";
 
-export function PageHeader({
-  path,
-  title,
-  description,
-  meta,
-  locked,
-}: {
-  path: string;
-  title: string;
-  description?: string;
-  meta?: PageMeta;
-  locked?: boolean;
-}) {
-  return (
-    <div className="space-y-4">
-      <Breadcrumbs path={path} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">{title}</h1>
-          {description && <p className="mt-1 text-[15px] text-text-secondary">{description}</p>}
-        </div>
-        {locked && <StatusLockBadge />}
-      </div>
-      {meta && <MetadataBadgeRow meta={meta} />}
-    </div>
-  );
-}
-
-export function DocPageTemplate({
+export async function DocPageTemplate({
   path,
   title,
   description,
@@ -47,6 +18,8 @@ export function DocPageTemplate({
   locked?: boolean;
   children?: React.ReactNode;
 }) {
+  const t = await getTranslations("docPage");
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader path={path} title={title} description={description} meta={meta} locked={locked} />
@@ -55,8 +28,7 @@ export function DocPageTemplate({
         {children ?? (
           <div className="space-y-3">
             <p className="rounded-lg border border-dashed border-border bg-surface-alt px-4 py-6 text-center text-[13.5px] italic text-text-secondary">
-              [Kontent shu yerga qo&apos;yiladi — bu bo&apos;lim tarkibiy joy egallovchi. “{title}” uchun
-              haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]
+              {t("placeholder", { title })}
             </p>
           </div>
         )}

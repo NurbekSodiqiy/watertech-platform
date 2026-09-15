@@ -1,0 +1,166 @@
+{
+  "metadata": {
+    "title": "База знаний продаж WaterTech",
+    "description": "Внутренняя база знаний и wiki-скелет для отдела продаж WaterTech."
+  },
+  "nav": {
+    "home": "Сегодня",
+    "childCount": "{count} подстраниц",
+    "salesProcess": {
+      "title": "Процесс продаж",
+      "description": "Воронка, скрипты, работа с возражениями и механика сделки.",
+      "scripts": {
+        "title": "Живой скрипт и помощник",
+        "description": "Самое важное во время активного звонка — скрипты, возражения, пакеты и конкуренты в одном месте."
+      },
+      "objections": { "title": "Возражения" },
+      "battleCards": { "title": "Карточки конкурентов" }
+    },
+    "company": {
+      "title": "Компания",
+      "description": "Кто мы, как мы работаем и где найти внутреннюю информацию.",
+      "about": { "title": "О компании" },
+      "missionValues": { "title": "Миссия и ценности" },
+      "onboarding": { "title": "Онбординг" },
+      "contacts": { "title": "Контакты" },
+      "internalRules": { "title": "Внутренние правила" },
+      "factoryTour": { "title": "Экскурсия по заводу" }
+    },
+    "products": {
+      "title": "Продукты и цены",
+      "description": "Полный каталог, техническая документация, цены и сравнения.",
+      "catalog": { "title": "Каталог" },
+      "comparisons": { "title": "Сравнение" },
+      "technicalDocs": { "title": "Техническая документация" },
+      "roadmap": { "title": "План развития" }
+    },
+    "tools": {
+      "title": "Программы и инструменты",
+      "description": "Программное обеспечение, стандартные регламенты CRM и устранение неполадок.",
+      "amocrm": {
+        "title": "amoCRM",
+        "leadCreation": { "title": "Создание лида" },
+        "stageTransition": { "title": "Смена этапа" },
+        "taskSetting": { "title": "Постановка задачи" },
+        "cardStandard": { "title": "Стандарт карточки" },
+        "lossReasons": { "title": "Причины потери" },
+        "reports": { "title": "Отчёты" }
+      },
+      "calculator": { "title": "Калькулятор партии" },
+      "googleSheets": { "title": "Google Таблицы" },
+      "communicationStandards": { "title": "Руководство по amoCRM" },
+      "salesFunnel": { "title": "Воронка продаж" },
+      "repeatSalesFunnel": { "title": "Повторные продажи" }
+    },
+    "logistics": {
+      "title": "Логистика",
+      "description": "Доставка, транспорт, возвраты и складская информация.",
+      "sampleShipping": { "title": "Отправка образцов" },
+      "returnsPolicy": { "title": "Политика возврата" }
+    },
+    "standards": {
+      "title": "Стандарты, KPI и мотивация",
+      "description": "Как измеряются, поощряются и развиваются результаты.",
+      "communicationStandards": { "title": "Стандарты общения" },
+      "kpiSystem": { "title": "Система KPI" },
+      "motivationBonus": { "title": "Мотивация и бонусы" },
+      "careerPath": { "title": "Карьерный путь" }
+    },
+    "faq": {
+      "title": "Вопросы и ответы",
+      "description": "Часто задаваемые вопросы по всем темам."
+    },
+    "changelog": {
+      "title": "История изменений",
+      "description": "Что изменилось, когда изменилось и кому об этом нужно знать."
+    }
+  },
+  "chrome": {
+    "appShell": {
+      "mobileNavTitle": "Навигация",
+      "closeMobileNav": "Закрыть навигацию"
+    },
+    "sidebar": {
+      "collapse": "Свернуть боковую панель",
+      "expand": "Развернуть боковую панель",
+      "collapseChild": "Свернуть",
+      "expandChild": "Развернуть",
+      "footer": "База знаний WaterTech · Тестовая версия"
+    },
+    "topBar": {
+      "toggleNav": "Открыть/закрыть навигацию",
+      "mobileTitle": "База знаний продаж",
+      "searchPlaceholder": "Поиск по базе знаний…"
+    },
+    "commandPalette": {
+      "results": "Результаты",
+      "loading": "Загрузка…",
+      "noResults": "Ничего не найдено.",
+      "startTyping": "Начните вводить текст для поиска.",
+      "categories": {
+        "objection": "Возражение",
+        "script_stage": "Этап скрипта",
+        "faq": "Вопрос-ответ",
+        "competitor": "Конкурент",
+        "package": "Пакет"
+      }
+    }
+  },
+  "theme": {
+    "light": "Светлая",
+    "dark": "Тёмная"
+  },
+  "avatarMenu": {
+    "menuLabel": "Меню пользователя",
+    "signOut": "Выйти"
+  },
+  "emptyState": {
+    "title": "Пока нет контента",
+    "description": "Этот раздел размещён как заглушка. Замените его реальным контентом."
+  },
+  "errors": {
+    "errorTitle": "Произошла ошибка",
+    "errorDescription": "При загрузке страницы произошла непредвиденная ошибка. Попробуйте ещё раз.",
+    "retry": "Попробовать ещё раз",
+    "notFoundTitle": "Страница не найдена",
+    "notFoundDescription": "Искомая страница не существует или была перемещена.",
+    "backHome": "Вернуться на главную"
+  },
+  "login": {
+    "title": "База знаний WaterTech",
+    "subtitle": "Войдите, чтобы продолжить",
+    "notAllowed": "У вас нет доступа, обратитесь к администратору.",
+    "googleSignIn": "Войти через Google"
+  },
+  "docPage": {
+    "placeholder": "[Контент будет размещён здесь — этот раздел является структурной заглушкой. Замените «{title}» реальным текстом, скриншотом, ссылкой или медиа.]"
+  },
+  "feedback": {
+    "question": "Эта страница была полезной?",
+    "helpfulLabel": "Полезно",
+    "notHelpfulLabel": "Не полезно",
+    "thanks": "Спасибо за отзыв."
+  },
+  "dailyTimeline": {
+    "heading": "План на день",
+    "callsLabel": "Звонки:",
+    "callsAriaLabel": "Количество звонков",
+    "current": "Сейчас",
+    "markDone": "Отметить как выполнено",
+    "markUndone": "Отметить как невыполнено"
+  },
+  "callMode": {
+    "closeButton": "Закрыть Call Mode (F2 / Esc)",
+    "planProgress": "{done}/{total} пунктов плана выполнено",
+    "searchPlaceholder": "Поиск во время звонка — возражение или этап…",
+    "noResults": "Совпадений не найдено.",
+    "nextStage": "Следующий этап: {stage}"
+  },
+  "scripts": {
+    "selectPrompt": "Выберите этап скрипта на правой панели...",
+    "callModeButton": "Режим звонка"
+  },
+  "common": {
+    "copyAll": "Скопировать всё"
+  }
+}

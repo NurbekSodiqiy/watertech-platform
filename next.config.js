@@ -90,7 +90,10 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
-let exportedConfig = withBundleAnalyzer(nextConfig);
+const createNextIntlPlugin = require("next-intl/plugin");
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
+let exportedConfig = withNextIntl(withBundleAnalyzer(nextConfig));
 
 // Only wraps (and uploads source maps) when a Sentry auth token is present —
 // unset in local dev, so local builds are unaffected.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
 import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
 import type { ContentBundle } from "@/lib/content/loader";

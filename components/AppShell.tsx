@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { usePathname } from "@/i18n/routing";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
@@ -20,6 +21,7 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   const [paletteEverOpened, setPaletteEverOpened] = useState(false);
   const pathname = usePathname();
   const reduce = useReducedMotion();
+  const t = useTranslations("chrome.appShell");
 
   useEffect(() => {
     setMobileOpen(false);
@@ -72,11 +74,11 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
               transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
             >
               <div className="flex items-center justify-between border-b border-border px-3 py-3">
-                <span className="text-sm font-semibold text-primary-dark">Navigatsiya</span>
+                <span className="text-sm font-semibold text-primary-dark">{t("mobileNavTitle")}</span>
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="rounded-lg p-1 text-text-secondary hover:bg-primary/10"
-                  aria-label="Navigatsiyani yopish"
+                  aria-label={t("closeMobileNav")}
                 >
                   <X size={18} />
                 </button>

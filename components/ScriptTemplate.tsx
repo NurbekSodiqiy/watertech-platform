@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { PageHeader } from "./DocPageTemplate";
+import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { ScriptTurns, objectionToTurns } from "./ScriptTurns";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
