@@ -32,6 +32,7 @@ export function MiniCalculatorButton() {
   const [operator, setOperator] = useState<Op | null>(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +40,10 @@ export function MiniCalculatorButton() {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      // Back to the calculator icon rather than the top of the document.
+      triggerRef.current?.focus();
     }
     document.addEventListener("mousedown", onClickOutside);
     window.addEventListener("keydown", onKeyDown);
@@ -104,18 +108,28 @@ export function MiniCalculatorButton() {
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Kalkulyator"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-primary-dark hover:bg-primary/10"
       >
-        <Calculator size={18} />
+        <Calculator size={18} aria-hidden="true" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg">
-          <div className="mb-3 overflow-x-auto rounded-lg border border-border bg-surface-alt px-3 py-3 text-right text-[22px] font-semibold text-primary-dark">
+        <div
+          role="dialog"
+          aria-label="Kalkulyator"
+          className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg"
+        >
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-3 overflow-x-auto rounded-lg border border-border bg-surface-alt px-3 py-3 text-right text-[22px] font-semibold text-primary-dark"
+          >
             {display}
           </div>
 

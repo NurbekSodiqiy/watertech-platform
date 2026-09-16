@@ -1,5 +1,6 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
+import { OfflineBanner } from "@/components/providers/OfflineBanner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { getFaqs } from "@/lib/content/loader";
 import { changelogEntries } from "@/lib/mock-data/changelog";
@@ -31,6 +32,9 @@ export default async function AppGroupLayout({
 
   return (
     <SessionProvider>
+      {/* Above the shell rather than inside it: the banner is a statement
+          about the whole app, and it renders nothing at all while online. */}
+      <OfflineBanner />
       <AppShell navBadges={navBadges}>{children}</AppShell>
     </SessionProvider>
   );

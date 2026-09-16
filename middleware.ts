@@ -5,7 +5,11 @@ import { clientEnv } from "@/lib/env";
 import { homeForRole, isManagerArea, roleFromClaims } from "@/lib/auth/claims";
 import { routing } from "@/i18n/routing";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+// /offline is public because the service worker precaches it at install time,
+// and that request doesn't necessarily carry the session cookie — gating it
+// would cache a redirect to /login as the offline fallback. The page holds no
+// user data.
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/offline"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -115,8 +119,12 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// sw.js and manifest.webmanifest are excluded because neither is fetched as a
+// normal page: the browser requests the manifest without credentials, and a
+// service worker script must be served from the origin root unredirected — a
+// locale rewrite or an auth redirect on either one breaks installation.
 export const config = {
   matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|products/|fonts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico|products/|fonts/|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
   ],
 };

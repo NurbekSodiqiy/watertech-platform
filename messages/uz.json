@@ -93,6 +93,7 @@
       "searchPlaceholder": "Bilimlar bazasidan qidirish…"
     },
     "commandPalette": {
+      "title": "Qidiruv paneli",
       "results": "Natijalar",
       "loading": "Yuklanmoqda…",
       "noResults": "Hech narsa topilmadi.",
@@ -104,6 +105,23 @@
         "competitor": "Raqobatchi",
         "package": "Paket"
       }
+    },
+    "offline": {
+      "title": "Internet aloqasi yo'q",
+      "description": "Qurilmangiz tarmoqqa ulanmagan. Ulanish tiklangach, sahifani qayta yuklang.",
+      "retry": "Qayta urinish",
+      "cachedNote": "Oxirgi ochilgan skriptlar va sahifalar oflayn rejimda ham mavjud bo'lib qoladi.",
+      "banner": "Oflayn rejim — so'nggi yuklangan ma'lumotlar ko'rsatilmoqda"
+    },
+    "shortcuts": {
+      "title": "Tezkor tugmalar",
+      "search": "Qidiruv",
+      "searchSlash": "Qidiruv",
+      "stageNumber": "Bosqich",
+      "stageArrows": "Bosqich",
+      "callMode": "Qo'ng'iroq rejimi",
+      "close": "Yopish",
+      "help": "Yordam"
     }
   },
   "theme": {

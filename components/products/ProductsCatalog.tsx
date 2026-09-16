@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import type { Product } from "@/lib/content/products";
+import { Dialog } from "@/components/ui/Dialog";
+
+const LIGHTBOX_TITLE_ID = "product-lightbox-title";
 
 // Turlari va ularning yorliqlari
 const CATEGORIES = [
@@ -26,14 +28,11 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
   // Kattalashtirilgan rasm ko'rinishi (lightbox)
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
-  useEffect(() => {
-    if (!lightbox) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setLightbox(null);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [lightbox]);
+  // <Dialog> keeps the panel mounted while it fades out, so the last opened
+  // image is held here — otherwise the card would blank out mid-animation.
+  const lastOpened = useRef<{ src: string; alt: string } | null>(null);
+  if (lightbox) lastOpened.current = lightbox;
+  const shownImage = lightbox ?? lastOpened.current;
 
   const filteredProducts = products.filter((product) => {
     // 1. Line filtri
@@ -177,53 +176,45 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
         </div>
       )}
 
-      {/* Kattalashtirilgan rasm modali */}
-      <AnimatePresence>
-        {lightbox && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <motion.div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={() => setLightbox(null)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            />
-            <motion.div
-              className="relative flex h-[520px] w-[640px] max-h-[85vh] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-            >
-              <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-                <h3 className="text-[15px] font-semibold text-primary-dark leading-snug pr-4">
-                  {lightbox.alt}
-                </h3>
-                <button
-                  onClick={() => setLightbox(null)}
-                  className="shrink-0 rounded-lg p-1 text-text-secondary hover:bg-primary/10"
-                  aria-label="Yopish"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              {/* Har bir mahsulot uchun bir xil qat'iy o'lcham — rasmning
-                  o'zi (turlicha en-bo'y nisbatiga qaramay) shu ramka ichida
-                  object-contain bilan joylashadi, cho'zilmaydi/kesilmaydi. */}
-              <div className="relative w-full flex-1 bg-surface-alt p-4">
-                <Image
-                  src={lightbox.src}
-                  alt={lightbox.alt}
-                  fill
-                  sizes="640px"
-                  className="object-contain"
-                />
-              </div>
-            </motion.div>
-          </div>
+      {/* Kattalashtirilgan rasm modali — Esc, fon bosilishi va fokus
+          tuzog'i <Dialog> ichida. */}
+      <Dialog
+        open={lightbox !== null}
+        onClose={() => setLightbox(null)}
+        labelledBy={LIGHTBOX_TITLE_ID}
+        containerClassName="z-50 flex items-center justify-center p-6"
+        panelClassName="flex h-[520px] w-[640px] max-h-[85vh] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
+      >
+        {shownImage && (
+          <>
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+              <h3 id={LIGHTBOX_TITLE_ID} className="text-[15px] font-semibold text-primary-dark leading-snug pr-4">
+                {shownImage.alt}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setLightbox(null)}
+                className="shrink-0 rounded-lg p-1 text-text-secondary hover:bg-primary/10"
+                aria-label="Yopish"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+            {/* Har bir mahsulot uchun bir xil qat'iy o'lcham — rasmning
+                o'zi (turlicha en-bo'y nisbatiga qaramay) shu ramka ichida
+                object-contain bilan joylashadi, cho'zilmaydi/kesilmaydi. */}
+            <div className="relative w-full flex-1 bg-surface-alt p-4">
+              <Image
+                src={shownImage.src}
+                alt={shownImage.alt}
+                fill
+                sizes="640px"
+                className="object-contain"
+              />
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </Dialog>
     </div>
   );
 }

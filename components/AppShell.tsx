@@ -15,10 +15,16 @@ const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.Co
   ssr: false,
 });
 
+const ShortcutsHelp = dynamic(() => import("@/components/layout/ShortcutsHelp").then((m) => m.ShortcutsHelp), {
+  ssr: false,
+});
+
 export function AppShell({ children, navBadges }: { children: React.ReactNode; navBadges?: NavBadges }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [paletteEverOpened, setPaletteEverOpened] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [shortcutsEverOpened, setShortcutsEverOpened] = useState(false);
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const t = useTranslations("chrome.appShell");
@@ -32,6 +38,18 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCommandOpen(true);
+        return;
+      }
+      // "?" is a printable character, so it only opens help when the operator
+      // isn't typing it into something (the client-name field, the palette's
+      // own input, an admin form).
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey) {
+        const target = e.target as HTMLElement | null;
+        const isTyping =
+          !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+        if (isTyping) return;
+        e.preventDefault();
+        setShortcutsOpen(true);
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -41,6 +59,10 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   useEffect(() => {
     if (commandOpen) setPaletteEverOpened(true);
   }, [commandOpen]);
+
+  useEffect(() => {
+    if (shortcutsOpen) setShortcutsEverOpened(true);
+  }, [shortcutsOpen]);
 
   useEffect(() => {
     // warms the chunk after the page is idle so Ctrl+K opens instantly
@@ -101,6 +123,10 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
 
       {paletteEverOpened && (
         <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+      )}
+
+      {shortcutsEverOpened && (
+        <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       )}
     </div>
   );

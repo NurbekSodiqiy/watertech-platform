@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { X, Clock, ArrowRight, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
@@ -14,6 +14,9 @@ import { buildSearchDocs, createSearcher, type SearchNav } from "@/lib/search";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
 import { dailySchedule } from "@/lib/content/daily-schedule";
+import { Dialog } from "@/components/ui/Dialog";
+
+const TITLE_ID = "call-mode-title";
 
 function formatElapsed(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
@@ -78,17 +81,20 @@ export function CallModeOverlay({
     }
   }, []);
 
+  // While typing in the inline search box, Escape should clear/blur the
+  // search — not close the whole overlay and lose the call's context.
+  // <Dialog> owns Escape otherwise; F2 (the shortcut that opened Call Mode)
+  // stays here, since it is this overlay's own toggle.
+  const shouldCloseOnEscape = useCallback((e: KeyboardEvent) => {
+    const target = e.target as HTMLElement | null;
+    return !target || (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA");
+  }, []);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // While typing in the inline search box, Escape should clear/blur the
-      // search — not close the whole overlay and lose the call's context.
-      const target = e.target as HTMLElement | null;
-      const isTyping = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
-      if (isTyping && e.key === "Escape") return;
-      if (e.key === "F2" || e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
+      if (e.key !== "F2") return;
+      e.preventDefault();
+      onClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -114,7 +120,16 @@ export function CallModeOverlay({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-background">
+    <Dialog
+      open
+      onClose={onClose}
+      labelledBy={TITLE_ID}
+      containerClassName="z-[100]"
+      panelClassName="flex h-full w-full flex-col bg-background"
+      backdrop={false}
+      motionStyle="fade"
+      shouldCloseOnEscape={shouldCloseOnEscape}
+    >
       <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
         <span className="flex items-center gap-2 text-[15px] font-semibold text-primary-dark">
           <Clock size={18} className="text-accent" />
@@ -173,7 +188,7 @@ export function CallModeOverlay({
             <ObjectionNavButtons script={script} currentStage={currentStage} onSelectStage={onSelectStage} />
           )}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[28px] font-bold text-primary-dark">
+            <h2 id={TITLE_ID} className="text-[28px] font-bold text-primary-dark">
               {currentObjection?.label || currentStage?.label}
             </h2>
             {turns.some((turn) => turn.speaker === "operator") && (
@@ -200,6 +215,6 @@ export function CallModeOverlay({
           </button>
         </div>
       )}
-    </div>
+    </Dialog>
   );
 }

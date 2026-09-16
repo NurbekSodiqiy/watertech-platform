@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/routing";
@@ -10,6 +9,9 @@ import type { NavNode } from "@/lib/types";
 import { useTrack } from "@/hooks/useTrack";
 import { createSearcher, resolveSearchPath, type Searcher, type SearchDoc, type SearchResultType } from "@/lib/search";
 import { normalizeSearchText } from "@/lib/search/normalize";
+import { Dialog } from "@/components/ui/Dialog";
+
+const TITLE_ID = "command-palette-title";
 
 interface SearchItem {
   categoryKey: string;
@@ -94,14 +96,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     return () => clearTimeout(t);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  // Escape closing, the focus trap and the enter/exit motion all live in
+  // <Dialog> now — this component only owns search.
 
   const results = useMemo(() => {
     if (!query.trim()) return null;
@@ -152,72 +148,64 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
-          <motion.div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          />
-          <motion.div
-            className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
-            initial={{ opacity: 0, scale: 0.97, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-          >
-            <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5">
-              <Search size={18} className="shrink-0 text-text-secondary" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={tChrome("topBar.searchPlaceholder")}
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-primary-dark placeholder:text-text-secondary focus:outline-none"
-              />
-              <span className="shrink-0 rounded-md border border-border bg-surface-alt px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">
-                ESC
-              </span>
-            </div>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      labelledBy={TITLE_ID}
+      containerClassName="z-50 flex items-start justify-center px-4 pt-[12vh]"
+      panelClassName="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
+    >
+      {/* The input is the palette's visible affordance, so the accessible
+          name it's labelled by is off-screen rather than duplicated on it. */}
+      <h2 id={TITLE_ID} className="sr-only">
+        {tChrome("commandPalette.title")}
+      </h2>
 
-            <div className="max-h-[50vh] overflow-y-auto p-2">
-              {results ? (
-                <>
-                  <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-                    {tChrome("commandPalette.results")}
-                  </p>
-                  <div className="space-y-0.5">
-                    {results.length === 0 && indexLoading && (
-                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
-                    )}
-                    {results.length === 0 && !indexLoading && (
-                      <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.noResults")}</p>
-                    )}
-                    {results.map((item) => (
-                      <button
-                        key={item.path}
-                        onClick={() => go(item.path)}
-                        className="flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left hover:bg-primary/5"
-                      >
-                        <span className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-                          {item.category}
-                        </span>
-                        <span className="text-[14px] font-semibold text-primary-dark">{item.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.startTyping")}</p>
+      <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5">
+        <Search size={18} className="shrink-0 text-text-secondary" />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={tChrome("topBar.searchPlaceholder")}
+          className="min-w-0 flex-1 bg-transparent text-[15px] text-primary-dark placeholder:text-text-secondary focus:outline-none"
+        />
+        <span className="shrink-0 rounded-md border border-border bg-surface-alt px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">
+          ESC
+        </span>
+      </div>
+
+      <div className="max-h-[50vh] overflow-y-auto p-2">
+        {results ? (
+          <>
+            <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+              {tChrome("commandPalette.results")}
+            </p>
+            <div className="space-y-0.5">
+              {results.length === 0 && indexLoading && (
+                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
               )}
+              {results.length === 0 && !indexLoading && (
+                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.noResults")}</p>
+              )}
+              {results.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => go(item.path)}
+                  className="flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left hover:bg-primary/5"
+                >
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+                    {item.category}
+                  </span>
+                  <span className="text-[14px] font-semibold text-primary-dark">{item.title}</span>
+                </button>
+              ))}
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+          </>
+        ) : (
+          <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.startTyping")}</p>
+        )}
+      </div>
+    </Dialog>
   );
 }
