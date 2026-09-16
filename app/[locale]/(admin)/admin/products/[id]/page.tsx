@@ -19,6 +19,7 @@ function buildFields(isNew: boolean): EntityFieldDef<ProductFormInput>[] {
       placeholder: "masalan: truba-ppr.jpg — public/products/ ichidagi fayl bilan bir xil bo'lishi kerak",
     },
     { kind: "text", name: "name_ru", label: "Nomi (rus tilida)" },
+    { kind: "text", name: "name_uz", label: "Nomi (o'zbek tilida, ixtiyoriy)" },
     { kind: "csv", name: "sizes", label: "O'lchamlar", hint: "Vergul bilan ajrating: Ø20, Ø25, Ø32" },
     {
       kind: "select",
@@ -78,13 +79,24 @@ export default async function AdminProductEditPage({
         id: row.id,
         filename: row.filename,
         name_ru: row.name_ru,
+        name_uz: row.name_uz ?? "",
         sizes: row.sizes.join(", "),
         line: row.line,
         category: row.category,
         material: row.material ?? "",
         status: row.status,
       }
-    : { id: "", filename: "", name_ru: "", sizes: "", line: "ppr", category: "truba", material: "", status: "draft" };
+    : {
+        id: "",
+        filename: "",
+        name_ru: "",
+        name_uz: "",
+        sizes: "",
+        line: "ppr",
+        category: "truba",
+        material: "",
+        status: "draft",
+      };
 
   return (
     <div className="space-y-6">

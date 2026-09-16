@@ -40,6 +40,31 @@ const LINK_TYPE_OPTIONS: { value: ScriptTurnLink["type"]; label: string }[] = [
   { value: "faq", label: "FAQ" },
 ];
 
+/** stagesRu (lib/content/types.ts) mirrors stages field-for-field — every
+ * stage/turn/link editing component below is parameterized over which of
+ * the two top-level arrays it's bound to, instead of duplicating the whole
+ * tree for the "Ruscha (ixtiyoriy)" section. */
+type StagesBase = "stages" | "stagesRu";
+
+/** Script["stages"]/Script["stagesRu"] (both the same shape) -> the form's
+ * stage values — turns need their optional fields defined ("" not undefined)
+ * for controlled inputs, same as the rest of this form. */
+function toStageFormValues(stages: Script["stages"]): ScriptFormValues["stages"] {
+  return stages.map((s) => ({
+    id: s.id,
+    label: s.label,
+    objectionIds: s.objectionIds,
+    nextStageId: s.nextStageId,
+    turns: s.turns.map((t) => ({
+      speaker: t.speaker,
+      text: t.text,
+      subStepHeader: t.subStepHeader ?? "",
+      condition: t.condition ?? "",
+      links: t.links ?? [],
+    })),
+  }));
+}
+
 /** Turns "" back into undefined for the optional string/array fields the
  * form always keeps defined (controlled inputs need a defined default) —
  * so saved content matches the shape hand-written scripts already use. */
@@ -90,7 +115,7 @@ const AutosizeTextarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<
 
 interface LinkRowProps {
   control: Control<ScriptFormValues>;
-  path: `stages.${number}.turns.${number}.links.${number}`;
+  path: `${StagesBase}.${number}.turns.${number}.links.${number}`;
   competitors: Competitor[];
   faqs: Faq[];
   packageGroups: PackageGroup[];
@@ -169,6 +194,7 @@ function LinkRow({ control, path, competitors, faqs, packageGroups, onRemove }: 
 interface TurnFieldsProps {
   control: Control<ScriptFormValues>;
   register: UseFormRegister<ScriptFormValues>;
+  stagesBase: StagesBase;
   stageIndex: number;
   turnIndex: number;
   isFirst: boolean;
@@ -184,6 +210,7 @@ interface TurnFieldsProps {
 function TurnFields({
   control,
   register,
+  stagesBase,
   stageIndex,
   turnIndex,
   isFirst,
@@ -195,7 +222,7 @@ function TurnFields({
   onMoveDown,
   onRemove,
 }: TurnFieldsProps) {
-  const base = `stages.${stageIndex}.turns.${turnIndex}` as const;
+  const base = `${stagesBase}.${stageIndex}.turns.${turnIndex}` as const;
   const {
     fields: linkFields,
     append: appendLink,
@@ -292,6 +319,7 @@ function TurnFields({
 interface StageFieldsProps {
   control: Control<ScriptFormValues>;
   register: UseFormRegister<ScriptFormValues>;
+  stagesBase: StagesBase;
   stageIndex: number;
   isFirst: boolean;
   isLast: boolean;
@@ -300,8 +328,8 @@ interface StageFieldsProps {
   competitors: Competitor[];
   faqs: Faq[];
   packageGroups: PackageGroup[];
-  selected: boolean;
-  onSelect: () => void;
+  selected?: boolean;
+  onSelect?: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
@@ -311,6 +339,7 @@ interface StageFieldsProps {
 function StageFields({
   control,
   register,
+  stagesBase,
   stageIndex,
   isFirst,
   isLast,
@@ -319,7 +348,7 @@ function StageFields({
   competitors,
   faqs,
   packageGroups,
-  selected,
+  selected = false,
   onSelect,
   onMoveUp,
   onMoveDown,
@@ -331,13 +360,13 @@ function StageFields({
     append: appendTurn,
     remove: removeTurn,
     swap: swapTurn,
-  } = useFieldArray({ control, name: `stages.${stageIndex}.turns` });
+  } = useFieldArray({ control, name: `${stagesBase}.${stageIndex}.turns` });
 
-  const { field: labelField } = useController({ control, name: `stages.${stageIndex}.label` });
-  const { field: idField } = useController({ control, name: `stages.${stageIndex}.id` });
-  const { field: objectionIdsField } = useController({ control, name: `stages.${stageIndex}.objectionIds` });
+  const { field: labelField } = useController({ control, name: `${stagesBase}.${stageIndex}.label` });
+  const { field: idField } = useController({ control, name: `${stagesBase}.${stageIndex}.id` });
+  const { field: objectionIdsField } = useController({ control, name: `${stagesBase}.${stageIndex}.objectionIds` });
 
-  const stageIdError = errors.stages?.[stageIndex]?.id?.message;
+  const stageIdError = (stagesBase === "stages" ? errors.stages : errors.stagesRu)?.[stageIndex]?.id?.message;
 
   function toggleObjection(id: string) {
     const current = objectionIdsField.value ?? [];
@@ -452,6 +481,7 @@ function StageFields({
             key={turnField.id}
             control={control}
             register={register}
+            stagesBase={stagesBase}
             stageIndex={stageIndex}
             turnIndex={turnIndex}
             isFirst={turnIndex === 0}
@@ -509,19 +539,10 @@ export function ScriptEditor({
     name: script.name,
     cheatSheet: script.cheatSheet,
     status,
-    stages: script.stages.map((s) => ({
-      id: s.id,
-      label: s.label,
-      objectionIds: s.objectionIds,
-      nextStageId: s.nextStageId,
-      turns: s.turns.map((t) => ({
-        speaker: t.speaker,
-        text: t.text,
-        subStepHeader: t.subStepHeader ?? "",
-        condition: t.condition ?? "",
-        links: t.links ?? [],
-      })),
-    })),
+    stages: toStageFormValues(script.stages),
+    nameRu: script.nameRu ?? "",
+    cheatSheetRu: script.cheatSheetRu ?? "",
+    stagesRu: script.stagesRu ? toStageFormValues(script.stagesRu) : [],
   };
 
   const {
@@ -541,6 +562,13 @@ export function ScriptEditor({
     swap: swapStage,
   } = useFieldArray({ control, name: "stages" });
 
+  const {
+    fields: stageRuFields,
+    append: appendStageRu,
+    remove: removeStageRu,
+    swap: swapStageRu,
+  } = useFieldArray({ control, name: "stagesRu" });
+
   const watchedStages = useWatch({ control, name: "stages" });
 
   useEffect(() => {
@@ -553,7 +581,11 @@ export function ScriptEditor({
     setError(null);
     setSuccess(false);
     startTransition(async () => {
-      const result = await upsertScript({ ...values, stages: cleanStages(values.stages) });
+      const result = await upsertScript({
+        ...values,
+        stages: cleanStages(values.stages),
+        stagesRu: values.stagesRu ? cleanStages(values.stagesRu) : undefined,
+      });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -652,6 +684,7 @@ export function ScriptEditor({
               key={stageField.id}
               control={control}
               register={register}
+              stagesBase="stages"
               stageIndex={stageIndex}
               isFirst={stageIndex === 0}
               isLast={stageIndex === stageFields.length - 1}
@@ -669,6 +702,72 @@ export function ScriptEditor({
             />
           ))}
         </div>
+
+        <details className="rounded-2xl border border-border bg-surface-alt/60 p-4">
+          <summary className="cursor-pointer text-[15px] font-semibold text-primary-dark">
+            Ruscha (ixtiyoriy)
+          </summary>
+          <div className="mt-4 space-y-6">
+            <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface p-4 shadow-soft sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-name-ru">
+                  Nomi
+                </label>
+                <input
+                  id="script-name-ru"
+                  type="text"
+                  {...register("nameRu")}
+                  className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-cheat-sheet-ru">
+                  Shpargalka
+                </label>
+                <textarea
+                  id="script-cheat-sheet-ru"
+                  rows={3}
+                  {...register("cheatSheetRu")}
+                  className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[15px] font-semibold text-primary-dark">Bosqichlar (ruscha)</h2>
+                <button
+                  type="button"
+                  onClick={() => appendStageRu({ id: "", label: "", objectionIds: [], turns: [] })}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-primary-dark hover:bg-surface-alt"
+                >
+                  <Plus size={13} />
+                  Bosqich qo&apos;shish
+                </button>
+              </div>
+
+              {stageRuFields.map((stageField, stageIndex) => (
+                <StageFields
+                  key={stageField.id}
+                  control={control}
+                  register={register}
+                  stagesBase="stagesRu"
+                  stageIndex={stageIndex}
+                  isFirst={stageIndex === 0}
+                  isLast={stageIndex === stageRuFields.length - 1}
+                  objections={objections}
+                  competitors={competitors}
+                  faqs={faqs}
+                  packageGroups={packageGroups}
+                  onMoveUp={() => swapStageRu(stageIndex, stageIndex - 1)}
+                  onMoveDown={() => swapStageRu(stageIndex, stageIndex + 1)}
+                  onRemove={() => removeStageRu(stageIndex)}
+                  errors={errors}
+                />
+              ))}
+            </div>
+          </div>
+        </details>
 
         <div className="flex items-center gap-2 pt-2">
           <button

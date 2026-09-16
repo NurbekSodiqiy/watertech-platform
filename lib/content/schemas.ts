@@ -28,6 +28,9 @@ export const scriptSchema = z.object({
   name: z.string(),
   cheatSheet: z.string(),
   stages: z.array(stageSchema),
+  nameRu: z.string().optional(),
+  cheatSheetRu: z.string().optional(),
+  stagesRu: z.array(stageSchema).optional(),
 });
 
 export const objectionSchema = z.object({
@@ -39,6 +42,11 @@ export const objectionSchema = z.object({
   response: z.string(),
   followUp: z.string().optional(),
   scriptIds: z.array(z.string()),
+  labelRu: z.string().optional(),
+  clientSaysRu: z.string().optional(),
+  realMeaningRu: z.string().optional(),
+  responseRu: z.string().optional(),
+  followUpRu: z.string().optional(),
 });
 
 export const competitorSchema = z.object({
@@ -64,6 +72,8 @@ export const faqSchema = z.object({
   category: z.string(),
   question: z.string(),
   answer: z.string(),
+  questionRu: z.string().optional(),
+  answerRu: z.string().optional(),
 });
 
 export const packageSchema = z.object({
@@ -77,6 +87,12 @@ export const packageSchema = z.object({
   advancePct: z.number().nullable(),
   logistics: z.string(),
   deliveryTime: z.string(),
+  nameRu: z.string().optional(),
+  orderVolumeRu: z.string().optional(),
+  paymentTermsRu: z.string().optional(),
+  estimatedDiscountRu: z.string().optional(),
+  logisticsRu: z.string().optional(),
+  deliveryTimeRu: z.string().optional(),
 });
 
 export const packageGroupSchema = z.object({
@@ -84,12 +100,15 @@ export const packageGroupSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
   packages: z.array(packageSchema),
+  titleRu: z.string().optional(),
+  subtitleRu: z.string().optional(),
 });
 
 export const productSchema = z.object({
   id: z.string(),
   filename: z.string(),
   name_ru: z.string(),
+  name_uz: z.string().optional(),
   sizes: z.array(z.string()),
   line: z.enum(["ppr", "kanalizatsiya"]),
   category: z.enum(["truba", "fiting", "kran", "aksessuar"]),

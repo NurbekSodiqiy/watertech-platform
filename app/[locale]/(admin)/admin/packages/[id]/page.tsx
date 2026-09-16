@@ -34,6 +34,12 @@ function buildFields(
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "text", name: "nameRu", label: "Nomi", group: "ru" },
+    { kind: "text", name: "orderVolumeRu", label: "Buyurtma hajmi", group: "ru" },
+    { kind: "text", name: "paymentTermsRu", label: "To'lov shartlari", group: "ru" },
+    { kind: "text", name: "estimatedDiscountRu", label: "Taxminiy chegirma (matn)", group: "ru" },
+    { kind: "text", name: "logisticsRu", label: "Logistika", group: "ru" },
+    { kind: "text", name: "deliveryTimeRu", label: "Yetkazib berish muddati", group: "ru" },
   ];
 }
 
@@ -68,6 +74,12 @@ export default async function AdminPackageEditPage({
         logistics: row.logistics,
         deliveryTime: row.delivery_time,
         status: row.status,
+        nameRu: row.name_ru ?? "",
+        orderVolumeRu: row.order_volume_ru ?? "",
+        paymentTermsRu: row.payment_terms_ru ?? "",
+        estimatedDiscountRu: row.estimated_discount_ru ?? "",
+        logisticsRu: row.logistics_ru ?? "",
+        deliveryTimeRu: row.delivery_time_ru ?? "",
       }
     : {
         id: "",
@@ -82,6 +94,12 @@ export default async function AdminPackageEditPage({
         logistics: "",
         deliveryTime: "",
         status: "draft",
+        nameRu: "",
+        orderVolumeRu: "",
+        paymentTermsRu: "",
+        estimatedDiscountRu: "",
+        logisticsRu: "",
+        deliveryTimeRu: "",
       };
 
   return (

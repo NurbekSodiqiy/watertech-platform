@@ -21,7 +21,7 @@ export async function upsertScript(input: unknown): Promise<ActionResult> {
     const { data: objectionRows, error: objectionError } = await supabase.from("content_objections").select("id");
     if (objectionError) return { ok: false, error: objectionError.message };
     const validObjectionIds = new Set((objectionRows ?? []).map((row) => row.id as string));
-    for (const stage of parsed.stages) {
+    for (const stage of [...parsed.stages, ...(parsed.stagesRu ?? [])]) {
       const unknownId = stage.objectionIds.find((id) => !validObjectionIds.has(id));
       if (unknownId) return { ok: false, error: `Noma'lum e'tiroz ID: ${unknownId}` };
     }
@@ -31,6 +31,9 @@ export async function upsertScript(input: unknown): Promise<ActionResult> {
       name: parsed.name,
       cheatSheet: parsed.cheatSheet,
       stages: chain(parsed.stages),
+      nameRu: parsed.nameRu,
+      cheatSheetRu: parsed.cheatSheetRu,
+      stagesRu: parsed.stagesRu && parsed.stagesRu.length > 0 ? chain(parsed.stagesRu) : undefined,
     };
     const row = { ...scriptToRow(scriptWithChain), status: parsed.status, updated_by: session.email };
     const { error } = await supabase.from("content_scripts").upsert(row);

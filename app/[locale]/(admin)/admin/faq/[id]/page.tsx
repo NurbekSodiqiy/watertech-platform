@@ -24,6 +24,8 @@ function buildFields(isNew: boolean): EntityFieldDef<FaqFormValues>[] {
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "textarea", name: "questionRu", label: "Savol", rows: 2, group: "ru" },
+    { kind: "textarea", name: "answerRu", label: "Javob", rows: 6, group: "ru" },
   ];
 }
 
@@ -40,8 +42,16 @@ export default async function AdminFaqEditPage({
   if (!isNew && !row) notFound();
 
   const defaultValues: FaqFormValues = row
-    ? { id: row.id, category: row.category, question: row.question, answer: row.answer, status: row.status }
-    : { id: "", category: "", question: "", answer: "", status: "draft" };
+    ? {
+        id: row.id,
+        category: row.category,
+        question: row.question,
+        answer: row.answer,
+        status: row.status,
+        questionRu: row.question_ru ?? "",
+        answerRu: row.answer_ru ?? "",
+      }
+    : { id: "", category: "", question: "", answer: "", status: "draft", questionRu: "", answerRu: "" };
 
   return (
     <div className="space-y-6">

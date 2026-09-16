@@ -5,6 +5,7 @@ import { getFaqs } from "@/lib/content/loader";
 import type { Faq } from "@/lib/content/types";
 import { contacts } from "@/lib/mock-data/contacts";
 import { MessageCircle } from "lucide-react";
+import type { Locale } from "@/i18n/routing";
 
 const columns: DbColumn<Faq>[] = [
   { key: "category", label: "Bo'lim", sortable: true },
@@ -12,10 +13,10 @@ const columns: DbColumn<Faq>[] = [
   { key: "answer", label: "Javob" },
 ];
 
-export default async function FaqPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function FaqPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
 
-  const faqs = await getFaqs();
+  const faqs = await getFaqs(locale);
   const categories = Array.from(new Set(faqs.map((f) => f.category)));
 
   // Closest-matching contact for knowledge-base questions (topic explicitly

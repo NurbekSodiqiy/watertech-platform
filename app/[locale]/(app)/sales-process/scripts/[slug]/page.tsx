@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ScriptTemplate } from "@/components/ScriptTemplate";
 import { ScriptsContentProvider } from "@/components/scripts/ScriptsContentContext";
 import { getScripts, getContentBundle } from "@/lib/content/loader";
+import type { Locale } from "@/i18n/routing";
 
 // Content now lives in Supabase, so generating params means reading it at
 // build time. When SUPABASE_SERVICE_ROLE_KEY isn't configured (a fresh
@@ -24,12 +25,12 @@ export const dynamicParams = true;
 export default async function ScriptPage({
   params,
 }: {
-  params: { locale: string; slug: string };
+  params: { locale: Locale; slug: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
 
-  const content = await getContentBundle();
+  const content = await getContentBundle(locale);
   const script = content.scripts.find((s) => s.id === params.slug);
   if (!script) notFound();
 

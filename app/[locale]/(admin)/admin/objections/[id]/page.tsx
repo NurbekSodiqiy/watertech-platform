@@ -28,6 +28,11 @@ function buildFields(isNew: boolean): EntityFieldDef<ObjectionFormInput>[] {
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "text", name: "labelRu", label: "Nomi", group: "ru" },
+    { kind: "textarea", name: "clientSaysRu", label: "Mijoz aytadi", rows: 2, group: "ru" },
+    { kind: "textarea", name: "realMeaningRu", label: "Aslida nima demoqchi", rows: 2, group: "ru" },
+    { kind: "textarea", name: "responseRu", label: "Javob", rows: 4, group: "ru" },
+    { kind: "textarea", name: "followUpRu", label: "Qo'shimcha (ixtiyoriy)", rows: 2, group: "ru" },
   ];
 }
 
@@ -54,6 +59,11 @@ export default async function AdminObjectionEditPage({
         followUp: row.follow_up ?? "",
         scriptIds: row.script_ids.join(", "),
         status: row.status,
+        labelRu: row.label_ru ?? "",
+        clientSaysRu: row.client_says_ru ?? "",
+        realMeaningRu: row.real_meaning_ru ?? "",
+        responseRu: row.response_ru ?? "",
+        followUpRu: row.follow_up_ru ?? "",
       }
     : {
         id: "",
@@ -65,6 +75,11 @@ export default async function AdminObjectionEditPage({
         followUp: "",
         scriptIds: "",
         status: "draft",
+        labelRu: "",
+        clientSaysRu: "",
+        realMeaningRu: "",
+        responseRu: "",
+        followUpRu: "",
       };
 
   return (

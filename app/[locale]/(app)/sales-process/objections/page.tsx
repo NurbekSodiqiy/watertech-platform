@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getObjections, getScripts } from "@/lib/content/loader";
+import type { Locale } from "@/i18n/routing";
 
 interface ObjectionRow {
   id: string;
@@ -21,10 +22,10 @@ const columns: DbColumn<ObjectionRow>[] = [
   { key: "sourceScripts", label: "Qaysi skriptda" },
 ];
 
-export default async function ObjectionsPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function ObjectionsPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
 
-  const [objections, scripts] = await Promise.all([getObjections(), getScripts()]);
+  const [objections, scripts] = await Promise.all([getObjections(locale), getScripts(locale)]);
   const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
   const rows: ObjectionRow[] = objections.map((o) => ({
     id: o.id,

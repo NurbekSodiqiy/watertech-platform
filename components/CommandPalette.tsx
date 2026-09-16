@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
@@ -43,6 +43,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const track = useTrack();
   const t = useTranslations("nav");
   const tChrome = useTranslations("chrome");
+  const locale = useLocale();
 
   // Page-title matches (above) point straight at a URL already, so they're
   // kept as-is; content matches (objection/script-stage/faq/competitor/
@@ -62,10 +63,17 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const [indexLoading, setIndexLoading] = useState(false);
   const [, forceRerender] = useState(0);
 
+  // Dropping the cached searcher when the chrome locale changes forces the
+  // effect below to refetch — an operator who switches Uzbek/Russian mid-
+  // session sees matching-language results instead of the first load's.
+  useEffect(() => {
+    searcherRef.current = null;
+  }, [locale]);
+
   useEffect(() => {
     if (!open || searcherRef.current || indexLoading) return;
     setIndexLoading(true);
-    fetch("/api/search-index")
+    fetch(`/api/search-index?locale=${locale}`)
       .then((res) => (res.ok ? (res.json() as Promise<SearchDoc[]>) : Promise.reject(res)))
       .then((docs) => {
         searcherRef.current = createSearcher(docs);
@@ -77,7 +85,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         setIndexLoading(false);
         forceRerender((n) => n + 1);
       });
-  }, [open, indexLoading]);
+  }, [open, indexLoading, locale]);
 
   useEffect(() => {
     if (!open) return;

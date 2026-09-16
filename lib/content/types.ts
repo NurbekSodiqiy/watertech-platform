@@ -42,6 +42,13 @@ export interface Script {
   /** Short summary shown at the top of the detailed /scripts/[slug] view. */
   cheatSheet: string;
   stages: Stage[];
+  /** Optional Russian translations — raw, unresolved. Only populated on the
+   * admin edit form's defaultValues (see components/admin/ScriptEditor.tsx);
+   * lib/content/loader.ts getters resolve these into name/cheatSheet/stages
+   * for locale "ru" and never return them alongside the resolved value. */
+  nameRu?: string;
+  cheatSheetRu?: string;
+  stagesRu?: Stage[];
 }
 
 export interface Objection {
@@ -59,6 +66,13 @@ export interface Objection {
   followUp?: string;
   /** Script ids (Script["id"]) this objection is used in. */
   scriptIds: string[];
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract (raw here, resolved by lib/content/loader.ts getters). */
+  labelRu?: string;
+  clientSaysRu?: string;
+  realMeaningRu?: string;
+  responseRu?: string;
+  followUpRu?: string;
 }
 
 export interface Competitor {
@@ -84,6 +98,10 @@ export interface Faq {
   category: string;
   question: string;
   answer: string;
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract. */
+  questionRu?: string;
+  answerRu?: string;
 }
 
 export interface Package {
@@ -102,6 +120,14 @@ export interface Package {
   advancePct: number | null;
   logistics: string;
   deliveryTime: string;
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract. discountPct/advancePct are numeric, not language-dependent. */
+  nameRu?: string;
+  orderVolumeRu?: string;
+  paymentTermsRu?: string;
+  estimatedDiscountRu?: string;
+  logisticsRu?: string;
+  deliveryTimeRu?: string;
 }
 
 export interface PackageGroup {
@@ -109,4 +135,8 @@ export interface PackageGroup {
   title: string;
   subtitle: string;
   packages: Package[];
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract. */
+  titleRu?: string;
+  subtitleRu?: string;
 }

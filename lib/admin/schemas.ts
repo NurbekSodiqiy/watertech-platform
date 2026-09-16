@@ -55,24 +55,30 @@ const optionalNumberField = z
  * editor auto-fills one from the stage label, but a manager can still type
  * one by hand. Uniqueness across a script's stages can't be expressed by the
  * shape alone, hence the superRefine below. */
+function checkStageIdsUnique(stages: { id: string }[], path: "stages" | "stagesRu", ctx: z.RefinementCtx): void {
+  const seen = new Set<string>();
+  stages.forEach((stage, index) => {
+    if (seen.has(stage.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bosqich ID takrorlanmoqda",
+        path: [path, index, "id"],
+      });
+    }
+    seen.add(stage.id);
+  });
+}
+
 export const scriptWriteSchema = scriptSchema
   .extend({
     id: idSchema,
     status: statusSchema,
     stages: z.array(stageSchema.extend({ id: idSchema })),
+    stagesRu: z.array(stageSchema.extend({ id: idSchema })).optional(),
   })
   .superRefine((script, ctx) => {
-    const seen = new Set<string>();
-    script.stages.forEach((stage, index) => {
-      if (seen.has(stage.id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bosqich ID takrorlanmoqda",
-          path: ["stages", index, "id"],
-        });
-      }
-      seen.add(stage.id);
-    });
+    checkStageIdsUnique(script.stages, "stages", ctx);
+    if (script.stagesRu) checkStageIdsUnique(script.stagesRu, "stagesRu", ctx);
   });
 
 export const faqWriteSchema = faqSchema.extend({ id: idSchema, status: statusSchema });

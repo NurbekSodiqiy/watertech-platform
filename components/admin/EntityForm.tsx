@@ -8,13 +8,19 @@ import type { ZodType, ZodTypeDef } from "zod";
 import { CheckCircle2 } from "lucide-react";
 import type { ActionResult } from "@/lib/admin/actions/guard";
 
-export type EntityFieldDef<TIn extends FieldValues> =
+export type EntityFieldDef<TIn extends FieldValues> = (
   | { kind: "text"; name: Path<TIn>; label: string; placeholder?: string; readOnly?: boolean }
   | { kind: "textarea"; name: Path<TIn>; label: string; rows?: number }
   | { kind: "number"; name: Path<TIn>; label: string; step?: string }
   | { kind: "checkbox"; name: Path<TIn>; label: string }
   | { kind: "select"; name: Path<TIn>; label: string; options: { value: string; label: string }[] }
-  | { kind: "csv"; name: Path<TIn>; label: string; placeholder?: string; hint: string };
+  | { kind: "csv"; name: Path<TIn>; label: string; placeholder?: string; hint: string }
+) & {
+  /** Renders under a collapsed "Ruscha (ixtiyoriy)" <details> instead of
+   * inline with the main fields — every *_ru translation field sets this
+   * instead of getting its own EntityForm variant. */
+  group?: "ru";
+};
 
 /** Config-driven create/edit form shared by every admin section —
  * react-hook-form + zodResolver on the same schema the server action
@@ -72,6 +78,94 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     });
   }
 
+  function renderField(field: EntityFieldDef<TIn>) {
+    const fieldError = errors[field.name as string];
+    const message = typeof fieldError?.message === "string" ? fieldError.message : undefined;
+
+    return (
+      <div key={field.name} className="space-y-1.5">
+        {field.kind === "checkbox" ? (
+          <label className="flex items-center gap-2 text-[13px] font-medium text-primary-dark">
+            <input
+              type="checkbox"
+              {...register(field.name)}
+              className="h-4 w-4 rounded border-border text-accent focus:outline-none focus:ring-2 focus:ring-primary-light"
+            />
+            {field.label}
+          </label>
+        ) : (
+          <label className="block text-[13px] font-medium text-primary-dark" htmlFor={field.name}>
+            {field.label}
+          </label>
+        )}
+
+        {field.kind === "text" && (
+          <input
+            id={field.name}
+            type="text"
+            placeholder={field.placeholder}
+            readOnly={field.readOnly}
+            {...register(field.name)}
+            className={`w-full rounded-lg border border-border px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light ${
+              field.readOnly ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
+            }`}
+          />
+        )}
+
+        {field.kind === "csv" && (
+          <>
+            <input
+              id={field.name}
+              type="text"
+              placeholder={field.placeholder}
+              {...register(field.name)}
+              className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+            />
+            <p className="text-[11px] text-text-secondary">{field.hint}</p>
+          </>
+        )}
+
+        {field.kind === "number" && (
+          <input
+            id={field.name}
+            type="number"
+            step={field.step ?? "any"}
+            {...register(field.name)}
+            className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
+          />
+        )}
+
+        {field.kind === "textarea" && (
+          <textarea
+            id={field.name}
+            rows={field.rows ?? 4}
+            {...register(field.name)}
+            className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+          />
+        )}
+
+        {field.kind === "select" && (
+          <select
+            id={field.name}
+            {...register(field.name)}
+            className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
+          >
+            {field.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {message && <p className="text-[11px] text-status-outdated">{message}</p>}
+      </div>
+    );
+  }
+
+  const mainFields = fields.filter((f) => f.group !== "ru");
+  const ruFields = fields.filter((f) => f.group === "ru");
+
   return (
     <form onSubmit={handleSubmit(submit)} className="max-w-2xl space-y-4">
       {error && (
@@ -86,90 +180,16 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         </div>
       )}
 
-      {fields.map((field) => {
-        const fieldError = errors[field.name as string];
-        const message = typeof fieldError?.message === "string" ? fieldError.message : undefined;
+      {mainFields.map(renderField)}
 
-        return (
-          <div key={field.name} className="space-y-1.5">
-            {field.kind === "checkbox" ? (
-              <label className="flex items-center gap-2 text-[13px] font-medium text-primary-dark">
-                <input
-                  type="checkbox"
-                  {...register(field.name)}
-                  className="h-4 w-4 rounded border-border text-accent focus:outline-none focus:ring-2 focus:ring-primary-light"
-                />
-                {field.label}
-              </label>
-            ) : (
-              <label className="block text-[13px] font-medium text-primary-dark" htmlFor={field.name}>
-                {field.label}
-              </label>
-            )}
-
-            {field.kind === "text" && (
-              <input
-                id={field.name}
-                type="text"
-                placeholder={field.placeholder}
-                readOnly={field.readOnly}
-                {...register(field.name)}
-                className={`w-full rounded-lg border border-border px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light ${
-                  field.readOnly ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
-                }`}
-              />
-            )}
-
-            {field.kind === "csv" && (
-              <>
-                <input
-                  id={field.name}
-                  type="text"
-                  placeholder={field.placeholder}
-                  {...register(field.name)}
-                  className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-                />
-                <p className="text-[11px] text-text-secondary">{field.hint}</p>
-              </>
-            )}
-
-            {field.kind === "number" && (
-              <input
-                id={field.name}
-                type="number"
-                step={field.step ?? "any"}
-                {...register(field.name)}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            )}
-
-            {field.kind === "textarea" && (
-              <textarea
-                id={field.name}
-                rows={field.rows ?? 4}
-                {...register(field.name)}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-              />
-            )}
-
-            {field.kind === "select" && (
-              <select
-                id={field.name}
-                {...register(field.name)}
-                className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
-              >
-                {field.options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {message && <p className="text-[11px] text-status-outdated">{message}</p>}
-          </div>
-        );
-      })}
+      {ruFields.length > 0 && (
+        <details className="rounded-xl border border-border bg-surface-alt/60 p-3.5">
+          <summary className="cursor-pointer text-[13px] font-medium text-primary-dark">
+            Ruscha (ixtiyoriy)
+          </summary>
+          <div className="mt-3 space-y-4">{ruFields.map(renderField)}</div>
+        </details>
+      )}
 
       <div className="flex items-center gap-2 pt-2">
         <button

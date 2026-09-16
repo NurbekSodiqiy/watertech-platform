@@ -4,6 +4,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import { getFaqs } from "@/lib/content/loader";
 import { changelogEntries } from "@/lib/mock-data/changelog";
 import type { NavBadges } from "@/lib/types";
+import type { Locale } from "@/i18n/routing";
 
 // changelogEntries.readCount is an "a / b" string — an entry is unread while
 // a < b, matching the badge semantics NAV_BADGES used to hardcode.
@@ -19,10 +20,10 @@ export default async function AppGroupLayout({
   params: { locale },
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: { locale: Locale };
 }) {
   unstable_setRequestLocale(locale);
-  const faqs = await getFaqs();
+  const faqs = await getFaqs(locale);
   const navBadges: NavBadges = {
     "/faq": { count: faqs.length, tone: "ok" },
     "/changelog": { count: countUnreadChangelog(), tone: "warning" },

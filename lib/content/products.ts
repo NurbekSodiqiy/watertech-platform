@@ -10,6 +10,11 @@ export interface Product {
   id: string;
   filename: string;
   name_ru: string;
+  /** Optional Uzbek override — product names are Russian by default (see
+   * CLAUDE.md section 1); this is the one field where uz is the addition
+   * and ru is the fallback. lib/content/loader.ts's getProducts resolves it
+   * into name_ru for locale "uz" and never returns it alongside. */
+  name_uz?: string;
   sizes: string[];
   line: "ppr" | "kanalizatsiya";
   category: "truba" | "fiting" | "kran" | "aksessuar";

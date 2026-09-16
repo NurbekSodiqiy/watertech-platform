@@ -23,6 +23,8 @@ function buildFields(isNew: boolean): EntityFieldDef<PackageGroupFormValues>[] {
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "text", name: "titleRu", label: "Nomi", group: "ru" },
+    { kind: "text", name: "subtitleRu", label: "Tavsif", group: "ru" },
   ];
 }
 
@@ -39,8 +41,15 @@ export default async function AdminPackageGroupEditPage({
   if (!isNew && !row) notFound();
 
   const defaultValues: PackageGroupFormValues = row
-    ? { id: row.id, title: row.title, subtitle: row.subtitle, status: row.status }
-    : { id: "", title: "", subtitle: "", status: "draft" };
+    ? {
+        id: row.id,
+        title: row.title,
+        subtitle: row.subtitle,
+        status: row.status,
+        titleRu: row.title_ru ?? "",
+        subtitleRu: row.subtitle_ru ?? "",
+      }
+    : { id: "", title: "", subtitle: "", status: "draft", titleRu: "", subtitleRu: "" };
 
   return (
     <div className="space-y-6">

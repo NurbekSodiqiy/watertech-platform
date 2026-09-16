@@ -2,11 +2,12 @@ import { unstable_setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { ProductsCatalog } from "@/components/products/ProductsCatalog";
 import { getProducts } from "@/lib/content/loader";
+import type { Locale } from "@/i18n/routing";
 
-export default async function ProductsPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function ProductsPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
 
-  const products = await getProducts();
+  const products = await getProducts(locale);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
