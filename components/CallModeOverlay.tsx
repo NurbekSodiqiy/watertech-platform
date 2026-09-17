@@ -15,6 +15,7 @@ import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
 import { dailySchedule } from "@/lib/content/daily-schedule";
 import { Dialog } from "@/components/ui/Dialog";
+import { setCallModeOpen } from "@/components/copilot/call-mode-store";
 
 const TITLE_ID = "call-mode-title";
 
@@ -64,6 +65,12 @@ export function CallModeOverlay({
   // dashboard page). Same localStorage key DailyTimeline itself reads/
   // writes, so it reflects whatever was last saved there.
   const [checklistDone, setChecklistDone] = useState(0);
+
+  // Lets AppShell's floating Copilot button step aside while this covers the screen.
+  useEffect(() => {
+    setCallModeOpen(true);
+    return () => setCallModeOpen(false);
+  }, []);
 
   useEffect(() => {
     const startedAt = Date.now();

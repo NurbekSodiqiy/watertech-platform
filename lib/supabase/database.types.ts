@@ -33,6 +33,48 @@ export type Database = {
         }
         Relationships: []
       }
+      copilot_logs: {
+        Row: {
+          answer_chars: number | null
+          email: string | null
+          finish_reason: string | null
+          hit_ids: string[] | null
+          id: number
+          latency_ms: number | null
+          locale: string | null
+          model: string | null
+          question: string | null
+          status: string
+          ts: string
+        }
+        Insert: {
+          answer_chars?: number | null
+          email?: string | null
+          finish_reason?: string | null
+          hit_ids?: string[] | null
+          id?: number
+          latency_ms?: number | null
+          locale?: string | null
+          model?: string | null
+          question?: string | null
+          status: string
+          ts?: string
+        }
+        Update: {
+          answer_chars?: number | null
+          email?: string | null
+          finish_reason?: string | null
+          hit_ids?: string[] | null
+          id?: number
+          latency_ms?: number | null
+          locale?: string | null
+          model?: string | null
+          question?: string | null
+          status?: string
+          ts?: string
+        }
+        Relationships: []
+      }
       content_competitors: {
         Row: {
           assortment: string | null

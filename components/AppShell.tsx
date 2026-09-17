@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
@@ -12,9 +12,15 @@ import { PageTransition } from "./PageTransition";
 import { Dialog } from "@/components/ui/Dialog";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { WidgetFallback } from "@/components/ui/WidgetFallback";
+import { CopilotButton } from "@/components/copilot/CopilotButton";
+import type { CopilotPrefill } from "@/components/copilot/CopilotPanel";
 import type { NavBadges } from "@/lib/types";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
+  ssr: false,
+});
+
+const CopilotPanel = dynamic(() => import("@/components/copilot/CopilotPanel").then((m) => m.CopilotPanel), {
   ssr: false,
 });
 
@@ -28,6 +34,9 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   const [paletteEverOpened, setPaletteEverOpened] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shortcutsEverOpened, setShortcutsEverOpened] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotEverOpened, setCopilotEverOpened] = useState(false);
+  const [copilotPrefill, setCopilotPrefill] = useState<CopilotPrefill | null>(null);
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const t = useTranslations("chrome.appShell");
@@ -41,6 +50,11 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCommandOpen(true);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setCopilotOpen((open) => !open);
         return;
       }
       // "?" is a printable character, so it only opens help when the operator
@@ -66,6 +80,18 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   useEffect(() => {
     if (shortcutsOpen) setShortcutsEverOpened(true);
   }, [shortcutsOpen]);
+
+  useEffect(() => {
+    if (copilotOpen) setCopilotEverOpened(true);
+  }, [copilotOpen]);
+
+  const closeCopilot = useCallback(() => setCopilotOpen(false), []);
+
+  const askCopilot = useCallback((query: string) => {
+    setCommandOpen(false);
+    setCopilotPrefill((prev) => ({ text: query, key: (prev?.key ?? 0) + 1 }));
+    setCopilotOpen(true);
+  }, []);
 
   useEffect(() => {
     // warms the chunk after the page is idle so Ctrl+K opens instantly
@@ -140,7 +166,28 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
             </Dialog>
           )}
         >
-          <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+          <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} onAskCopilot={askCopilot} />
+        </ErrorBoundary>
+      )}
+
+      <CopilotButton open={copilotOpen} onToggle={() => setCopilotOpen((open) => !open)} />
+
+      {copilotEverOpened && (
+        // Kept mounted once opened: the session's conversation lives inside.
+        <ErrorBoundary
+          fallback={(reset) => (
+            <Dialog
+              open={copilotOpen}
+              onClose={closeCopilot}
+              labelledBy="copilot-panel-fallback"
+              containerClassName="z-50 flex items-start justify-center px-4 pt-[12vh]"
+              panelClassName="w-full max-w-xl"
+            >
+              <WidgetFallback reset={reset} titleId="copilot-panel-fallback" />
+            </Dialog>
+          )}
+        >
+          <CopilotPanel open={copilotOpen} onClose={closeCopilot} prefill={copilotPrefill} />
         </ErrorBoundary>
       )}
 

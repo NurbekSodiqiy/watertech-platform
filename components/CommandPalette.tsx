@@ -39,7 +39,15 @@ function buildIndex(nodes: NavNode[], categoryKey?: string): SearchItem[] {
 
 const SEARCH_INDEX = buildIndex(siteTree);
 
-export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CommandPalette({
+  open,
+  onClose,
+  onAskCopilot,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAskCopilot: (query: string) => void;
+}) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -48,7 +56,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const t = useTranslations("nav");
   const tChrome = useTranslations("chrome");
   const tEmpty = useTranslations("emptyState.searchNoResults");
-  const tCommon = useTranslations("common");
   const locale = useLocale();
 
   // Page-title matches (above) point straight at a URL already, so they're
@@ -195,7 +202,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   icon={EMPTY_STATES.searchNoResults.icon}
                   title={tEmpty("title")}
                   reason={tEmpty("reason", { query: query.trim() })}
-                  action={{ label: tEmpty("cta"), disabled: true, title: tCommon("comingSoon"), onClick: () => {} }}
+                  action={{ label: tEmpty("cta"), onClick: () => onAskCopilot(query.trim()) }}
                 />
               )}
               {results.map((item) => (

@@ -18,7 +18,7 @@ export function appPath(pathname: string): string {
 // Anything session-bound or telemetry-related: responses must never be
 // written to a cache, or one operator's data could be replayed to another on
 // a shared machine, and queued events would be served back as "sent".
-const NEVER_CACHED_PREFIXES = ["/api/events", "/auth", "/login", "/admin", "/dashboard"];
+const NEVER_CACHED_PREFIXES = ["/api/events", "/api/copilot", "/auth", "/login", "/admin", "/dashboard"];
 
 export function isNeverCached(pathname: string): boolean {
   const path = appPath(pathname);

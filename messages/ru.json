@@ -120,7 +120,8 @@
       "stageArrows": "Этап",
       "callMode": "Режим звонка",
       "close": "Закрыть",
-      "help": "Справка"
+      "help": "Справка",
+      "copilot": "Copilot"
     }
   },
   "theme": {
@@ -283,5 +284,32 @@
     "unknownError": "Непредвиденная ошибка",
     "backOnline": "Интернет восстановлен",
     "refresh": "Обновить"
+  },
+  "copilot": {
+    "title": "Copilot",
+    "open": "Открыть Copilot",
+    "close": "Закрыть",
+    "clear": "Очистить",
+    "placeholder": "Напишите вопрос…",
+    "send": "Отправить",
+    "hint": "Спрашивайте о скриптах, возражениях, FAQ, пакетах и продукции. Ответ опирается только на данные базы.",
+    "keyHint": "Enter — отправить, Shift+Enter — новая строка",
+    "pending": "Пишу ответ…",
+    "sources": "Источники",
+    "copy": "Скопировать ответ",
+    "you": "Вы",
+    "errors": {
+      "disabled": "Copilot не настроен",
+      "unavailable": "Copilot временно не работает",
+      "interrupted": "Ответ прервался — спросите ещё раз",
+      "invalid": "Вопрос должен быть от 3 до 400 символов",
+      "unauthorized": "Сессия истекла",
+      "rateLimited": "Слишком много запросов"
+    },
+    "toast": {
+      "unauthorizedHint": "Перезагрузите страницу и войдите снова",
+      "reload": "Перезагрузить",
+      "rateLimitedHint": "Повторите через {seconds} с"
+    }
   }
 }

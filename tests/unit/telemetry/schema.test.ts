@@ -31,3 +31,16 @@ describe("telemetryEventSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("copilot_ask meta", () => {
+  const ask = { ...validEvent, type: "copilot_ask" as const };
+
+  it("accepts counts", () => {
+    expect(telemetryEventSchema.safeParse({ ...ask, meta: { hits: 3, chars: 240 } }).success).toBe(true);
+  });
+
+  it("rejects the question text or a missing meta", () => {
+    expect(telemetryEventSchema.safeParse({ ...ask, meta: { hits: 3, chars: 240, question: "narx?" } }).success).toBe(false);
+    expect(telemetryEventSchema.safeParse(ask).success).toBe(false);
+  });
+});

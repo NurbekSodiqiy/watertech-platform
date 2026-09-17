@@ -23,19 +23,30 @@ export const clientEnv = parseEnv(clientEnvSchema, {
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
 
+// A blank `KEY=` line in .env arrives as "" rather than undefined — treated as
+// unset so an empty placeholder disables Copilot instead of failing the whole
+// server env (and with it the admin client every content getter needs).
+const blankAsUnset = (value: unknown) => (value === "" ? undefined : value);
+
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
+  // Server-only by construction: never add a NEXT_PUBLIC_ twin or a clientEnv
+  // entry. Unset means Copilot is disabled (the route answers 503).
+  GEMINI_API_KEY: z.preprocess(blankAsUnset, z.string().min(20).optional()),
+  COPILOT_MODEL: z.preprocess(blankAsUnset, z.string().default("gemini-2.5-flash")),
 });
 
 let serverEnv: z.infer<typeof serverEnvSchema> | undefined;
 
-export function getServerEnv() {
+export function getServerEnv(): z.infer<typeof serverEnvSchema> {
   if (typeof window !== "undefined") {
     throw new Error("getServerEnv() must not be called in the browser");
   }
   if (!serverEnv) {
     serverEnv = parseEnv(serverEnvSchema, {
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      COPILOT_MODEL: process.env.COPILOT_MODEL,
     });
   }
   return serverEnv;

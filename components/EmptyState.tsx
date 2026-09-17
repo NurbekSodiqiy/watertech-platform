@@ -10,7 +10,7 @@ export interface EmptyStateAction {
   href?: string;
   onClick?: () => void;
   icon?: LucideIcon;
-  /** Only for the CommandPalette "Copilot'dan so'rash" CTA (S22 wires it up). */
+  /** Renders the action inert, with `title` as its tooltip (e.g. a not-yet-available feature). */
   disabled?: boolean;
   title?: string;
 }

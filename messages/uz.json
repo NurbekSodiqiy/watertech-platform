@@ -120,7 +120,8 @@
       "stageArrows": "Bosqich",
       "callMode": "Qo'ng'iroq rejimi",
       "close": "Yopish",
-      "help": "Yordam"
+      "help": "Yordam",
+      "copilot": "Copilot"
     }
   },
   "theme": {
@@ -283,5 +284,32 @@
     "unknownError": "Kutilmagan xatolik",
     "backOnline": "Internet qaytdi",
     "refresh": "Yangilash"
+  },
+  "copilot": {
+    "title": "Copilot",
+    "open": "Copilot'ni ochish",
+    "close": "Yopish",
+    "clear": "Tozalash",
+    "placeholder": "Savolingizni yozing…",
+    "send": "Yuborish",
+    "hint": "Skriptlar, e'tirozlar, FAQ, paketlar va mahsulotlar bo'yicha so'rang. Javob faqat bazadagi ma'lumotga tayanadi.",
+    "keyHint": "Enter — yuborish, Shift+Enter — yangi qator",
+    "pending": "Javob yozilmoqda…",
+    "sources": "Manbalar",
+    "copy": "Javobni nusxalash",
+    "you": "Siz",
+    "errors": {
+      "disabled": "Copilot sozlanmagan",
+      "unavailable": "Copilot vaqtincha ishlamayapti",
+      "interrupted": "Javob uzilib qoldi — qayta so'rab ko'ring",
+      "invalid": "Savol 3 dan 400 gacha belgidan iborat bo'lishi kerak",
+      "unauthorized": "Sessiya tugagan",
+      "rateLimited": "So'rovlar juda ko'p"
+    },
+    "toast": {
+      "unauthorizedHint": "Sahifani qayta yuklab, qaytadan kiring",
+      "reload": "Qayta yuklash",
+      "rateLimitedHint": "{seconds} soniyadan keyin qayta urinib ko'ring"
+    }
   }
 }

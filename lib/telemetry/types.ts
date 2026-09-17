@@ -18,6 +18,7 @@ export const TELEMETRY_EVENT_TYPES = [
   "idle_start",
   "idle_end",
   "web_vital",
+  "copilot_ask",
 ] as const;
 
 export type TelemetryEventType = (typeof TELEMETRY_EVENT_TYPES)[number];
@@ -31,6 +32,8 @@ export interface TelemetryEvent {
   entityId?: string;
   durationMs?: number;
   /** e.g. for `search`: { query, resultCount }
-   * for `web_vital`: { name: "LCP"|"CLS"|"INP"|"FCP"|"TTFB", value: number, rating: "good"|"needs-improvement"|"poor" } */
+   * for `web_vital`: { name: "LCP"|"CLS"|"INP"|"FCP"|"TTFB", value: number, rating: "good"|"needs-improvement"|"poor" }
+   * for `copilot_ask`: { hits: number, chars: number } — counts only, never the question text
+   * (telemetry is visible on the dashboard; questions live in copilot_logs). */
   meta?: Record<string, unknown>;
 }

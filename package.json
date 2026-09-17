@@ -16,6 +16,7 @@
     "seed:content": "tsx supabase/seed/seed-content.ts"
   },
   "dependencies": {
+    "@google/genai": "2.23.0",
     "@hookform/resolvers": "3.10.0",
     "@sentry/nextjs": "^8.55.2",
     "@serwist/next": "9.5.12",

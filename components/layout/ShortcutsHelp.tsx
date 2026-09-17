@@ -7,10 +7,11 @@ const TITLE_ID = "shortcuts-help-title";
 
 // Keys are rendered verbatim (they're glyphs, not prose) while the
 // descriptions come from the message catalogue. The list mirrors the handlers
-// that actually exist: Ctrl+K in AppShell, the rest in ScriptsWorkspace and
+// that actually exist: Ctrl+K and Ctrl+J in AppShell, the rest in ScriptsWorkspace and
 // CallModeOverlay.
 const SHORTCUTS: { keys: string[]; descriptionKey: string }[] = [
   { keys: ["Ctrl", "K"], descriptionKey: "search" },
+  { keys: ["Ctrl", "J"], descriptionKey: "copilot" },
   { keys: ["/"], descriptionKey: "searchSlash" },
   { keys: ["1–6"], descriptionKey: "stageNumber" },
   { keys: ["←", "→"], descriptionKey: "stageArrows" },

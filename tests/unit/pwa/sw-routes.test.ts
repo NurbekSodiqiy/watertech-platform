@@ -26,6 +26,7 @@ describe("appPath", () => {
 describe("isNeverCached", () => {
   it.each([
     "/api/events",
+    "/api/copilot",
     "/auth",
     "/auth/callback",
     "/login",
