@@ -1,7 +1,8 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
+import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
+import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { updateWithVersion } from "./concurrency";
 import { scriptWriteSchema } from "@/lib/admin/schemas";
@@ -38,6 +39,10 @@ export async function upsertScript(input: unknown): Promise<ActionResult> {
       stagesRu: parsed.stagesRu && parsed.stagesRu.length > 0 ? chain(parsed.stagesRu) : undefined,
     };
     const row = { ...scriptToRow(scriptWithChain), status: parsed.status, updated_by: session.email };
+    if (parsed.status === "published") {
+      const gate = await runPublishGateOnCandidate({ target: { table: "content_scripts", row }, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     if (parsed.version !== undefined) {
       await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_scripts", parsed.id, row, parsed.version);
     } else {
@@ -71,6 +76,11 @@ export async function setScriptStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    // Unpublishing never runs the gate — only a move to "published" does.
+    if (status === "published") {
+      const gate = await runPublishGate({ table: "content_scripts", id, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     await updateWithVersion(
       createClient<DynamicTablesDatabase>(),
       "content_scripts",

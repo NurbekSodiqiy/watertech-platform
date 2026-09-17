@@ -53,3 +53,24 @@ time too — if Supabase is unreachable, those page builds fail. `.github/workfl
 placeholder (non-functional) Supabase env vars, so **CI's `npm run build` step needs a real, reachable
 Supabase project's credentials as a secret** to succeed now that content lives in the database — a
 placeholder URL is no longer sufficient.
+
+## Publish gate & daily content scan
+
+- **Publish gate** (`lib/agents/publish-gate/`): every move to `published` — the admin tables' status toggle,
+  saving an edit form with status "Nashr etilgan", and the dashboard's "Nashr qilish" quick action — runs
+  `runPublishGate` first. Error-severity issues block the write; warnings don't. Each run is logged to
+  `content_gate_reports`, and a blocked run also lands in the manager inbox (`/admin/notifications`).
+- **Daily scan** (`lib/agents/stale-scan.ts`, `GET /api/cron/content-scan`): flags published rows not updated
+  for 90+ days and rows with empty `*_ru` columns, skipping any row that still has an unread notification of
+  the same kind, then posts one summary notification.
+- Both need migration `supabase/migrations/0007_notifications_and_gate.sql` applied.
+
+The endpoint requires `Authorization: Bearer $CRON_SECRET` (set `CRON_SECRET`, at least 16 characters, in
+the deployment env) and answers `401` otherwise. On Vercel, `vercel.json` schedules it daily at 03:00 UTC
+and Vercel Cron sends that header automatically. **On any other host**, call it from whatever scheduler
+you have (system cron, GitHub Actions `schedule`, a monitoring pinger) with the same header:
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<your-host>/api/cron/content-scan
+# -> {"created":3,"skipped":1}
+```

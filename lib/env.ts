@@ -34,6 +34,8 @@ const serverEnvSchema = z.object({
   // entry. Unset means Copilot is disabled (the route answers 503).
   GEMINI_API_KEY: z.preprocess(blankAsUnset, z.string().min(20).optional()),
   COPILOT_MODEL: z.preprocess(blankAsUnset, z.string().default("gemini-2.5-flash")),
+  // Bearer secret for /api/cron/content-scan. Server-only, never NEXT_PUBLIC_.
+  CRON_SECRET: z.string().min(16),
 });
 
 let serverEnv: z.infer<typeof serverEnvSchema> | undefined;
@@ -47,6 +49,7 @@ export function getServerEnv(): z.infer<typeof serverEnvSchema> {
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       COPILOT_MODEL: process.env.COPILOT_MODEL,
+      CRON_SECRET: process.env.CRON_SECRET,
     });
   }
   return serverEnv;

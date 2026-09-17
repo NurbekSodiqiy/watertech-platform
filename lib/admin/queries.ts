@@ -1,7 +1,16 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { narrowColumn } from "@/lib/content/db";
+import {
+  narrowColumn,
+  rowToScript,
+  rowToObjection,
+  rowToFaq,
+  rowToCompetitor,
+  rowToPackageGroup,
+  rowToProduct,
+} from "@/lib/content/db";
 import { competitorSchema, productSchema } from "@/lib/content/schemas";
+import type { ContentBundle } from "@/lib/content/loader";
 import { statusSchema } from "@/lib/admin/schemas";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import type {
@@ -185,6 +194,60 @@ export async function countRowsByStatus(table: CountableTable): Promise<StatusCo
   if (totalRes.error) throw new Error(`${table}: ${totalRes.error.message}`);
   if (draftRes.error) throw new Error(`${table}: ${draftRes.error.message}`);
   return { total: totalRes.count ?? 0, draft: draftRes.count ?? 0 };
+}
+
+export interface AdminContentBundle {
+  /** Unlocalised (raw *Ru twins intact) and including drafts — unlike
+   * lib/content/loader.ts's getContentBundle(), which is published-only. */
+  bundle: ContentBundle;
+  products: Product[];
+  /** Ids whose status is "published", per table — ContentBundle itself
+   * carries no status, and the publish gate must tell drafts apart. */
+  publishedIds: Record<CountableTable, ReadonlySet<string>>;
+}
+
+function publishedIdSet(rows: { id: string; status: StatusValue }[]): ReadonlySet<string> {
+  return new Set(rows.filter((row) => row.status === "published").map((row) => row.id));
+}
+
+/** Every content row a manager can see, for the publish gate's cross-reference
+ * checks (lib/agents/publish-gate). Session client like the rest of this file,
+ * so it only works inside a manager's request — the cron scan never calls it. */
+export async function getContentBundleAdmin(): Promise<AdminContentBundle> {
+  const [scripts, objections, faqs, competitors, packageGroups, packages, products] = await Promise.all([
+    listScriptRows(),
+    listObjectionRows(),
+    listFaqRows(),
+    listCompetitorRows(),
+    listPackageGroupRows(),
+    listPackageRows(),
+    listProductRows(),
+  ]);
+
+  return {
+    bundle: {
+      scripts: scripts.map(rowToScript),
+      objections: objections.map(rowToObjection),
+      faqs: faqs.map(rowToFaq),
+      competitors: competitors.map(rowToCompetitor),
+      packageGroups: packageGroups.map((group) =>
+        rowToPackageGroup(
+          group,
+          packages.filter((pkg) => pkg.group_id === group.id)
+        )
+      ),
+    },
+    products: products.map(rowToProduct),
+    publishedIds: {
+      content_scripts: publishedIdSet(scripts),
+      content_objections: publishedIdSet(objections),
+      content_faqs: publishedIdSet(faqs),
+      content_competitors: publishedIdSet(competitors),
+      content_package_groups: publishedIdSet(packageGroups),
+      content_packages: publishedIdSet(packages),
+      content_products: publishedIdSet(products),
+    },
+  };
 }
 
 export async function listVersions(table: string, rowId: string): Promise<ContentVersionRow[]> {

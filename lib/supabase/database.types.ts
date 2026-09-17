@@ -1,4 +1,4 @@
-// Regenerate with npm run gen:types; hand-written from migrations 0001–0004 on 2026-09-17.
+// Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17.
 //
 // allowed_users and telemetry_events are NOT created by any migration in
 // supabase/migrations (they predate the migrations folder). Their columns are
@@ -18,6 +18,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          actor: string | null
+          body: string | null
+          created_at: string
+          href: string | null
+          id: number
+          kind: string
+          read_at: string | null
+          row_id: string | null
+          severity: string
+          table_name: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actor?: string | null
+          body?: string | null
+          created_at?: string
+          href?: string | null
+          id?: number
+          kind: string
+          read_at?: string | null
+          row_id?: string | null
+          severity: string
+          table_name?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actor?: string | null
+          body?: string | null
+          created_at?: string
+          href?: string | null
+          id?: number
+          kind?: string
+          read_at?: string | null
+          row_id?: string | null
+          severity?: string
+          table_name?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       allowed_users: {
         Row: {
           email: string
@@ -189,6 +237,36 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           version?: number
+        }
+        Relationships: []
+      }
+      content_gate_reports: {
+        Row: {
+          actor: string | null
+          created_at: string
+          id: number
+          issues: Json
+          passed: boolean
+          row_id: string
+          table_name: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          id?: number
+          issues?: Json
+          passed: boolean
+          row_id: string
+          table_name: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          id?: number
+          issues?: Json
+          passed?: boolean
+          row_id?: string
+          table_name?: string
         }
         Relationships: []
       }

@@ -1,7 +1,8 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
+import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
+import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { updateWithVersion } from "./concurrency";
 import { competitorWriteSchema } from "@/lib/admin/schemas";
@@ -15,6 +16,10 @@ export async function upsertCompetitor(input: unknown): Promise<ActionResult> {
     const parsed = competitorWriteSchema.parse(input);
     const supabase = createClient();
     const row = { ...competitorToRow(parsed), status: parsed.status, updated_by: session.email };
+    if (parsed.status === "published") {
+      const gate = await runPublishGateOnCandidate({ target: { table: "content_competitors", row }, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     if (parsed.version !== undefined) {
       await updateWithVersion(
         createClient<DynamicTablesDatabase>(),
@@ -54,6 +59,11 @@ export async function setCompetitorStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    // Unpublishing never runs the gate — only a move to "published" does.
+    if (status === "published") {
+      const gate = await runPublishGate({ table: "content_competitors", id, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     await updateWithVersion(
       createClient<DynamicTablesDatabase>(),
       "content_competitors",

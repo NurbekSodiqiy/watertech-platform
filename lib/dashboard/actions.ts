@@ -2,7 +2,13 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "@/lib/admin/actions/guard";
+import {
+  requireManagerSession,
+  actionErrorResult,
+  gateBlockedResult,
+  type ActionResult,
+} from "@/lib/admin/actions/guard";
+import { runPublishGate } from "@/lib/agents/publish-gate";
 import { updateWithVersion } from "@/lib/admin/actions/concurrency";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { DASHBOARD_TABLE_KIND, type DashboardTableName } from "@/lib/dashboard/content-health";
@@ -36,6 +42,9 @@ async function writeAndRevalidate(
 export async function publishFromDashboard(table: string, id: string, expectedVersion: number): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    if (!isDashboardTable(table)) return { ok: false, error: "Noma'lum jadval" };
+    const gate = await runPublishGate({ table, id, actor: session.email });
+    if (!gate.passed) return gateBlockedResult(gate);
     return await writeAndRevalidate(table, id, expectedVersion, { status: "published" }, session);
   } catch (e) {
     return actionErrorResult(e);

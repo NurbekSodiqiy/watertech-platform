@@ -10,8 +10,10 @@ import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import type { ActionResult } from "@/lib/admin/actions/guard";
+import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 export type EntityFieldDef<TIn extends FieldValues> = (
   | { kind: "text"; name: Path<TIn>; label: string; placeholder?: string; readOnly?: boolean }
@@ -55,6 +57,8 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Set when saving with status "published" was blocked by the publish gate.
+  const [gateResult, setGateResult] = useState<GateResult | null>(null);
   // Guards against a second submit firing before React re-renders the
   // button's `disabled` state (a fast double-click/double-Enter) — a ref
   // since it must be read/written synchronously, not through a re-render.
@@ -102,6 +106,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         if (!result.ok) {
           const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
           setError(result.error);
+          if (result.gate) setGateResult(result.gate);
           toast({
             kind: "error",
             title: isConflict ? t("conflict") : result.error,
@@ -246,6 +251,8 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
           Bekor qilish
         </button>
       </div>
+
+      <GateReportDialog result={gateResult} onClose={() => setGateResult(null)} />
     </form>
   );
 }

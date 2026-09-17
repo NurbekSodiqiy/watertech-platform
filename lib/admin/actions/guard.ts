@@ -1,11 +1,18 @@
 import "server-only";
 import { getServerSession } from "@/lib/auth/server-session";
+import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 export interface ManagerSession {
   email: string;
 }
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+/** `gate` is set only when the publish gate blocked the write — the client
+ * shows its report in a dialog (components/admin/GateReportDialog.tsx). */
+export type ActionResult = { ok: true } | { ok: false; error: string; gate?: GateResult };
+
+export function gateBlockedResult(gate: GateResult): ActionResult {
+  return { ok: false, error: "Nashr qorovuli to'xtatdi", gate };
+}
 
 /** Every admin Server Action calls this first — throws when the caller
  * isn't a signed-in manager, so callers can wrap the rest of the action body

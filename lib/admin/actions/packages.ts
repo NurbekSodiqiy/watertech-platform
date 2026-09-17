@@ -1,7 +1,8 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
+import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
+import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { updateWithVersion } from "./concurrency";
 import { packageGroupWriteSchema, packageWriteSchema } from "@/lib/admin/schemas";
@@ -17,6 +18,10 @@ export async function upsertPackageGroup(input: unknown): Promise<ActionResult> 
     const parsed = packageGroupWriteSchema.parse(input);
     const supabase = createClient();
     const row = { ...packageGroupToRow(parsed), status: parsed.status, updated_by: session.email };
+    if (parsed.status === "published") {
+      const gate = await runPublishGateOnCandidate({ target: { table: "content_package_groups", row }, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     if (parsed.version !== undefined) {
       await updateWithVersion(
         createClient<DynamicTablesDatabase>(),
@@ -56,6 +61,11 @@ export async function setPackageGroupStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    // Unpublishing never runs the gate — only a move to "published" does.
+    if (status === "published") {
+      const gate = await runPublishGate({ table: "content_package_groups", id, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     await updateWithVersion(
       createClient<DynamicTablesDatabase>(),
       "content_package_groups",
@@ -78,6 +88,10 @@ export async function upsertPackage(input: unknown): Promise<ActionResult> {
     const parsed = packageWriteSchema.parse(input);
     const supabase = createClient();
     const row = { ...packageToRow(parsed, parsed.groupId), status: parsed.status, updated_by: session.email };
+    if (parsed.status === "published") {
+      const gate = await runPublishGateOnCandidate({ target: { table: "content_packages", row }, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     if (parsed.version !== undefined) {
       await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_packages", parsed.id, row, parsed.version);
     } else {
@@ -111,6 +125,11 @@ export async function setPackageStatus(
 ): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    // Unpublishing never runs the gate — only a move to "published" does.
+    if (status === "published") {
+      const gate = await runPublishGate({ table: "content_packages", id, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     await updateWithVersion(
       createClient<DynamicTablesDatabase>(),
       "content_packages",

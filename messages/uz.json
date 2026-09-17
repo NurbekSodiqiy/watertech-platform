@@ -199,6 +199,13 @@
       "title": "Salbiy fikr yo'q",
       "reason": "Hech kim \"Foydali emas\" deb belgilamagan"
     },
+    "notificationsNone": {
+      "title": "Bildirishnomalar yo'q",
+      "reason": "Nashr qorovuli ham, kunlik kontent tekshiruvi ham hozircha hech narsa topmadi",
+      "unreadTitle": "O'qilmagan bildirishnoma yo'q",
+      "unreadReason": "Barcha bildirishnomalar ko'rib chiqilgan",
+      "cta": "Barchasini ko'rsatish"
+    },
     "adminListNone": {
       "title": "Hozircha {type} yo'q",
       "reason": "Ro'yxatga birorta ham yozuv qo'shilmagan",

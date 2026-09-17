@@ -3,6 +3,7 @@ import { redirect } from "@/i18n/routing";
 import { getServerSession } from "@/lib/auth/server-session";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { NotificationsBell } from "@/components/admin/NotificationsBell";
 
 export default async function AdminLayout({
   children,
@@ -17,7 +18,7 @@ export default async function AdminLayout({
 
   return (
     <SessionProvider>
-      <AdminShell>{children}</AdminShell>
+      <AdminShell notificationsSlot={<NotificationsBell />}>{children}</AdminShell>
     </SessionProvider>
   );
 }

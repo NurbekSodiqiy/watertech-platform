@@ -38,7 +38,14 @@ const ADMIN_NAV: AdminNavEntry[] = [
  * left nav), deliberately not built from AppShell/Sidebar (design-locked,
  * see CLAUDE.md section 6) even though the row styling below mirrors them:
  * rounded-2xl rows, text-[13.5px] labels, the same token palette. */
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({
+  children,
+  notificationsSlot,
+}: {
+  children: ReactNode;
+  /** Server-rendered NotificationsBell — passed in because this shell is a Client Component. */
+  notificationsSlot?: ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -55,6 +62,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
+          {notificationsSlot}
           <Link
             href="/dashboard"
             className="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"

@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import { scriptWriteSchema, type ScriptFormValues } from "@/lib/admin/schemas";
 import { upsertScript } from "@/lib/admin/actions/scripts";
@@ -25,6 +26,7 @@ import { ScriptsContentProvider } from "@/components/scripts/ScriptsContentConte
 import { ClientNameProvider } from "@/components/ClientNameContext";
 import type { Competitor, Faq, Objection, PackageGroup, Script, ScriptTurnLink } from "@/lib/content/types";
 import type { ContentBundle } from "@/lib/content/loader";
+import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 function slugify(text: string): string {
   return text
@@ -542,6 +544,8 @@ export function ScriptEditor({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Set when saving with status "published" was blocked by the publish gate.
+  const [gateResult, setGateResult] = useState<GateResult | null>(null);
   const [selectedStage, setSelectedStage] = useState(0);
   // Guards against a second submit firing before React re-renders the
   // button's `disabled` state — see the identical guard in EntityForm.tsx.
@@ -610,6 +614,7 @@ export function ScriptEditor({
         if (!result.ok) {
           const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
           setError(result.error);
+          if (result.gate) setGateResult(result.gate);
           toast({
             kind: "error",
             title: isConflict ? t("conflict") : result.error,
@@ -826,6 +831,8 @@ export function ScriptEditor({
           </ClientNameProvider>
         </div>
       </div>
+
+      <GateReportDialog result={gateResult} onClose={() => setGateResult(null)} />
     </form>
   );
 }

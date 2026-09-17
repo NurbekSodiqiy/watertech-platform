@@ -58,7 +58,8 @@ const TABLES: TableConfig[] = [
   { table: "content_products", titleColumn: "name_ru", ruColumns: [] },
 ];
 
-const STALE_DAYS = 90;
+/** Shared with the daily content scan (lib/agents/stale-scan.ts). */
+export const STALE_DAYS = 90;
 const MAX_ROWS_PER_LIST = 20;
 
 export interface ContentHealthRow {

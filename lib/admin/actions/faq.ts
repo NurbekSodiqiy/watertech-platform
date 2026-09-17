@@ -1,7 +1,8 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
+import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
+import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { updateWithVersion } from "./concurrency";
 import { faqWriteSchema } from "@/lib/admin/schemas";
@@ -15,6 +16,10 @@ export async function upsertFaq(input: unknown): Promise<ActionResult> {
     const parsed = faqWriteSchema.parse(input);
     const supabase = createClient();
     const row = { ...faqToRow(parsed), status: parsed.status, updated_by: session.email };
+    if (parsed.status === "published") {
+      const gate = await runPublishGateOnCandidate({ target: { table: "content_faqs", row }, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     if (parsed.version !== undefined) {
       await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_faqs", parsed.id, row, parsed.version);
     } else {
@@ -44,6 +49,11 @@ export async function deleteFaq(id: string): Promise<ActionResult> {
 export async function setFaqStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    // Unpublishing never runs the gate — only a move to "published" does.
+    if (status === "published") {
+      const gate = await runPublishGate({ table: "content_faqs", id, actor: session.email });
+      if (!gate.passed) return gateBlockedResult(gate);
+    }
     await updateWithVersion(
       createClient<DynamicTablesDatabase>(),
       "content_faqs",

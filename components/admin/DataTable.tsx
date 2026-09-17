@@ -7,6 +7,7 @@ import { ArrowUpDown, Pencil, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import type { EmptyStateKey } from "@/lib/empty-states";
 import { formatRelativeUz } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
@@ -15,6 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import type { ActionResult } from "@/lib/admin/actions/guard";
 import type { StatusValue } from "@/lib/admin/actions/status";
+import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 export interface AdminRow {
   id: string;
@@ -75,6 +77,8 @@ export function DataTable<T extends AdminRow>({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // A publish the gate blocked, with the row it was for (the dialog links to its editor).
+  const [blocked, setBlocked] = useState<{ id: string; result: GateResult } | null>(null);
 
   const filtered = useMemo(() => {
     let out = rows.filter((row) =>
@@ -105,6 +109,7 @@ export function DataTable<T extends AdminRow>({
       if (!result.ok) {
         const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
         setError(result.error);
+        if (result.gate) setBlocked({ id: row.id, result: result.gate });
         toast({
           kind: "error",
           title: isConflict ? t("conflict") : result.error,
@@ -276,6 +281,12 @@ export function DataTable<T extends AdminRow>({
         pending={pending && pendingId === confirmId}
         onConfirm={handleDelete}
         onCancel={() => setConfirmId(null)}
+      />
+
+      <GateReportDialog
+        result={blocked?.result ?? null}
+        editHref={blocked ? `${editBase}/${blocked.id}` : undefined}
+        onClose={() => setBlocked(null)}
       />
     </div>
   );

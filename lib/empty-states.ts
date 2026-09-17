@@ -15,6 +15,7 @@ import {
   Clock,
   Languages,
   ThumbsUp,
+  BellOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -52,6 +53,7 @@ export const EMPTY_STATES = {
   dashboardNoStale: { key: "dashboardNoStale", icon: Clock, ctaKind: "link" },
   dashboardNoMissingRu: { key: "dashboardNoMissingRu", icon: Languages, ctaKind: "link" },
   dashboardNoFeedback: { key: "dashboardNoFeedback", icon: ThumbsUp, ctaKind: "link" },
+  notificationsNone: { key: "notificationsNone", icon: BellOff, ctaKind: "clear-filters" },
   adminListNone: { key: "adminListNone", icon: Inbox, ctaKind: "create" },
   versionsNone: { key: "versionsNone", icon: History, ctaKind: "retry" },
   offline: { key: "offline", icon: WifiOff, ctaKind: "retry" },

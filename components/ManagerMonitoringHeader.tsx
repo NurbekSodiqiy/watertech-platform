@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { LogOut } from "lucide-react";
@@ -11,7 +12,12 @@ import { signOutAndRedirect } from "@/lib/auth/sign-out";
 // not TopBar/AvatarMenu (those are design-locked, AGENTS.md), so this is a
 // small, self-contained duplicate of just the "sign out" logic instead of
 // importing from them.
-export function ManagerMonitoringHeader() {
+export function ManagerMonitoringHeader({
+  notificationsSlot,
+}: {
+  /** Server-rendered NotificationsBell — passed in because this header is a Client Component. */
+  notificationsSlot?: ReactNode;
+}) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -26,6 +32,7 @@ export function ManagerMonitoringHeader() {
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
+        {notificationsSlot}
         <Link
           href="/admin"
           className="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"

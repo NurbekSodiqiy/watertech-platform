@@ -1,5 +1,6 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { ManagerMonitoringHeader } from "@/components/ManagerMonitoringHeader";
+import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
@@ -20,7 +21,7 @@ export default function DashboardLayout({
   return (
     <SessionProvider>
       <div className="flex min-h-screen flex-col bg-background">
-        <ManagerMonitoringHeader />
+        <ManagerMonitoringHeader notificationsSlot={<NotificationsBell />} />
         <main className="min-w-0 flex-1">
           <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
             <PageHeader

@@ -84,6 +84,7 @@ export async function ContentHealthPanel({ health }: { health: ContentHealth }) 
             table={row.table}
             id={row.id}
             version={row.version}
+            editHref={adminEditHref(row.table, row.id)}
           />
         )}
       />
@@ -101,6 +102,7 @@ export async function ContentHealthPanel({ health }: { health: ContentHealth }) 
             table={row.table}
             id={row.id}
             version={row.version}
+            editHref={adminEditHref(row.table, row.id)}
           />
         )}
       />
