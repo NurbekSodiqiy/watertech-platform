@@ -13,6 +13,11 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/hooks/useToast";
+import { useOnline } from "@/hooks/useOnline";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import { scriptWriteSchema, type ScriptFormValues } from "@/lib/admin/schemas";
 import { upsertScript } from "@/lib/admin/actions/scripts";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
@@ -503,6 +508,7 @@ interface ScriptEditorProps {
   isNew: boolean;
   script: Script;
   status: "draft" | "published";
+  version?: number;
   objections: Objection[];
   competitors: Competitor[];
   faqs: Faq[];
@@ -522,6 +528,7 @@ export function ScriptEditor({
   isNew,
   script,
   status,
+  version,
   objections,
   competitors,
   faqs,
@@ -529,16 +536,23 @@ export function ScriptEditor({
   previewBundle,
 }: ScriptEditorProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const t = useTranslations("toast");
+  const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [selectedStage, setSelectedStage] = useState(0);
+  // Guards against a second submit firing before React re-renders the
+  // button's `disabled` state — see the identical guard in EntityForm.tsx.
+  const inFlightRef = useRef(false);
 
   const defaultValues: ScriptFormValues = {
     id: script.id,
     name: script.name,
     cheatSheet: script.cheatSheet,
     status,
+    version,
     stages: toStageFormValues(script.stages),
     nameRu: script.nameRu ?? "",
     cheatSheetRu: script.cheatSheetRu ?? "",
@@ -578,21 +592,38 @@ export function ScriptEditor({
   const previewTurns = watchedStages?.[selectedStage]?.turns ?? [];
 
   function submit(values: ScriptFormValues) {
+    if (inFlightRef.current) return;
+    if (!online) {
+      toast({ kind: "error", title: t("offline") });
+      return;
+    }
+    inFlightRef.current = true;
     setError(null);
     setSuccess(false);
     startTransition(async () => {
-      const result = await upsertScript({
-        ...values,
-        stages: cleanStages(values.stages),
-        stagesRu: values.stagesRu ? cleanStages(values.stagesRu) : undefined,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await upsertScript({
+          ...values,
+          stages: cleanStages(values.stages),
+          stagesRu: values.stagesRu ? cleanStages(values.stagesRu) : undefined,
+        });
+        if (!result.ok) {
+          const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
+          setError(result.error);
+          toast({
+            kind: "error",
+            title: isConflict ? t("conflict") : result.error,
+            action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
+          });
+          return;
+        }
+        setSuccess(true);
+        toast({ kind: "success", title: t("saved") });
+        router.push("/admin/scripts");
+        router.refresh();
+      } finally {
+        inFlightRef.current = false;
       }
-      setSuccess(true);
-      router.push("/admin/scripts");
-      router.refresh();
     });
   }
 
@@ -770,13 +801,9 @@ export function ScriptEditor({
         </details>
 
         <div className="flex items-center gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover disabled:opacity-50"
-          >
-            {pending ? "Saqlanmoqda…" : "Saqlash"}
-          </button>
+          <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel="Saqlanmoqda…">
+            Saqlash
+          </SubmitButton>
           <button
             type="button"
             onClick={() => router.push("/admin/scripts")}

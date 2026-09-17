@@ -1,12 +1,14 @@
+import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
+
 export default function Loading() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
-      <div className="h-8 w-64 animate-pulse rounded-lg bg-surface-alt" />
+      <Skeleton className="h-8 w-64" />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="h-24 animate-pulse rounded-2xl border border-border bg-surface" />
-        <div className="h-24 animate-pulse rounded-2xl border border-border bg-surface" />
+        <SkeletonCard className="h-24" />
+        <SkeletonCard className="h-24" />
       </div>
-      <div className="h-48 animate-pulse rounded-2xl border border-border bg-surface" />
+      <SkeletonCard className="h-48" />
     </div>
   );
 }

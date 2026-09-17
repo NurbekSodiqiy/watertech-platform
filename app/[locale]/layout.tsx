@@ -6,6 +6,7 @@ import { getMessages, getTranslations, unstable_setRequestLocale } from "next-in
 import { ThemeScript } from "@/components/ThemeScript";
 import { TelemetryProvider } from "@/components/TelemetryProvider";
 import { WebVitalsReporter } from "@/components/providers/WebVitalsReporter";
+import { Toaster } from "@/components/ui/Toaster";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -50,6 +51,7 @@ export default async function LocaleLayout({
           <TelemetryProvider />
           <WebVitalsReporter />
           {children}
+          <Toaster />
         </NextIntlClientProvider>
       </body>
     </html>

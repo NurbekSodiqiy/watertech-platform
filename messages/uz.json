@@ -184,5 +184,17 @@
   },
   "common": {
     "copyAll": "Barchasini nusxalash"
+  },
+  "toast": {
+    "saved": "Saqlandi",
+    "deleted": "O'chirildi",
+    "published": "Nashr etildi",
+    "unpublished": "Qoralamaga o'tkazildi",
+    "restored": "Versiya tiklandi",
+    "offline": "Internet yo'q — amalni bajarib bo'lmadi",
+    "conflict": "Bu yozuvni boshqa menejer o'zgartirgan. Sahifani yangilang.",
+    "unknownError": "Kutilmagan xatolik",
+    "backOnline": "Internet qaytdi",
+    "refresh": "Yangilash"
   }
 }

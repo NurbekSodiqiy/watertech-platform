@@ -4,16 +4,21 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { Link } from "@/i18n/routing";
 import { ArrowUpDown, Pencil, Search, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { formatRelativeUz } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
+import { useOnline } from "@/hooks/useOnline";
+import { useToast } from "@/hooks/useToast";
+import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import type { ActionResult } from "@/lib/admin/actions/guard";
 import type { StatusValue } from "@/lib/admin/actions/status";
 
 export interface AdminRow {
   id: string;
   status: StatusValue;
+  version: number;
   updated_at: string;
   updated_by: string | null;
 }
@@ -43,10 +48,13 @@ export function DataTable<T extends AdminRow>({
   editBase: string;
   emptyTitle?: string;
   onDelete: (id: string) => Promise<ActionResult>;
-  onToggleStatus: (id: string, next: StatusValue) => Promise<ActionResult>;
+  onToggleStatus: (id: string, next: StatusValue, expectedVersion: number) => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const mounted = useMounted();
+  const online = useOnline();
+  const { toast } = useToast();
+  const t = useTranslations("toast");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -70,19 +78,37 @@ export function DataTable<T extends AdminRow>({
   }
 
   function handleToggleStatus(row: T) {
+    if (!online) {
+      toast({ kind: "error", title: t("offline") });
+      return;
+    }
     const next: StatusValue = row.status === "published" ? "draft" : "published";
     setPendingId(row.id);
     setError(null);
     startTransition(async () => {
-      const result = await onToggleStatus(row.id, next);
+      const result = await onToggleStatus(row.id, next, row.version);
       setPendingId(null);
-      if (!result.ok) setError(result.error);
-      else router.refresh();
+      if (!result.ok) {
+        const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
+        setError(result.error);
+        toast({
+          kind: "error",
+          title: isConflict ? t("conflict") : result.error,
+          action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
+        });
+        return;
+      }
+      toast({ kind: "success", title: next === "published" ? t("published") : t("unpublished") });
+      router.refresh();
     });
   }
 
   function handleDelete() {
     if (!confirmId) return;
+    if (!online) {
+      toast({ kind: "error", title: t("offline") });
+      return;
+    }
     const id = confirmId;
     setPendingId(id);
     setError(null);
@@ -90,8 +116,13 @@ export function DataTable<T extends AdminRow>({
       const result = await onDelete(id);
       setPendingId(null);
       setConfirmId(null);
-      if (!result.ok) setError(result.error);
-      else router.refresh();
+      if (!result.ok) {
+        setError(result.error);
+        toast({ kind: "error", title: result.error });
+        return;
+      }
+      toast({ kind: "success", title: t("deleted") });
+      router.refresh();
     });
   }
 

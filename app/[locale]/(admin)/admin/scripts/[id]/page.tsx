@@ -72,6 +72,7 @@ export default async function AdminScriptEditPage({
         isNew={isNew}
         script={script}
         status={row?.status ?? "draft"}
+        version={row?.version}
         objections={objections}
         competitors={competitors}
         faqs={faqs}

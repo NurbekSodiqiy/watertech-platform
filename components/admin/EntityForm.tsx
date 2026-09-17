@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useForm, type DefaultValues, type FieldValues, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ZodType, ZodTypeDef } from "zod";
 import { CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/hooks/useToast";
+import { useOnline } from "@/hooks/useOnline";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import type { ActionResult } from "@/lib/admin/actions/guard";
 
 export type EntityFieldDef<TIn extends FieldValues> = (
@@ -15,6 +20,7 @@ export type EntityFieldDef<TIn extends FieldValues> = (
   | { kind: "checkbox"; name: Path<TIn>; label: string }
   | { kind: "select"; name: Path<TIn>; label: string; options: { value: string; label: string }[] }
   | { kind: "csv"; name: Path<TIn>; label: string; placeholder?: string; hint: string }
+  | { kind: "hidden"; name: Path<TIn> }
 ) & {
   /** Renders under a collapsed "Ruscha (ixtiyoriy)" <details> instead of
    * inline with the main fields — every *_ru translation field sets this
@@ -43,9 +49,16 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   backHref: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
+  const t = useTranslations("toast");
+  const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Guards against a second submit firing before React re-renders the
+  // button's `disabled` state (a fast double-click/double-Enter) — a ref
+  // since it must be read/written synchronously, not through a re-render.
+  const inFlightRef = useRef(false);
 
   const {
     register,
@@ -63,22 +76,41 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   });
 
   function submit(raw: TIn) {
+    if (inFlightRef.current) return;
+    if (!online) {
+      toast({ kind: "error", title: t("offline") });
+      return;
+    }
+    inFlightRef.current = true;
     setError(null);
     setSuccess(false);
     startTransition(async () => {
-      const values = schema.parse(raw);
-      const result = await onSubmit(values);
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const values = schema.parse(raw);
+        const result = await onSubmit(values);
+        if (!result.ok) {
+          const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
+          setError(result.error);
+          toast({
+            kind: "error",
+            title: isConflict ? t("conflict") : result.error,
+            action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
+          });
+          return;
+        }
+        setSuccess(true);
+        toast({ kind: "success", title: t("saved") });
+        router.push(backHref);
+        router.refresh();
+      } finally {
+        inFlightRef.current = false;
       }
-      setSuccess(true);
-      router.push(backHref);
-      router.refresh();
     });
   }
 
   function renderField(field: EntityFieldDef<TIn>) {
+    if (field.kind === "hidden") return <input key={field.name} type="hidden" {...register(field.name)} />;
+
     const fieldError = errors[field.name as string];
     const message = typeof fieldError?.message === "string" ? fieldError.message : undefined;
 
@@ -192,13 +224,9 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
       )}
 
       <div className="flex items-center gap-2 pt-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover disabled:opacity-50"
-        >
-          {pending ? "Saqlanmoqda…" : "Saqlash"}
-        </button>
+        <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel="Saqlanmoqda…">
+          Saqlash
+        </SubmitButton>
         <button
           type="button"
           onClick={() => router.push(backHref)}

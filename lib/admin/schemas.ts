@@ -47,6 +47,19 @@ const optionalNumberField = z
   .transform((v) => (v.trim() === "" ? null : Number(v)))
   .refine((v) => v === null || Number.isFinite(v), { message: "Raqam kiriting" });
 
+/** The row's last-known version, for optimistic concurrency
+ * (lib/admin/actions/concurrency.ts) — undefined means "creating a new row,
+ * skip the check". Every *WriteSchema carries this as the already-numeric
+ * shape a Server Action call receives; every *FormSchema below overrides it
+ * with versionFormField since EntityForm binds it to a hidden HTML input
+ * (always a string, blank on create). */
+const versionField = z.number().int().nonnegative().optional();
+const versionFormField = z
+  .string()
+  .optional()
+  .transform((v) => (v === undefined || v.trim() === "" ? undefined : Number(v)))
+  .pipe(versionField);
+
 // === Write schemas — server actions validate the already-structured value
 // (arrays, numbers, booleans) a submitted form or a version restore
 // produces, reusing the same field rules as the public content schemas. ===
@@ -75,20 +88,34 @@ export const scriptWriteSchema = scriptSchema
     status: statusSchema,
     stages: z.array(stageSchema.extend({ id: idSchema })),
     stagesRu: z.array(stageSchema.extend({ id: idSchema })).optional(),
+    version: versionField,
   })
   .superRefine((script, ctx) => {
     checkStageIdsUnique(script.stages, "stages", ctx);
     if (script.stagesRu) checkStageIdsUnique(script.stagesRu, "stagesRu", ctx);
   });
 
-export const faqWriteSchema = faqSchema.extend({ id: idSchema, status: statusSchema });
-export const objectionWriteSchema = objectionSchema.extend({ id: idSchema, status: statusSchema });
-export const competitorWriteSchema = competitorSchema.extend({ id: idSchema, status: statusSchema });
+export const faqWriteSchema = faqSchema.extend({ id: idSchema, status: statusSchema, version: versionField });
+export const objectionWriteSchema = objectionSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  version: versionField,
+});
+export const competitorWriteSchema = competitorSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  version: versionField,
+});
 export const packageGroupWriteSchema = packageGroupSchema
   .omit({ packages: true })
-  .extend({ id: idSchema, status: statusSchema });
-export const packageWriteSchema = packageSchema.extend({ id: idSchema, status: statusSchema, groupId: idSchema });
-export const productWriteSchema = productSchema.extend({ id: idSchema, status: statusSchema });
+  .extend({ id: idSchema, status: statusSchema, version: versionField });
+export const packageWriteSchema = packageSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  groupId: idSchema,
+  version: versionField,
+});
+export const productWriteSchema = productSchema.extend({ id: idSchema, status: statusSchema, version: versionField });
 
 // === Form schemas — react-hook-form + zodResolver on the client. Array
 // fields are edited as one comma-separated text input and transformed here;
@@ -96,23 +123,29 @@ export const productWriteSchema = productSchema.extend({ id: idSchema, status: s
 // value passed to onSubmit is z.output<...> (the transformed/coerced shape
 // the write schemas above also expect). ===
 
-export const faqFormSchema = faqWriteSchema;
+export const faqFormSchema = faqWriteSchema.extend({ version: versionFormField });
 export const objectionFormSchema = objectionWriteSchema.extend({
   keywords: csvArrayField,
   scriptIds: csvArrayField,
+  version: versionFormField,
 });
-export const competitorFormSchema = competitorWriteSchema;
-export const packageGroupFormSchema = packageGroupWriteSchema;
+export const competitorFormSchema = competitorWriteSchema.extend({ version: versionFormField });
+export const packageGroupFormSchema = packageGroupWriteSchema.extend({ version: versionFormField });
 export const packageFormSchema = packageWriteSchema.extend({
   discountPct: numberField,
   advancePct: optionalNumberField,
+  version: versionFormField,
 });
 /** The product's material <select> offers an empty "no material" option
  * (native <select> values are always strings) — map that back to undefined
  * before the literal("latun").optional() schema runs. */
 const materialField = z.preprocess((v) => (v === "" ? undefined : v), productSchema.shape.material);
 
-export const productFormSchema = productWriteSchema.extend({ sizes: csvArrayField, material: materialField });
+export const productFormSchema = productWriteSchema.extend({
+  sizes: csvArrayField,
+  material: materialField,
+  version: versionFormField,
+});
 
 // Output types — what onSubmit/the server actions receive (already parsed:
 // arrays, numbers, etc). Input types — what EntityForm/react-hook-form bind

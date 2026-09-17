@@ -40,6 +40,7 @@ function buildFields(
     { kind: "text", name: "estimatedDiscountRu", label: "Taxminiy chegirma (matn)", group: "ru" },
     { kind: "text", name: "logisticsRu", label: "Logistika", group: "ru" },
     { kind: "text", name: "deliveryTimeRu", label: "Yetkazib berish muddati", group: "ru" },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -80,6 +81,7 @@ export default async function AdminPackageEditPage({
         estimatedDiscountRu: row.estimated_discount_ru ?? "",
         logisticsRu: row.logistics_ru ?? "",
         deliveryTimeRu: row.delivery_time_ru ?? "",
+        version: String(row.version),
       }
     : {
         id: "",

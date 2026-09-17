@@ -59,6 +59,7 @@ function buildFields(isNew: boolean): EntityFieldDef<ProductFormInput>[] {
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -85,6 +86,7 @@ export default async function AdminProductEditPage({
         category: row.category,
         material: row.material ?? "",
         status: row.status,
+        version: String(row.version),
       }
     : {
         id: "",

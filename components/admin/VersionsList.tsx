@@ -3,10 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { History, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { restoreVersion } from "@/lib/admin/actions/versions";
 import { formatRelativeUz } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
+import { useOnline } from "@/hooks/useOnline";
+import { useToast } from "@/hooks/useToast";
 import type { ContentVersionRow } from "@/lib/admin/queries";
 
 /** Each row is a pre-edit snapshot (see content_versions in
@@ -16,18 +19,30 @@ import type { ContentVersionRow } from "@/lib/admin/queries";
 export function VersionsList({ table, versions }: { table: string; versions: ContentVersionRow[] }) {
   const router = useRouter();
   const mounted = useMounted();
+  const online = useOnline();
+  const { toast } = useToast();
+  const t = useTranslations("toast");
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleRestore(versionId: number) {
+    if (!online) {
+      toast({ kind: "error", title: t("offline") });
+      return;
+    }
     setPendingId(versionId);
     setError(null);
     startTransition(async () => {
       const result = await restoreVersion(table, versionId);
       setPendingId(null);
-      if (!result.ok) setError(result.error);
-      else router.refresh();
+      if (!result.ok) {
+        setError(result.error);
+        toast({ kind: "error", title: result.error });
+        return;
+      }
+      toast({ kind: "success", title: t("restored") });
+      router.refresh();
     });
   }
 

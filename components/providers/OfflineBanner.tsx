@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/hooks/useToast";
 
 /** Slim banner shown while the browser reports no connection, so an operator
  * reading a cached script knows the content may be stale.
@@ -14,16 +15,28 @@ import { useTranslations } from "next-intl";
 export function OfflineBanner() {
   const [offline, setOffline] = useState(false);
   const t = useTranslations("chrome.offline");
+  const tToast = useTranslations("toast");
+  const { toast } = useToast();
 
   useEffect(() => {
-    const sync = () => setOffline(!navigator.onLine);
-    sync();
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
+    function handleOnline() {
+      setOffline(false);
+      // Only the "online" event (an actual reconnect), never the initial
+      // sync below — a manager who was never offline this session shouldn't
+      // see a spurious "back online" toast.
+      toast({ kind: "info", title: tToast("backOnline") });
+    }
+    function handleOffline() {
+      setOffline(true);
+    }
+    setOffline(!navigator.onLine);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
     return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!offline) return null;

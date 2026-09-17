@@ -3,13 +3,13 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getPackageGroupRow } from "@/lib/admin/queries";
-import { packageGroupFormSchema, type PackageGroupFormValues } from "@/lib/admin/schemas";
+import { packageGroupFormSchema, type PackageGroupFormInput } from "@/lib/admin/schemas";
 import { upsertPackageGroup } from "@/lib/admin/actions/packages";
 import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
 
 export const metadata = { title: "Kontent boshqaruvi — Paket guruhi tahrirlash" };
 
-function buildFields(isNew: boolean): EntityFieldDef<PackageGroupFormValues>[] {
+function buildFields(isNew: boolean): EntityFieldDef<PackageGroupFormInput>[] {
   return [
     { kind: "text", name: "id", label: "ID (slug)", placeholder: "masalan: guruh-standart", readOnly: !isNew },
     { kind: "text", name: "title", label: "Nomi" },
@@ -25,6 +25,7 @@ function buildFields(isNew: boolean): EntityFieldDef<PackageGroupFormValues>[] {
     },
     { kind: "text", name: "titleRu", label: "Nomi", group: "ru" },
     { kind: "text", name: "subtitleRu", label: "Tavsif", group: "ru" },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -40,7 +41,7 @@ export default async function AdminPackageGroupEditPage({
   const row = isNew ? null : await getPackageGroupRow(params.id);
   if (!isNew && !row) notFound();
 
-  const defaultValues: PackageGroupFormValues = row
+  const defaultValues: PackageGroupFormInput = row
     ? {
         id: row.id,
         title: row.title,
@@ -48,6 +49,7 @@ export default async function AdminPackageGroupEditPage({
         status: row.status,
         titleRu: row.title_ru ?? "",
         subtitleRu: row.subtitle_ru ?? "",
+        version: String(row.version),
       }
     : { id: "", title: "", subtitle: "", status: "draft", titleRu: "", subtitleRu: "" };
 

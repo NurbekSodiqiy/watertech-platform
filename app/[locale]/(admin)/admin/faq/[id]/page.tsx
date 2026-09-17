@@ -3,13 +3,13 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getFaqRow } from "@/lib/admin/queries";
-import { faqFormSchema, type FaqFormValues } from "@/lib/admin/schemas";
+import { faqFormSchema, type FaqFormInput } from "@/lib/admin/schemas";
 import { upsertFaq } from "@/lib/admin/actions/faq";
 import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
 
 export const metadata = { title: "Kontent boshqaruvi — FAQ tahrirlash" };
 
-function buildFields(isNew: boolean): EntityFieldDef<FaqFormValues>[] {
+function buildFields(isNew: boolean): EntityFieldDef<FaqFormInput>[] {
   return [
     { kind: "text", name: "id", label: "ID (slug)", placeholder: "masalan: yetkazib-berish-muddati", readOnly: !isNew },
     { kind: "text", name: "category", label: "Kategoriya" },
@@ -26,6 +26,7 @@ function buildFields(isNew: boolean): EntityFieldDef<FaqFormValues>[] {
     },
     { kind: "textarea", name: "questionRu", label: "Savol", rows: 2, group: "ru" },
     { kind: "textarea", name: "answerRu", label: "Javob", rows: 6, group: "ru" },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -41,7 +42,7 @@ export default async function AdminFaqEditPage({
   const row = isNew ? null : await getFaqRow(params.id);
   if (!isNew && !row) notFound();
 
-  const defaultValues: FaqFormValues = row
+  const defaultValues: FaqFormInput = row
     ? {
         id: row.id,
         category: row.category,
@@ -50,6 +51,7 @@ export default async function AdminFaqEditPage({
         status: row.status,
         questionRu: row.question_ru ?? "",
         answerRu: row.answer_ru ?? "",
+        version: String(row.version),
       }
     : { id: "", category: "", question: "", answer: "", status: "draft", questionRu: "", answerRu: "" };
 

@@ -33,6 +33,7 @@ function buildFields(isNew: boolean): EntityFieldDef<ObjectionFormInput>[] {
     { kind: "textarea", name: "realMeaningRu", label: "Aslida nima demoqchi", rows: 2, group: "ru" },
     { kind: "textarea", name: "responseRu", label: "Javob", rows: 4, group: "ru" },
     { kind: "textarea", name: "followUpRu", label: "Qo'shimcha (ixtiyoriy)", rows: 2, group: "ru" },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -64,6 +65,7 @@ export default async function AdminObjectionEditPage({
         realMeaningRu: row.real_meaning_ru ?? "",
         responseRu: row.response_ru ?? "",
         followUpRu: row.follow_up_ru ?? "",
+        version: String(row.version),
       }
     : {
         id: "",

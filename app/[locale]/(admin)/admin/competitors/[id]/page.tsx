@@ -3,13 +3,13 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getCompetitorRow } from "@/lib/admin/queries";
-import { competitorFormSchema, type CompetitorFormValues } from "@/lib/admin/schemas";
+import { competitorFormSchema, type CompetitorFormInput } from "@/lib/admin/schemas";
 import { upsertCompetitor } from "@/lib/admin/actions/competitors";
 import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
 
 export const metadata = { title: "Kontent boshqaruvi — Raqobatchi tahrirlash" };
 
-function buildFields(isNew: boolean): EntityFieldDef<CompetitorFormValues>[] {
+function buildFields(isNew: boolean): EntityFieldDef<CompetitorFormInput>[] {
   return [
     { kind: "text", name: "id", label: "ID (slug)", placeholder: "masalan: comp-royal", readOnly: !isNew },
     { kind: "text", name: "name", label: "Nomi" },
@@ -44,6 +44,7 @@ function buildFields(isNew: boolean): EntityFieldDef<CompetitorFormValues>[] {
         { value: "published", label: "Nashr etilgan" },
       ],
     },
+    { kind: "hidden", name: "version" },
   ];
 }
 
@@ -59,7 +60,7 @@ export default async function AdminCompetitorEditPage({
   const row = isNew ? null : await getCompetitorRow(params.id);
   if (!isNew && !row) notFound();
 
-  const defaultValues: CompetitorFormValues = row
+  const defaultValues: CompetitorFormInput = row
     ? {
         id: row.id,
         name: row.name,
@@ -77,6 +78,7 @@ export default async function AdminCompetitorEditPage({
         marketingOffers: row.marketing_offers ?? "",
         threatLevel: row.threat_level,
         status: row.status,
+        version: String(row.version),
       }
     : {
         id: "",

@@ -3,9 +3,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
 import { revalidateContent } from "@/lib/content/revalidate";
+import { updateWithVersion } from "./concurrency";
 import { scriptWriteSchema } from "@/lib/admin/schemas";
 import { scriptToRow, chain } from "@/lib/content/db";
 import type { Script } from "@/lib/content/types";
+import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 import type { StatusValue } from "./status";
 
 export async function upsertScript(input: unknown): Promise<ActionResult> {
@@ -36,8 +38,12 @@ export async function upsertScript(input: unknown): Promise<ActionResult> {
       stagesRu: parsed.stagesRu && parsed.stagesRu.length > 0 ? chain(parsed.stagesRu) : undefined,
     };
     const row = { ...scriptToRow(scriptWithChain), status: parsed.status, updated_by: session.email };
-    const { error } = await supabase.from("content_scripts").upsert(row);
-    if (error) return { ok: false, error: error.message };
+    if (parsed.version !== undefined) {
+      await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_scripts", parsed.id, row, parsed.version);
+    } else {
+      const { error } = await supabase.from("content_scripts").upsert(row);
+      if (error) return { ok: false, error: error.message };
+    }
     revalidateContent("scripts");
     return { ok: true };
   } catch (e) {
@@ -58,15 +64,20 @@ export async function deleteScript(id: string): Promise<ActionResult> {
   }
 }
 
-export async function setScriptStatus(id: string, status: StatusValue): Promise<ActionResult> {
+export async function setScriptStatus(
+  id: string,
+  status: StatusValue,
+  expectedVersion: number
+): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("content_scripts")
-      .update({ status, updated_by: session.email })
-      .eq("id", id);
-    if (error) return { ok: false, error: error.message };
+    await updateWithVersion(
+      createClient<DynamicTablesDatabase>(),
+      "content_scripts",
+      id,
+      { status, updated_by: session.email },
+      expectedVersion
+    );
     revalidateContent("scripts");
     return { ok: true };
   } catch (e) {
