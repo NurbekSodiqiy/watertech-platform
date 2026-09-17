@@ -5,9 +5,17 @@ on:
   pull_request:
 
 env:
-  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-dummy-key-dummy-key
-  SUPABASE_SERVICE_ROLE_KEY: dummy-key-dummy-key-dummy-key
+  # Public Supabase values (browser-visible by design) from repository secrets.
+  # The fallbacks keep fork PRs, which get no secrets, building: the
+  # unauthenticated e2e specs never need a reachable Supabase project.
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key-dummy-key-dummy-key' }}
+  # Placeholders, NOT real secrets. lib/env.ts requires both to be set, and the
+  # cron route reads its env before checking the bearer — without them it
+  # answers 500 instead of the 401 the e2e spec asserts. No service-role key
+  # and no GEMINI_API_KEY ever reach CI: Copilot is disabled (503) here.
+  SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-not-a-service-role-key
+  CRON_SECRET: ci-placeholder-cron-secret
 
 jobs:
   ci:
@@ -15,9 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # @supabase/supabase-js 2.116 requires Node >= 22: on Node 20 its client
+      # constructor throws (no global WebSocket), which turns API 401s into 500s.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Cache npm
@@ -34,10 +44,36 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm run test
+      - run: npm test
 
       - run: npm run build
 
-      - run: npx playwright install --with-deps chromium
+      - name: Resolve Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}-chromium
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # Browsers come from the cache; the apt packages they need do not.
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - run: npm run e2e
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
