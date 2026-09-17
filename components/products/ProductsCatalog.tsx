@@ -3,8 +3,11 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/content/products";
 import { Dialog } from "@/components/ui/Dialog";
+import { EmptyState } from "@/components/EmptyState";
+import { EMPTY_STATES } from "@/lib/empty-states";
 
 const LIGHTBOX_TITLE_ID = "product-lightbox-title";
 
@@ -18,9 +21,15 @@ const CATEGORIES = [
 ];
 
 export function ProductsCatalog({ products }: { products: Product[] }) {
+  const t = useTranslations("emptyState.productsNoMatch");
   const [activeLine, setActiveLine] = useState<"ppr" | "kanalizatsiya">("ppr");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+
+  function resetFilters() {
+    setSearchQuery("");
+    setActiveCategory("all");
+  }
 
   // Xato bo'lgan rasmlarni kuzatib borish (fallback uchun)
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -114,9 +123,13 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
 
       {/* Grid (Desktop 4, Tablet 2-3, Mobile 1) */}
       {filteredProducts.length === 0 ? (
-        <div className="py-12 text-center text-text-secondary">
-          Ushbu filtrlarga mos mahsulot topilmadi.
-        </div>
+        <EmptyState
+          variant="compact"
+          icon={EMPTY_STATES.productsNoMatch.icon}
+          title={t("title")}
+          reason={t("reason")}
+          action={{ label: t("cta"), onClick: resetFilters }}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredProducts.map((product, idx) => (

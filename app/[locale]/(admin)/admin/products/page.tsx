@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listProductRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteProduct, setProductStatus } from "@/lib/admin/actions/products";
@@ -8,6 +8,8 @@ export const metadata = { title: "Kontent boshqaruvi — Mahsulotlar" };
 
 export default async function AdminProductsListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.product");
 
   const rows = await listProductRows();
 
@@ -20,7 +22,7 @@ export default async function AdminProductsListPage({ params: { locale } }: { pa
       <DataTable<AdminProductRow>
         rows={rows}
         editBase="/admin/products"
-        emptyTitle="Hozircha mahsulotlar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name_ru", label: "Nomi", sortable: true },
           { key: "line", label: "Yo'nalish", sortable: true },

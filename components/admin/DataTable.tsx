@@ -7,6 +7,7 @@ import { ArrowUpDown, Pencil, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import type { EmptyStateKey } from "@/lib/empty-states";
 import { formatRelativeUz } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
@@ -35,18 +36,30 @@ export interface AdminColumn<T> {
  * (status toggle, edit link, delete with confirmation). The first column is
  * always rendered as the edit link, same convention DatabaseTemplate uses
  * for its `linkBase` column. */
+/** `stateKey` rather than the icon itself — see the matching comment on
+ * DatabaseTemplate's DbEmptyState for why (Server Components can't pass a
+ * component reference as a named prop across the RSC boundary). */
+export interface DataTableEmptyState {
+  stateKey: EmptyStateKey;
+  title: string;
+  reason?: string;
+  ctaLabel: string;
+}
+
 export function DataTable<T extends AdminRow>({
   rows,
   columns,
   editBase,
-  emptyTitle,
+  emptyState,
   onDelete,
   onToggleStatus,
 }: {
   rows: T[];
   columns: AdminColumn<T>[];
   editBase: string;
-  emptyTitle?: string;
+  /** Shown instead of the generic filter-empty state when `rows` itself is
+   * empty (no records created yet, not just filtered down to nothing). */
+  emptyState?: DataTableEmptyState;
   onDelete: (id: string) => Promise<ActionResult>;
   onToggleStatus: (id: string, next: StatusValue, expectedVersion: number) => Promise<ActionResult>;
 }) {
@@ -55,6 +68,7 @@ export function DataTable<T extends AdminRow>({
   const online = useOnline();
   const { toast } = useToast();
   const t = useTranslations("toast");
+  const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -155,10 +169,19 @@ export function DataTable<T extends AdminRow>({
         </Link>
       </div>
 
-      {filtered.length === 0 ? (
+      {rows.length === 0 && emptyState ? (
         <EmptyState
-          title={emptyTitle ?? "Mos qator topilmadi"}
-          description="Filtrlarni tozalab ko'ring yoki yangi yozuv qo'shing."
+          stateKey={emptyState.stateKey}
+          title={emptyState.title}
+          reason={emptyState.reason}
+          action={{ label: emptyState.ctaLabel, href: `${editBase}/new` }}
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          variant="compact"
+          title={tFilterEmpty("title")}
+          reason={tFilterEmpty("reason")}
+          action={{ label: tFilterEmpty("cta"), onClick: () => setQuery("") }}
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">

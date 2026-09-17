@@ -4,8 +4,26 @@ import { useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { ArrowUpDown, ChevronRight, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "./EmptyState";
 import { CopyButton } from "./CopyButton";
+import type { EmptyStateKey } from "@/lib/empty-states";
+
+/** Content for the "there is no data at all" case — resolved by the Server
+ * Component caller (getTranslations) from lib/empty-states.ts and passed
+ * down as plain, serializable data. `stateKey` (a string) rather than the
+ * icon itself: a Server Component can't pass a component reference as a
+ * named prop across the RSC boundary (only `children` gets that special
+ * treatment), so EmptyState resolves the icon client-side from this key
+ * instead. The "filter matched nothing" case below is generic and
+ * translated internally instead, since every table needs it regardless of
+ * caller. */
+export interface DbEmptyState {
+  stateKey: EmptyStateKey;
+  title: string;
+  reason?: string;
+  cta?: { kind: "open-search" | "link"; label: string; href?: string };
+}
 
 export interface DbColumn<T> {
   key: keyof T & string;
@@ -32,16 +50,19 @@ export function DatabaseTemplate<T extends { id: string }>({
   filters = [],
   linkBase,
   linkKey,
-  emptyTitle,
+  emptyState,
 }: {
   columns: DbColumn<T>[];
   rows: T[];
   filters?: DbFilter[];
   linkBase?: string;
   linkKey?: keyof T & string;
-  emptyTitle?: string;
+  /** Shown instead of the generic filter-empty state when `rows` itself is
+   * empty (no content published yet, not just filtered down to nothing). */
+  emptyState?: DbEmptyState;
 }) {
   const router = useRouter();
+  const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
@@ -105,10 +126,35 @@ export function DatabaseTemplate<T extends { id: string }>({
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {rows.length === 0 && emptyState ? (
         <EmptyState
-          title={emptyTitle ?? "Mos qator topilmadi"}
-          description="Filtrlarni tozalab ko'ring yoki haqiqiy ma'lumot qo'shilgach qatorlar paydo bo'ladi."
+          stateKey={emptyState.stateKey}
+          title={emptyState.title}
+          reason={emptyState.reason}
+          action={
+            emptyState.cta?.kind === "open-search"
+              ? {
+                  label: emptyState.cta.label,
+                  icon: Search,
+                  onClick: () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true })),
+                }
+              : emptyState.cta
+                ? { label: emptyState.cta.label, href: emptyState.cta.href }
+                : undefined
+          }
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          variant="compact"
+          title={tFilterEmpty("title")}
+          reason={tFilterEmpty("reason")}
+          action={{
+            label: tFilterEmpty("cta"),
+            onClick: () => {
+              setQuery("");
+              setActiveFilters({});
+            },
+          }}
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">

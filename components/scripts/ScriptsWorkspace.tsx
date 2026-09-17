@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Compass } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import type { ContentBundle } from "@/lib/content/loader";
 import { ScriptsContentProvider, useScriptsContent } from "@/components/scripts/ScriptsContentContext";
@@ -15,6 +16,9 @@ import { FaqTab } from "@/components/FaqTab";
 import { PackagesTab } from "@/components/PackagesTab";
 import { CompetitorsTab } from "@/components/CompetitorsTab";
 import { SalesScriptsTab } from "@/components/SalesScriptsTab";
+import { EmptyState } from "@/components/EmptyState";
+import { EMPTY_STATES } from "@/lib/empty-states";
+import { useSessionUser } from "@/hooks/useSessionUser";
 import { useTrack } from "@/hooks/useTrack";
 
 // Last opened script/stage — restored on mount from the URL (?script=&stage=)
@@ -41,6 +45,34 @@ export function ScriptsWorkspace({ content }: { content: ContentBundle }) {
 }
 
 function ScriptsPageContent() {
+  const { scripts } = useScriptsContent();
+  const { user } = useSessionUser();
+  const t = useTranslations("emptyState.scriptsNone");
+
+  if (scripts.length === 0) {
+    return (
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <EmptyState
+          icon={EMPTY_STATES.scriptsNone.icon}
+          title={t("title")}
+          reason={t("reason")}
+          action={
+            user?.role === "manager"
+              ? { label: t("ctaManager"), href: "/admin/scripts/new" }
+              : { label: t("cta"), href: "/" }
+          }
+        />
+      </div>
+    );
+  }
+
+  return <ScriptsPageContentBody />;
+}
+
+/** Split out from ScriptsPageContent so the "no scripts published yet" guard
+ * above can bail before any of this runs — activeSalesScript below assumes
+ * scripts[0] exists. */
+function ScriptsPageContentBody() {
   const { scripts, objections } = useScriptsContent();
   const searchParams = useSearchParams();
   const scriptParam = searchParams.get("script");

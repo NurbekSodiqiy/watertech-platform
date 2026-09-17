@@ -96,7 +96,6 @@
       "title": "Qidiruv paneli",
       "results": "Natijalar",
       "loading": "Yuklanmoqda…",
-      "noResults": "Hech narsa topilmadi.",
       "startTyping": "Qidirish uchun yozishni boshlang.",
       "categories": {
         "objection": "E'tiroz",
@@ -133,8 +132,79 @@
     "signOut": "Chiqish"
   },
   "emptyState": {
-    "title": "Hozircha kontent yo'q",
-    "description": "Bu bo'lim joy egallovchi sifatida qo'yilgan. Haqiqiy kontent bilan almashtiring."
+    "scriptsNone": {
+      "title": "Skriptlar — qo'ng'iroq davomida o'qiladigan matnlar",
+      "reason": "Hali nashr qilingan skript yo'q",
+      "cta": "Bosh sahifaga",
+      "ctaManager": "+ Yangi skript"
+    },
+    "scriptNotFound": {
+      "title": "{type} topilmadi",
+      "reason": "Bu sahifa o'chirilgan yoki hech qachon mavjud bo'lmagan",
+      "cta": "{listName} ro'yxati",
+      "typeScript": "Skript",
+      "typeCompetitor": "Raqobatchi",
+      "listScripts": "Skriptlar",
+      "listCompetitors": "Raqobat kartalari"
+    },
+    "objectionsNone": {
+      "title": "E'tirozlar — qo'ng'iroq davomida ishlatiladigan javoblar bazasi",
+      "reason": "Hali nashr qilingan e'tiroz yo'q",
+      "cta": "Qidiruvni ochish"
+    },
+    "faqNone": {
+      "title": "Savol-javob — mijozlarga tez-tez beriladigan savollarga javoblar",
+      "reason": "Hali nashr qilingan savol-javob yo'q",
+      "cta": "Qidiruvni ochish"
+    },
+    "battleCardsNone": {
+      "title": "Raqobat kartalari — har bir raqobatchi bo'yicha qisqacha ma'lumot",
+      "reason": "Hali nashr qilingan raqobatchi yo'q",
+      "cta": "Qidiruvni ochish"
+    },
+    "productsNoMatch": {
+      "title": "Katalog — barcha mahsulotlar va texnik xususiyatlari",
+      "reason": "Filtrga mos mahsulot topilmadi",
+      "cta": "Filtrni tozalash"
+    },
+    "comparisonsNone": {
+      "title": "Taqqoslash — raqobatchilar bilan narx va xususiyatlar solishtiruvi",
+      "reason": "Bu bo'lim hali tayyor emas",
+      "cta": "Mahsulotlarga o'tish"
+    },
+    "searchNoResults": {
+      "title": "Qidiruv",
+      "reason": "“{query}” bo'yicha hech narsa topilmadi",
+      "cta": "Copilot'dan so'rash"
+    },
+    "dashboardNoEvents": {
+      "title": "Kunlik faollik — operatorlarning telemetriya asosidagi statistikasi",
+      "reason": "Tanlangan kunda hech qanday hodisa qayd etilmagan",
+      "cta": "Bugunga qaytish"
+    },
+    "adminListNone": {
+      "title": "Hozircha {type} yo'q",
+      "reason": "Ro'yxatga birorta ham yozuv qo'shilmagan",
+      "cta": "+ Yangi {type}",
+      "types": {
+        "script": "skript",
+        "faq": "FAQ yozuvi",
+        "objection": "e'tiroz",
+        "competitor": "raqobatchi",
+        "package": "paket",
+        "packageGroup": "guruh",
+        "product": "mahsulot"
+      }
+    },
+    "versionsNone": {
+      "title": "Versiyalar tarixi yo'q",
+      "reason": "Hali o'zgarish bo'lmagan"
+    },
+    "filterNoMatch": {
+      "title": "Mos qator topilmadi",
+      "reason": "Filtrlarni tozalab ko'ring yoki qidiruvni o'zgartiring",
+      "cta": "Filtrni tozalash"
+    }
   },
   "widgetFallback": {
     "message": "Bu qismni yuklab bo'lmadi.",
@@ -183,7 +253,8 @@
     "callModeButton": "Qo'ng'iroq rejimi"
   },
   "common": {
-    "copyAll": "Barchasini nusxalash"
+    "copyAll": "Barchasini nusxalash",
+    "comingSoon": "Tez orada"
   },
   "toast": {
     "saved": "Saqlandi",

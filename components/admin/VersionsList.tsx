@@ -46,14 +46,10 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
     });
   }
 
+  const tEmpty = useTranslations("emptyState.versionsNone");
+
   if (versions.length === 0) {
-    return (
-      <EmptyState
-        icon={History}
-        title="Versiyalar tarixi yo'q"
-        description="Bu yozuv hali birorta marta tahrirlanmagan."
-      />
-    );
+    return <EmptyState variant="compact" icon={History} title={tEmpty("title")} reason={tEmpty("reason")} />;
   }
 
   return (

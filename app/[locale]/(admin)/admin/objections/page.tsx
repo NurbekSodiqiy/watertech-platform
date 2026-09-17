@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listObjectionRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteObjection, setObjectionStatus } from "@/lib/admin/actions/objections";
@@ -8,6 +8,8 @@ export const metadata = { title: "Kontent boshqaruvi — E'tirozlar" };
 
 export default async function AdminObjectionsListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.objection");
 
   const rows = await listObjectionRows();
 
@@ -20,7 +22,7 @@ export default async function AdminObjectionsListPage({ params: { locale } }: { 
       <DataTable<AdminObjectionRow>
         rows={rows}
         editBase="/admin/objections"
-        emptyTitle="Hozircha e'tirozlar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[{ key: "label", label: "Nomi", sortable: true }]}
         onDelete={deleteObjection}
         onToggleStatus={setObjectionStatus}

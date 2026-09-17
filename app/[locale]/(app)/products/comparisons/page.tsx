@@ -1,10 +1,11 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
+import { EmptyState } from "@/components/EmptyState";
 import { findNode } from "@/lib/site-config";
-import { Clock } from "lucide-react";
 
-export default function ComparisonsPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function ComparisonsPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.comparisonsNone");
 
   const path = "/products/comparisons";
   const node = findNode(path);
@@ -16,15 +17,12 @@ export default function ComparisonsPage({ params: { locale } }: { params: { loca
       description={node?.description}
       locked={node?.locked}
     >
-      <div className="flex flex-col items-center justify-center space-y-4 py-20 text-center">
-        <div className="rounded-full bg-primary/10 p-5 text-primary">
-          <Clock size={40} />
-        </div>
-        <h2 className="text-[22px] font-bold text-primary-dark">Tez orada</h2>
-        <p className="max-w-md text-[15px] leading-relaxed text-text-secondary">
-          Bu bo&apos;lim ustida qizg&apos;in ish olib borilmoqda. Yaqin kunlarda barcha raqobatchilar bilan taqqoslash jadvali va tahlillar yuklanadi.
-        </p>
-      </div>
+      <EmptyState
+        stateKey="comparisonsNone"
+        title={t("title")}
+        reason={t("reason")}
+        action={{ label: t("cta"), href: "/products" }}
+      />
     </DocPageTemplate>
   );
 }

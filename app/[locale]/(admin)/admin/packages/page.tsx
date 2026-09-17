@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { Layers } from "lucide-react";
 import { listPackageRows, listPackageGroupRows } from "@/lib/admin/queries";
@@ -14,6 +14,8 @@ interface PackageDisplayRow extends AdminPackageRow {
 
 export default async function AdminPackagesListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.package");
 
   const [packages, groups] = await Promise.all([listPackageRows(), listPackageGroupRows()]);
   const groupTitleById = new Map(groups.map((g) => [g.id, g.title]));
@@ -40,7 +42,7 @@ export default async function AdminPackagesListPage({ params: { locale } }: { pa
       <DataTable<PackageDisplayRow>
         rows={rows}
         editBase="/admin/packages"
-        emptyTitle="Hozircha paketlar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name", label: "Nomi", sortable: true },
           { key: "group_title", label: "Guruh", sortable: true },

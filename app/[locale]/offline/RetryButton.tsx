@@ -1,20 +1,30 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 /** The only interactive part of the offline page. `location.reload()` rather
  * than a router refresh: when the page is being served from the precache the
  * router has nothing to re-fetch, and a full reload is what re-runs the
- * service worker's network-first attempt. */
-export function RetryButton({ label }: { label: string }) {
+ * service worker's network-first attempt. Wrapped in a client component (not
+ * inlined in the page) because that closure can't cross the RSC boundary as
+ * a prop — the page itself stays a Server Component reading the translations.
+ * `stateKey` (not `icon`) for the same reason: a component reference can't
+ * cross that boundary either, so EmptyState resolves it from the string. */
+export function OfflineEmptyState({
+  title,
+  reason,
+  retryLabel,
+}: {
+  title: string;
+  reason: string;
+  retryLabel: string;
+}) {
   return (
-    <button
-      type="button"
-      onClick={() => location.reload()}
-      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-surface shadow-softer transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary-light"
-    >
-      <RotateCw size={16} aria-hidden="true" />
-      {label}
-    </button>
+    <EmptyState
+      stateKey="offline"
+      title={title}
+      reason={reason}
+      action={{ label: retryLabel, onClick: () => location.reload() }}
+    />
   );
 }

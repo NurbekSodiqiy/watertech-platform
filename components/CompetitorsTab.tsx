@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import { Search, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Competitor } from "@/lib/content/types";
 import { CompetitorDetailPanel } from "@/components/CompetitorDetailPanel";
+import { EmptyState } from "@/components/EmptyState";
 import { useTrack } from "@/hooks/useTrack";
 
 /** Raqobatchilar tab — left+right panel pair. Owns its own selection and
@@ -12,6 +14,7 @@ import { useTrack } from "@/hooks/useTrack";
  * away and back, same as the inline ternary it replaced. */
 export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
   const { competitors } = useScriptsContent();
+  const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
   const [competitorQuery, setCompetitorQuery] = useState("");
   const track = useTrack();
@@ -58,7 +61,12 @@ export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLD
             />
           </div>
           {filteredCompetitors.length === 0 ? (
-            <p className="px-1 py-4 text-center text-[13px] text-text-secondary">Mos raqobatchi topilmadi.</p>
+            <EmptyState
+              variant="compact"
+              title={tFilterEmpty("title")}
+              reason={tFilterEmpty("reason")}
+              action={{ label: tFilterEmpty("cta"), onClick: () => setCompetitorQuery("") }}
+            />
           ) : (
             filteredCompetitors.map((comp) => (
               <button

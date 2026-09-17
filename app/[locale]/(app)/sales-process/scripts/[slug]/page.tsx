@@ -1,7 +1,7 @@
-import { unstable_setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { ScriptTemplate } from "@/components/ScriptTemplate";
 import { ScriptsContentProvider } from "@/components/scripts/ScriptsContentContext";
+import { EmptyState } from "@/components/EmptyState";
 import { getScripts, getContentBundle } from "@/lib/content/loader";
 import type { Locale } from "@/i18n/routing";
 
@@ -32,7 +32,19 @@ export default async function ScriptPage({
 
   const content = await getContentBundle(locale);
   const script = content.scripts.find((s) => s.id === params.slug);
-  if (!script) notFound();
+  if (!script) {
+    const t = await getTranslations("emptyState.scriptNotFound");
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <EmptyState
+          stateKey="scriptNotFound"
+          title={t("title", { type: t("typeScript") })}
+          reason={t("reason")}
+          action={{ label: t("cta", { listName: t("listScripts") }), href: "/sales-process/scripts" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <ScriptsContentProvider value={content}>

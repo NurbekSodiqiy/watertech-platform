@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listCompetitorRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteCompetitor, setCompetitorStatus } from "@/lib/admin/actions/competitors";
@@ -8,6 +8,8 @@ export const metadata = { title: "Kontent boshqaruvi — Raqobatchilar" };
 
 export default async function AdminCompetitorsListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.competitor");
 
   const rows = await listCompetitorRows();
 
@@ -20,7 +22,7 @@ export default async function AdminCompetitorsListPage({ params: { locale } }: {
       <DataTable<AdminCompetitorRow>
         rows={rows}
         editBase="/admin/competitors"
-        emptyTitle="Hozircha raqobatchilar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name", label: "Nomi", sortable: true },
           { key: "threat_level", label: "Tahdid darajasi", sortable: true },

@@ -10,6 +10,8 @@ import { useTrack } from "@/hooks/useTrack";
 import { createSearcher, resolveSearchPath, type Searcher, type SearchDoc, type SearchResultType } from "@/lib/search";
 import { normalizeSearchText } from "@/lib/search/normalize";
 import { Dialog } from "@/components/ui/Dialog";
+import { EmptyState } from "@/components/EmptyState";
+import { EMPTY_STATES } from "@/lib/empty-states";
 
 const TITLE_ID = "command-palette-title";
 
@@ -45,6 +47,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const track = useTrack();
   const t = useTranslations("nav");
   const tChrome = useTranslations("chrome");
+  const tEmpty = useTranslations("emptyState.searchNoResults");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
 
   // Page-title matches (above) point straight at a URL already, so they're
@@ -186,7 +190,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                 <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
               )}
               {results.length === 0 && !indexLoading && (
-                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.noResults")}</p>
+                <EmptyState
+                  variant="compact"
+                  icon={EMPTY_STATES.searchNoResults.icon}
+                  title={tEmpty("title")}
+                  reason={tEmpty("reason", { query: query.trim() })}
+                  action={{ label: tEmpty("cta"), disabled: true, title: tCommon("comingSoon"), onClick: () => {} }}
+                />
               )}
               {results.map((item) => (
                 <button

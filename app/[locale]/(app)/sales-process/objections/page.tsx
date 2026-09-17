@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
@@ -24,6 +24,7 @@ const columns: DbColumn<ObjectionRow>[] = [
 
 export default async function ObjectionsPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.objectionsNone");
 
   const [objections, scripts] = await Promise.all([getObjections(locale), getScripts(locale)]);
   const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
@@ -53,7 +54,16 @@ export default async function ObjectionsPage({ params: { locale } }: { params: {
         </p>
       </div>
 
-      <DatabaseTemplate columns={columns} rows={rows} />
+      <DatabaseTemplate
+        columns={columns}
+        rows={rows}
+        emptyState={{
+          stateKey: "objectionsNone",
+          title: t("title"),
+          reason: t("reason"),
+          cta: { kind: "open-search", label: t("cta") },
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listScriptRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteScript, setScriptStatus } from "@/lib/admin/actions/scripts";
@@ -8,6 +8,8 @@ export const metadata = { title: "Kontent boshqaruvi — Skriptlar" };
 
 export default async function AdminScriptsListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.script");
 
   const rows = await listScriptRows();
 
@@ -20,7 +22,7 @@ export default async function AdminScriptsListPage({ params: { locale } }: { par
       <DataTable<AdminScriptRow>
         rows={rows}
         editBase="/admin/scripts"
-        emptyTitle="Hozircha skriptlar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[{ key: "name", label: "Nomi", sortable: true }]}
         onDelete={deleteScript}
         onToggleStatus={setScriptStatus}

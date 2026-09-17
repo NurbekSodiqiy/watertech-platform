@@ -1,6 +1,6 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/routing";
-import { BarChart3, Clock, Copy, Search as SearchIcon, ListChecks, Gauge } from "lucide-react";
+import { Clock, Copy, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getServerSession } from "@/lib/auth/server-session";
 import { getContentBundle } from "@/lib/content/loader";
@@ -36,6 +36,7 @@ export default async function DashboardPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.dashboardNoEvents");
   const supabase = createClient();
 
   // Access check happens here, in the page itself — role comes from the
@@ -97,9 +98,11 @@ export default async function DashboardPage({
         <h2 className="text-[15px] font-bold text-primary-dark">Operatorlar bo&apos;yicha kunlik faollik</h2>
         {operators.length === 0 ? (
           <EmptyState
-            icon={BarChart3}
-            title="Bu kun uchun ma'lumot yo'q"
-            description="Tanlangan kunda hech qanday telemetriya hodisasi qayd etilmagan."
+            variant="inline"
+            stateKey="dashboardNoEvents"
+            title={t("title")}
+            reason={t("reason")}
+            action={{ label: t("cta"), href: "/dashboard" }}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -197,11 +200,7 @@ export default async function DashboardPage({
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">Nol-natijali qidiruvlar</h2>
         {zeroResultSearches.length === 0 ? (
-          <EmptyState
-            icon={SearchIcon}
-            title="Nol-natijali qidiruv yo'q"
-            description="Tanlangan kunda operatorlar qidirgan barcha so'rovlar natija bergan."
-          />
+          <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
             <table className="w-full min-w-[360px] text-left text-[13px]">
@@ -227,11 +226,7 @@ export default async function DashboardPage({
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">Web Vitals (p50 / p75)</h2>
         {webVitals.length === 0 ? (
-          <EmptyState
-            icon={Gauge}
-            title="Web Vitals ma'lumoti yo'q"
-            description="Tanlangan kunda hech qanday Web Vitals o'lchovi qayd etilmagan."
-          />
+          <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
             <table className="w-full min-w-[360px] text-left text-[13px]">

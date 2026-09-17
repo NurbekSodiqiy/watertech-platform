@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listFaqRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteFaq, setFaqStatus } from "@/lib/admin/actions/faq";
@@ -8,6 +8,8 @@ export const metadata = { title: "Kontent boshqaruvi — FAQ" };
 
 export default async function AdminFaqListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.faq");
 
   const rows = await listFaqRows();
 
@@ -20,7 +22,7 @@ export default async function AdminFaqListPage({ params: { locale } }: { params:
       <DataTable<AdminFaqRow>
         rows={rows}
         editBase="/admin/faq"
-        emptyTitle="Hozircha FAQ yozuvlari yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "question", label: "Savol", sortable: true },
           { key: "category", label: "Kategoriya", sortable: true },

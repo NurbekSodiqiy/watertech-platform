@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getFaqs } from "@/lib/content/loader";
@@ -15,6 +15,7 @@ const columns: DbColumn<Faq>[] = [
 
 export default async function FaqPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.faqNone");
 
   const faqs = await getFaqs(locale);
   const categories = Array.from(new Set(faqs.map((f) => f.category)));
@@ -36,6 +37,12 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
         columns={columns}
         rows={faqs}
         filters={[{ key: "category", label: "Bo'lim", options: categories }]}
+        emptyState={{
+          stateKey: "faqNone",
+          title: t("title"),
+          reason: t("reason"),
+          cta: { kind: "open-search", label: t("cta") },
+        }}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-surface p-5">

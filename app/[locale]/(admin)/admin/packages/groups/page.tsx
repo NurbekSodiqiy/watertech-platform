@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
 import { listPackageGroupRows } from "@/lib/admin/queries";
@@ -10,6 +10,8 @@ export const metadata = { title: "Kontent boshqaruvi — Paket guruhlari" };
 
 export default async function AdminPackageGroupsListPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.adminListNone");
+  const type = t("types.packageGroup");
 
   const rows = await listPackageGroupRows();
 
@@ -29,7 +31,7 @@ export default async function AdminPackageGroupsListPage({ params: { locale } }:
       <DataTable<AdminPackageGroupRow>
         rows={rows}
         editBase="/admin/packages/groups"
-        emptyTitle="Hozircha guruhlar yo'q"
+        emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "title", label: "Nomi", sortable: true },
           { key: "subtitle", label: "Tavsif" },

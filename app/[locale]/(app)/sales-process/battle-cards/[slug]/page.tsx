@@ -1,6 +1,6 @@
-import { unstable_setRequestLocale } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { BattleCardTemplate } from "@/components/BattleCardTemplate";
+import { EmptyState } from "@/components/EmptyState";
 import { getCompetitors } from "@/lib/content/loader";
 
 // See the matching comment in scripts/[slug]/page.tsx: content lives in
@@ -28,7 +28,19 @@ export default async function BattleCardPage({
 
   const competitors = await getCompetitors();
   const competitor = competitors.find((c) => c.id === params.slug);
-  if (!competitor) notFound();
+  if (!competitor) {
+    const t = await getTranslations("emptyState.scriptNotFound");
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <EmptyState
+          stateKey="scriptNotFound"
+          title={t("title", { type: t("typeCompetitor") })}
+          reason={t("reason")}
+          action={{ label: t("cta", { listName: t("listCompetitors") }), href: "/sales-process/battle-cards" }}
+        />
+      </div>
+    );
+  }
 
   return <BattleCardTemplate competitor={competitor} />;
 }

@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getCompetitors } from "@/lib/content/loader";
@@ -13,6 +13,7 @@ const columns: DbColumn<Competitor>[] = [
 
 export default async function BattleCardsPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("emptyState.battleCardsNone");
 
   const competitors = await getCompetitors();
   return (
@@ -22,7 +23,17 @@ export default async function BattleCardsPage({ params: { locale } }: { params: 
         title="Raqobat kartalari"
         description="Har bir raqobatchi bo'yicha narx, chegirma va yetkazib berish shartlari."
       />
-      <DatabaseTemplate columns={columns} rows={competitors} linkBase="/sales-process/battle-cards" />
+      <DatabaseTemplate
+        columns={columns}
+        rows={competitors}
+        linkBase="/sales-process/battle-cards"
+        emptyState={{
+          stateKey: "battleCardsNone",
+          title: t("title"),
+          reason: t("reason"),
+          cta: { kind: "open-search", label: t("cta") },
+        }}
+      />
     </div>
   );
 }
