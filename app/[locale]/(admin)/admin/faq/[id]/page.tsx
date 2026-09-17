@@ -32,8 +32,10 @@ function buildFields(isNew: boolean): EntityFieldDef<FaqFormInput>[] {
 
 export default async function AdminFaqEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { question?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -53,7 +55,18 @@ export default async function AdminFaqEditPage({
         answerRu: row.answer_ru ?? "",
         version: String(row.version),
       }
-    : { id: "", category: "", question: "", answer: "", status: "draft", questionRu: "", answerRu: "" };
+    : {
+        id: "",
+        category: "",
+        // Prefilled from the Sifat tab's "FAQ yaratish" quick action
+        // (/admin/faq/new?question=…) — a zero-result search query the
+        // manager is turning straight into a new FAQ entry.
+        question: searchParams.question ?? "",
+        answer: "",
+        status: "draft",
+        questionRu: "",
+        answerRu: "",
+      };
 
   return (
     <div className="space-y-6">

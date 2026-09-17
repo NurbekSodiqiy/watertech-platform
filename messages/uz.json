@@ -182,6 +182,22 @@
       "reason": "Tanlangan kunda hech qanday hodisa qayd etilmagan",
       "cta": "Bugunga qaytish"
     },
+    "dashboardNoDrafts": {
+      "title": "Qoralamalar yo'q",
+      "reason": "Nashr kutayotgan kontent yo'q — hammasi nashr etilgan"
+    },
+    "dashboardNoStale": {
+      "title": "Eskirgan kontent yo'q",
+      "reason": "Barcha nashr etilgan kontent so'nggi 90 kun ichida yangilangan"
+    },
+    "dashboardNoMissingRu": {
+      "title": "Tarjima kerak emas",
+      "reason": "Barcha kontentda ruscha tarjima mavjud"
+    },
+    "dashboardNoFeedback": {
+      "title": "Salbiy fikr yo'q",
+      "reason": "Hech kim \"Foydali emas\" deb belgilamagan"
+    },
     "adminListNone": {
       "title": "Hozircha {type} yo'q",
       "reason": "Ro'yxatga birorta ham yozuv qo'shilmagan",

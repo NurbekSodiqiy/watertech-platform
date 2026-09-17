@@ -207,6 +207,14 @@ export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: numbe
   return summaries.sort((a, b) => b.activeMs - a.activeMs);
 }
 
+/** Narrows a fetched row set down to one operator — every dashboard
+ * aggregator takes the row set only (never a query param), so a page filters
+ * once here before handing rows to whichever aggregators it needs. */
+export function filterRows(rows: TelemetryRow[], filters: { operatorEmail?: string | null }): TelemetryRow[] {
+  if (!filters.operatorEmail) return rows;
+  return rows.filter((r) => r.user_email === filters.operatorEmail);
+}
+
 export function aggregateZeroResultSearches(rows: TelemetryRow[]): { query: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const r of rows) {

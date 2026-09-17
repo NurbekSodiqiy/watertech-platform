@@ -1,32 +1,25 @@
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/routing";
 import { Clock, Copy, ListChecks } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getServerSession } from "@/lib/auth/server-session";
-import { getContentBundle } from "@/lib/content/loader";
-import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { RangePicker } from "@/components/dashboard/RangePicker";
+import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
+import { KpiGrid } from "@/components/dashboard/KpiGrid";
+import { formatDurationUz } from "@/lib/dashboard/format";
+import { parseDashboardRange } from "@/lib/dashboard/range";
+import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
 import {
   aggregatePerOperator,
   aggregateZeroResultSearches,
   aggregateHourly,
   aggregateWebVitals,
-  buildEntityLabelMaps,
+  filterRows,
   PLANNED_HOURS,
   TOTAL_ONBOARDING_ITEMS,
-  todayInTashkent,
-  isValidDateString,
-  tashkentDayRangeUTC,
-  type TelemetryRow,
 } from "@/lib/telemetry/aggregate";
 
-function formatDuration(ms: number): string {
-  const totalMinutes = Math.round(ms / 60000);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  if (h === 0) return `${m} daq`;
-  return `${h} soat ${m} daq`;
-}
+const BASE_PATH = "/dashboard";
 
 export default async function DashboardPage({
   params: { locale },
@@ -37,7 +30,6 @@ export default async function DashboardPage({
 }) {
   unstable_setRequestLocale(locale);
   const t = await getTranslations("emptyState.dashboardNoEvents");
-  const supabase = createClient();
 
   // Access check happens here, in the page itself — role comes from the
   // JWT claim (no DB round trip). Not a manager -> home, no error shown
@@ -45,57 +37,36 @@ export default async function DashboardPage({
   const session = await getServerSession();
   if (!session || session.role !== "manager") redirect({ href: "/", locale });
 
-  const rawDate = Array.isArray(searchParams.date) ? searchParams.date[0] : searchParams.date;
-  const selectedDate = isValidDateString(rawDate) ? rawDate : todayInTashkent();
-  const { startUTC, endUTC } = tashkentDayRangeUTC(selectedDate);
+  if (process.env.NODE_ENV !== "production") console.time("[dashboard] Faollik render");
 
-  // Regular session client, not service-role — RLS's "Managers read all
-  // events" policy is what allows this to see every operator's rows.
-  const { data, error } = await supabase.from("telemetry_events").select("*").gte("ts", startUTC).lt("ts", endUTC);
+  const range = parseDashboardRange(searchParams);
+  const { currentRows, labelMaps, kpis, error } = await fetchDashboardTelemetry(range);
 
-  const rows = (data ?? []) as TelemetryRow[];
-  const labelMaps = buildEntityLabelMaps(await getContentBundle());
+  const rows = filterRows(currentRows, { operatorEmail: range.operatorEmail });
   const operators = aggregatePerOperator(rows, TOTAL_ONBOARDING_ITEMS, labelMaps);
   const zeroResultSearches = aggregateZeroResultSearches(rows);
   const hourlyActual = aggregateHourly(rows);
   const webVitals = aggregateWebVitals(rows);
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
-      <PageHeader
-        path="/dashboard"
-        title="Rahbariyat monitoring"
-        description="Operatorlarning kunlik faolligi — telemetriya asosida."
-      />
+  if (process.env.NODE_ENV !== "production") console.timeEnd("[dashboard] Faollik render");
 
-      <form method="get" className="flex flex-wrap items-center gap-3">
-        <label htmlFor="date" className="text-[13px] font-medium text-text-secondary">
-          Kun:
-        </label>
-        <input
-          id="date"
-          type="date"
-          name="date"
-          defaultValue={selectedDate}
-          max={todayInTashkent()}
-          className="rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
-        />
-        <button
-          type="submit"
-          className="rounded-lg border border-border bg-surface px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
-        >
-          Ko&apos;rsatish
-        </button>
-      </form>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <RangePicker range={range} basePath={BASE_PATH} />
+        <OperatorFilter range={range} basePath={BASE_PATH} />
+      </div>
+
+      <KpiGrid kpis={kpis} />
 
       {error && (
         <div className="rounded-2xl border border-status-outdated/40 bg-status-outdated/10 p-4 text-[13px] text-primary-dark">
-          Ma&apos;lumotlarni yuklab bo&apos;lmadi: {error.message}
+          Ma&apos;lumotlarni yuklab bo&apos;lmadi: {error}
         </div>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">Operatorlar bo&apos;yicha kunlik faollik</h2>
+        <h2 className="text-[15px] font-bold text-primary-dark">Operatorlar bo&apos;yicha faollik</h2>
         {operators.length === 0 ? (
           <EmptyState
             variant="inline"
@@ -112,7 +83,7 @@ export default async function DashboardPage({
                   <p className="truncate text-[14px] font-semibold text-primary-dark">{op.email}</p>
                   <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-accent">
                     <Clock size={14} />
-                    {formatDuration(op.activeMs)}
+                    {formatDurationUz(op.activeMs)}
                   </span>
                 </div>
 

@@ -11,6 +11,10 @@ import {
   Inbox,
   History,
   WifiOff,
+  CheckCircle2,
+  Clock,
+  Languages,
+  ThumbsUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -44,6 +48,10 @@ export const EMPTY_STATES = {
   comparisonsNone: { key: "comparisonsNone", icon: GitCompare, ctaKind: "link" },
   searchNoResults: { key: "searchNoResults", icon: SearchX, ctaKind: "create" },
   dashboardNoEvents: { key: "dashboardNoEvents", icon: BarChart3, ctaKind: "home" },
+  dashboardNoDrafts: { key: "dashboardNoDrafts", icon: CheckCircle2, ctaKind: "link" },
+  dashboardNoStale: { key: "dashboardNoStale", icon: Clock, ctaKind: "link" },
+  dashboardNoMissingRu: { key: "dashboardNoMissingRu", icon: Languages, ctaKind: "link" },
+  dashboardNoFeedback: { key: "dashboardNoFeedback", icon: ThumbsUp, ctaKind: "link" },
   adminListNone: { key: "adminListNone", icon: Inbox, ctaKind: "create" },
   versionsNone: { key: "versionsNone", icon: History, ctaKind: "retry" },
   offline: { key: "offline", icon: WifiOff, ctaKind: "retry" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useForm, type DefaultValues, type FieldValues, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +59,17 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   // button's `disabled` state (a fast double-click/double-Enter) — a ref
   // since it must be read/written synchronously, not through a re-render.
   const inFlightRef = useRef(false);
+  // Opens the RU <details> when a dashboard "Tarjima qilish" quick action
+  // links here with a #ru hash (lib/dashboard/content-health.ts's
+  // adminEditHref) — a plain effect, not the details element's own `open`
+  // prop, since that would fight the user re-collapsing it on every render.
+  const ruDetailsRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (window.location.hash === "#ru" && ruDetailsRef.current) {
+      ruDetailsRef.current.open = true;
+      ruDetailsRef.current.scrollIntoView({ block: "start" });
+    }
+  }, []);
 
   const {
     register,
@@ -215,7 +226,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
       {mainFields.map(renderField)}
 
       {ruFields.length > 0 && (
-        <details className="rounded-xl border border-border bg-surface-alt/60 p-3.5">
+        <details ref={ruDetailsRef} className="rounded-xl border border-border bg-surface-alt/60 p-3.5">
           <summary className="cursor-pointer text-[13px] font-medium text-primary-dark">
             Ruscha (ixtiyoriy)
           </summary>
