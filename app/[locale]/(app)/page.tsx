@@ -1,5 +1,6 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { DailyTimeline, DailyDateLabel } from "@/components/DailyTimeline";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { HomeGreeting } from "@/components/HomeGreeting";
 import { Link } from "@/i18n/routing";
 import { Headphones, Package } from "lucide-react";
@@ -52,7 +53,9 @@ export default function HomePage({ params: { locale } }: { params: { locale: str
         </div>
       </div>
 
-      <DailyTimeline />
+      <WidgetBoundary>
+        <DailyTimeline />
+      </WidgetBoundary>
     </div>
   );
 }

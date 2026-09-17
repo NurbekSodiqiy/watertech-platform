@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { listPackageGroupRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deletePackageGroup, setPackageGroupStatus } from "@/lib/admin/actions/packages";
-import type { PackageGroupRow } from "@/lib/content/db";
+import type { AdminPackageGroupRow } from "@/lib/admin/queries";
 
 export const metadata = { title: "Kontent boshqaruvi — Paket guruhlari" };
 
@@ -26,7 +26,7 @@ export default async function AdminPackageGroupsListPage({ params: { locale } }:
         <h1 className="mt-2 text-[24px] font-bold text-primary-dark">Paket guruhlari</h1>
         <p className="mt-1 text-[13px] text-text-secondary">Har bir paket shu guruhlardan biriga tegishli bo&apos;ladi.</p>
       </div>
-      <DataTable<PackageGroupRow>
+      <DataTable<AdminPackageGroupRow>
         rows={rows}
         editBase="/admin/packages/groups"
         emptyTitle="Hozircha guruhlar yo'q"

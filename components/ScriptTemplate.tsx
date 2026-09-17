@@ -6,6 +6,7 @@ import { ChevronDown, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { ScriptTurns, objectionToTurns } from "./ScriptTurns";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Script, Stage } from "@/lib/content/types";
@@ -88,7 +89,9 @@ export function ScriptTemplate({ script, meta }: { script: Script; meta?: PageMe
         ))}
       </div>
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

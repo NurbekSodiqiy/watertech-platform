@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import type { PageMeta } from "@/lib/types";
 
 export async function DocPageTemplate({
@@ -34,7 +35,9 @@ export async function DocPageTemplate({
         )}
       </div>
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

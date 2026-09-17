@@ -1,109 +1,53 @@
 import type { Script, Stage, Objection, Faq, Competitor, Package, PackageGroup } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
+import { z } from "zod";
+import { stagesSchema, competitorSchema, productSchema } from "@/lib/content/schemas";
+import type { Json } from "@/lib/supabase/database.types";
+import type { Tables } from "@/lib/supabase/typed";
 
-/** Bookkeeping columns every content_* table carries, on top of its own
- * domain columns. Not part of any domain type — callers that need them
- * (the seed script's sort_order, a future admin UI's status toggle) read
- * them off the row directly rather than through a mapper. */
-export interface ContentCommonRow {
-  status: "draft" | "published";
-  sort_order: number;
-  version: number;
-  updated_at: string;
-  updated_by: string | null;
-  created_at: string;
+export type ScriptRow = Tables<"content_scripts">;
+export type ObjectionRow = Tables<"content_objections">;
+export type FaqRow = Tables<"content_faqs">;
+export type CompetitorRow = Tables<"content_competitors">;
+export type PackageGroupRow = Tables<"content_package_groups">;
+export type PackageRow = Tables<"content_packages">;
+export type ProductRow = Tables<"content_products">;
+
+// Generated row types widen CHECK-constrained text columns (threat_level,
+// line, category, material) to plain string. The constraints make an invalid
+// value unreachable in practice; if the schema ever drifts, log it and fall
+// back instead of throwing — a mapper must never take a page down.
+export function narrowColumn<T>(schema: z.ZodType<T>, value: unknown, fallback: T, what: string, id: string): T {
+  const result = schema.safeParse(value);
+  if (result.success) return result.data;
+  console.error(`[content] invalid ${what} for`, id);
+  return fallback;
 }
 
-export interface ScriptRow extends ContentCommonRow {
-  id: string;
-  name: string;
-  cheat_sheet: string;
-  stages: unknown;
-  name_ru: string | null;
-  cheat_sheet_ru: string | null;
-  stages_ru: unknown;
+/** JSONB stages -> Stage[]. The only place stages/stages_ru are narrowed. */
+function parseStages(value: Json, id: string): Stage[] {
+  const result = stagesSchema.safeParse(value);
+  if (result.success) return result.data;
+  console.error("[content] invalid stages for script", id);
+  return [];
 }
 
-export interface ObjectionRow extends ContentCommonRow {
-  id: string;
-  label: string;
-  keywords: string[];
-  client_says: string;
-  real_meaning: string;
-  response: string;
-  follow_up: string | null;
-  script_ids: string[];
-  label_ru: string | null;
-  client_says_ru: string | null;
-  real_meaning_ru: string | null;
-  response_ru: string | null;
-  follow_up_ru: string | null;
-}
-
-export interface FaqRow extends ContentCommonRow {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-  question_ru: string | null;
-  answer_ru: string | null;
-}
-
-export interface CompetitorRow extends ContentCommonRow {
-  id: string;
-  name: string;
-  assortment: string | null;
-  base_discount: string | null;
-  volume_discount: string | null;
-  retro_bonus: string | null;
-  max_discount: string | null;
-  payment_terms: string | null;
-  payment_method: string | null;
-  delivery_time: string | null;
-  logistics: string | null;
-  dealer_coverage: string | null;
-  certificates: string | null;
-  marketing_offers: string | null;
-  threat_level: Competitor["threatLevel"];
-}
-
-export interface PackageGroupRow extends ContentCommonRow {
-  id: string;
-  title: string;
-  subtitle: string;
-  title_ru: string | null;
-  subtitle_ru: string | null;
-}
-
-export interface PackageRow extends ContentCommonRow {
-  id: string;
-  group_id: string;
-  name: string;
-  is_featured: boolean;
-  order_volume: string;
-  payment_terms: string;
-  estimated_discount: string;
-  logistics: string;
-  delivery_time: string;
-  discount_pct: number;
-  advance_pct: number | null;
-  name_ru: string | null;
-  order_volume_ru: string | null;
-  payment_terms_ru: string | null;
-  estimated_discount_ru: string | null;
-  logistics_ru: string | null;
-  delivery_time_ru: string | null;
-}
-
-export interface ProductRow extends ContentCommonRow {
-  id: string;
-  filename: string;
-  name_ru: string;
-  name_uz: string | null;
-  sizes: string[];
-  line: Product["line"];
-  category: Product["category"];
-  material: Product["material"] | null;
+/** Stage[] -> JSONB. Rebuilt as plain object literals because interfaces
+ * (Stage, ScriptTurn) are not assignable to Json's index signature. */
+function stagesToJson(stages: Stage[]): Json {
+  return stages.map((stage) => ({
+    id: stage.id,
+    label: stage.label,
+    turns: stage.turns.map((turn) => ({
+      speaker: turn.speaker,
+      text: turn.text,
+      subStepHeader: turn.subStepHeader,
+      condition: turn.condition,
+      links: turn.links?.map((link) => ({ label: link.label, type: link.type, id: link.id })),
+    })),
+    objectionIds: stage.objectionIds,
+    nextStageId: stage.nextStageId,
+  }));
 }
 
 // === Row -> domain ==============================================================
@@ -121,10 +65,10 @@ export function rowToScript(row: ScriptRow): Script {
     id: row.id,
     name: row.name,
     cheatSheet: row.cheat_sheet,
-    stages: row.stages as Stage[],
+    stages: parseStages(row.stages, row.id),
     nameRu: row.name_ru ?? undefined,
     cheatSheetRu: row.cheat_sheet_ru ?? undefined,
-    stagesRu: (row.stages_ru as Stage[] | null) ?? undefined,
+    stagesRu: row.stages_ru === null ? undefined : parseStages(row.stages_ru, row.id),
   };
 }
 
@@ -173,7 +117,7 @@ export function rowToCompetitor(row: CompetitorRow): Competitor {
     dealerCoverage: row.dealer_coverage ?? "",
     certificates: row.certificates ?? "",
     marketingOffers: row.marketing_offers ?? "",
-    threatLevel: row.threat_level,
+    threatLevel: narrowColumn(competitorSchema.shape.threatLevel, row.threat_level, "Ma'lumot yo'q", "threat_level", row.id),
   };
 }
 
@@ -216,9 +160,9 @@ export function rowToProduct(row: ProductRow): Product {
     name_ru: row.name_ru,
     name_uz: row.name_uz ?? undefined,
     sizes: row.sizes,
-    line: row.line,
-    category: row.category,
-    material: row.material ?? undefined,
+    line: narrowColumn(productSchema.shape.line, row.line, "ppr", "line", row.id),
+    category: narrowColumn(productSchema.shape.category, row.category, "aksessuar", "category", row.id),
+    material: row.material === null ? undefined : narrowColumn(productSchema.shape.material, row.material, undefined, "material", row.id),
   };
 }
 
@@ -238,10 +182,10 @@ export function scriptToRow(script: Script) {
     id: script.id,
     name: script.name,
     cheat_sheet: script.cheatSheet,
-    stages: script.stages,
+    stages: stagesToJson(script.stages),
     name_ru: ru(script.nameRu),
     cheat_sheet_ru: ru(script.cheatSheetRu),
-    stages_ru: script.stagesRu && script.stagesRu.length > 0 ? script.stagesRu : null,
+    stages_ru: script.stagesRu && script.stagesRu.length > 0 ? stagesToJson(script.stagesRu) : null,
   };
 }
 

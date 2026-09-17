@@ -1,5 +1,6 @@
 import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { CompetitorDetailPanel } from "./CompetitorDetailPanel";
 import type { Competitor } from "@/lib/content/types";
 import type { PageMeta } from "@/lib/types";
@@ -16,7 +17,9 @@ export function BattleCardTemplate({ competitor, meta }: { competitor: Competito
 
       <CompetitorDetailPanel competitor={competitor} />
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

@@ -9,6 +9,9 @@ import { usePathname } from "@/i18n/routing";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
+import { Dialog } from "@/components/ui/Dialog";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { WidgetFallback } from "@/components/ui/WidgetFallback";
 import type { NavBadges } from "@/lib/types";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
@@ -122,7 +125,23 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
       </div>
 
       {paletteEverOpened && (
-        <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+        // A crashed palette (or a failed chunk load) shows the retry card in
+        // the palette's own dialog slot instead of taking down the shell.
+        <ErrorBoundary
+          fallback={(reset) => (
+            <Dialog
+              open={commandOpen}
+              onClose={() => setCommandOpen(false)}
+              labelledBy="command-palette-fallback"
+              containerClassName="z-50 flex items-start justify-center px-4 pt-[12vh]"
+              panelClassName="w-full max-w-xl"
+            >
+              <WidgetFallback reset={reset} titleId="command-palette-fallback" />
+            </Dialog>
+          )}
+        >
+          <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+        </ErrorBoundary>
       )}
 
       {shortcutsEverOpened && (

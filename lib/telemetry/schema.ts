@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { TELEMETRY_EVENT_TYPES } from "./types";
+import type { Json } from "@/lib/supabase/database.types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Any JSON value — meta lands in the telemetry_events.meta JSONB column. */
+const jsonValueSchema: z.ZodType<Json> = z.lazy(() =>
+  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValueSchema), z.record(jsonValueSchema)])
+);
 
 export const telemetryEventSchema = z.object({
   sessionId: z.string().uuid(),
@@ -20,7 +26,7 @@ export const telemetryEventSchema = z.object({
   entityId: z.string().max(200).optional(),
   durationMs: z.number().int().min(0).max(86_400_000).optional(),
   meta: z
-    .record(z.unknown())
+    .record(jsonValueSchema)
     .optional()
     .refine((m) => !m || JSON.stringify(m).length <= 600, {
       message: "meta must serialize to 600 bytes or fewer",

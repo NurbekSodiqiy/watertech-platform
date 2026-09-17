@@ -2,7 +2,7 @@ import { unstable_setRequestLocale } from "next-intl/server";
 import { listProductRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteProduct, setProductStatus } from "@/lib/admin/actions/products";
-import type { ProductRow } from "@/lib/content/db";
+import type { AdminProductRow } from "@/lib/admin/queries";
 
 export const metadata = { title: "Kontent boshqaruvi — Mahsulotlar" };
 
@@ -17,7 +17,7 @@ export default async function AdminProductsListPage({ params: { locale } }: { pa
         <h1 className="text-[24px] font-bold text-primary-dark">Mahsulotlar</h1>
         <p className="mt-1 text-[13px] text-text-secondary">Mahsulot katalogi — rasm fayllari public/products/ ichida.</p>
       </div>
-      <DataTable<ProductRow>
+      <DataTable<AdminProductRow>
         rows={rows}
         editBase="/admin/products"
         emptyTitle="Hozircha mahsulotlar yo'q"

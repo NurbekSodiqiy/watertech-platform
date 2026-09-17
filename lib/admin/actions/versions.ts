@@ -3,8 +3,10 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
 import { revalidateContent, type ContentKind } from "@/lib/content/revalidate";
+import type { Json } from "@/lib/supabase/database.types";
+import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 
-const RESTORABLE_TABLES: Record<string, ContentKind> = {
+const RESTORABLE_TABLES = {
   content_scripts: "scripts",
   content_objections: "objections",
   content_faqs: "faqs",
@@ -12,7 +14,17 @@ const RESTORABLE_TABLES: Record<string, ContentKind> = {
   content_package_groups: "packages",
   content_packages: "packages",
   content_products: "products",
-};
+} satisfies Record<string, ContentKind>;
+
+type RestorableTable = keyof typeof RESTORABLE_TABLES;
+
+function isRestorableTable(table: string): table is RestorableTable {
+  return Object.prototype.hasOwnProperty.call(RESTORABLE_TABLES, table);
+}
+
+function isJsonObject(value: Json): value is { [key: string]: Json | undefined } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** Columns present in a content_versions snapshot (to_jsonb(old), see
  * 0002_content_tables.sql) that must NOT be written back verbatim: id
@@ -30,8 +42,8 @@ const SNAPSHOT_ONLY_COLUMNS = new Set(["id", "version", "created_at", "updated_a
 export async function restoreVersion(table: string, versionId: number): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
+    if (!isRestorableTable(table)) return { ok: false, error: "Noma'lum jadval" };
     const kind = RESTORABLE_TABLES[table];
-    if (!kind) return { ok: false, error: "Noma'lum jadval" };
 
     const supabase = createClient();
     const { data: versionRow, error: versionError } = await supabase
@@ -42,16 +54,22 @@ export async function restoreVersion(table: string, versionId: number): Promise<
       .single();
     if (versionError || !versionRow) return { ok: false, error: "Versiya topilmadi" };
 
-    const snapshot = versionRow.snapshot as Record<string, unknown>;
+    const snapshot = versionRow.snapshot;
+    if (!isJsonObject(snapshot)) return { ok: false, error: "Versiya ma'lumoti noto'g'ri" };
     const rowId = snapshot.id;
     if (typeof rowId !== "string") return { ok: false, error: "Versiya ma'lumoti noto'g'ri" };
 
-    const payload: Record<string, unknown> = { updated_by: session.email };
+    const payload: { [key: string]: Json | undefined } = { updated_by: session.email };
     for (const [key, value] of Object.entries(snapshot)) {
       if (!SNAPSHOT_ONLY_COLUMNS.has(key)) payload[key] = value;
     }
 
-    const { error: updateError } = await supabase.from(table).update(payload).eq("id", rowId);
+    // Table name is a runtime value (allow-listed above), so this one write
+    // goes through the column-agnostic client instead of the generated types.
+    const { error: updateError } = await createClient<DynamicTablesDatabase>()
+      .from(table)
+      .update(payload)
+      .eq("id", rowId);
     if (updateError) return { ok: false, error: updateError.message };
 
     revalidateContent(kind);

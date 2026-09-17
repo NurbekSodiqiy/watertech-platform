@@ -20,7 +20,7 @@ export async function upsertScript(input: unknown): Promise<ActionResult> {
     // cached/published-only getObjections().
     const { data: objectionRows, error: objectionError } = await supabase.from("content_objections").select("id");
     if (objectionError) return { ok: false, error: objectionError.message };
-    const validObjectionIds = new Set((objectionRows ?? []).map((row) => row.id as string));
+    const validObjectionIds = new Set((objectionRows ?? []).map((row) => row.id));
     for (const stage of [...parsed.stages, ...(parsed.stagesRu ?? [])]) {
       const unknownId = stage.objectionIds.find((id) => !validObjectionIds.has(id));
       if (unknownId) return { ok: false, error: `Noma'lum e'tiroz ID: ${unknownId}` };

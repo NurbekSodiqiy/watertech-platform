@@ -2,6 +2,7 @@ import { unstable_setRequestLocale } from "next-intl/server";
 import { ShieldCheck, Award } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { CERTIFICATES } from "@/lib/content/certificates";
 import { CertificateGrid } from "@/components/CertificateGrid";
 import { CertificateGallery } from "@/components/CertificateGallery";
@@ -94,7 +95,9 @@ export default function TechnicalDocsPage({ params: { locale } }: { params: { lo
         </div>
       </div>
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

@@ -4,11 +4,11 @@ import { Layers } from "lucide-react";
 import { listPackageRows, listPackageGroupRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deletePackage, setPackageStatus } from "@/lib/admin/actions/packages";
-import type { PackageRow } from "@/lib/content/db";
+import type { AdminPackageRow } from "@/lib/admin/queries";
 
 export const metadata = { title: "Kontent boshqaruvi — Paketlar" };
 
-interface PackageDisplayRow extends PackageRow {
+interface PackageDisplayRow extends AdminPackageRow {
   group_title: string;
 }
 

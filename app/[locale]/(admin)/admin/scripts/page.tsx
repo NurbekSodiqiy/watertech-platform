@@ -2,7 +2,7 @@ import { unstable_setRequestLocale } from "next-intl/server";
 import { listScriptRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteScript, setScriptStatus } from "@/lib/admin/actions/scripts";
-import type { ScriptRow } from "@/lib/content/db";
+import type { AdminScriptRow } from "@/lib/admin/queries";
 
 export const metadata = { title: "Kontent boshqaruvi — Skriptlar" };
 
@@ -17,7 +17,7 @@ export default async function AdminScriptsListPage({ params: { locale } }: { par
         <h1 className="text-[24px] font-bold text-primary-dark">Skriptlar</h1>
         <p className="mt-1 text-[13px] text-text-secondary">Savdo skriptlari, ularning bosqichlari va repliklari.</p>
       </div>
-      <DataTable<ScriptRow>
+      <DataTable<AdminScriptRow>
         rows={rows}
         editBase="/admin/scripts"
         emptyTitle="Hozircha skriptlar yo'q"

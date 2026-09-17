@@ -3,6 +3,7 @@ import { Flag, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 
 interface MotivationRow {
   id: string;
@@ -101,7 +102,9 @@ export default function MotivationBonusPage({ params: { locale } }: { params: { 
         <DatabaseTemplate columns={motivationColumns} rows={motivationRows} />
       </div>
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

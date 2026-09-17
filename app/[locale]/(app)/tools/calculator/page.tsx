@@ -1,6 +1,7 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { BatchCalculator } from "@/components/tools/BatchCalculator";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { getProducts, getPackageGroups } from "@/lib/content/loader";
 import type { Locale } from "@/i18n/routing";
 
@@ -16,7 +17,9 @@ export default async function CalculatorPage({ params: { locale } }: { params: {
         title="Partiya kalkulyatori"
         description="Miqdor, birlik narxi va hamkorlik paketiga qarab yakuniy summani hisoblang — narxni operator o'zi kiritadi, chegirma va avans foizlari mavjud paketlar ma'lumotidan olinadi."
       />
-      <BatchCalculator products={products} packageGroups={packageGroups} />
+      <WidgetBoundary>
+        <BatchCalculator products={products} packageGroups={packageGroups} />
+      </WidgetBoundary>
     </div>
   );
 }

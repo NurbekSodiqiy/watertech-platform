@@ -136,6 +136,10 @@
     "title": "Hozircha kontent yo'q",
     "description": "Bu bo'lim joy egallovchi sifatida qo'yilgan. Haqiqiy kontent bilan almashtiring."
   },
+  "widgetFallback": {
+    "message": "Bu qismni yuklab bo'lmadi.",
+    "retry": "Qayta urinish"
+  },
   "errors": {
     "errorTitle": "Xatolik yuz berdi",
     "errorDescription": "Sahifani yuklashda kutilmagan xatolik yuz berdi. Qayta urinib ko'ring.",

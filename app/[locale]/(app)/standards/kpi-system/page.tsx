@@ -3,6 +3,7 @@ import { Wallet, Percent, Gift, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 
 interface KpiRow {
   id: string;
@@ -157,7 +158,9 @@ export default function KpiSystemPage({ params: { locale } }: { params: { locale
         belgilanadi.
       </div>
 
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }

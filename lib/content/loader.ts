@@ -12,6 +12,7 @@ import {
 import type { Script, Objection, Faq, Competitor, PackageGroup, Package } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import type { Locale } from "@/i18n/routing";
+import { safeContent } from "@/lib/content/safe";
 
 export interface ContentBundle {
   scripts: Script[];
@@ -157,7 +158,7 @@ const getScriptsCached = unstable_cache(
   { tags: ["content", "content:scripts"], revalidate: 3600 }
 );
 export function getScripts(locale: Locale = "uz"): Promise<Script[]> {
-  return getScriptsCached(locale);
+  return safeContent("scripts", () => getScriptsCached(locale), []);
 }
 
 const getObjectionsCached = unstable_cache(
@@ -174,7 +175,7 @@ const getObjectionsCached = unstable_cache(
   { tags: ["content", "content:objections"], revalidate: 3600 }
 );
 export function getObjections(locale: Locale = "uz"): Promise<Objection[]> {
-  return getObjectionsCached(locale);
+  return safeContent("objections", () => getObjectionsCached(locale), []);
 }
 
 const getFaqsCached = unstable_cache(
@@ -191,12 +192,12 @@ const getFaqsCached = unstable_cache(
   { tags: ["content", "content:faqs"], revalidate: 3600 }
 );
 export function getFaqs(locale: Locale = "uz"): Promise<Faq[]> {
-  return getFaqsCached(locale);
+  return safeContent("faqs", () => getFaqsCached(locale), []);
 }
 
 // content_competitors has no *_ru columns (battle-cards stay Uzbek-only, see
 // the 0004 migration) — no locale argument needed here.
-export const getCompetitors = unstable_cache(
+const getCompetitorsCached = unstable_cache(
   async (): Promise<Competitor[]> => {
     const { data, error } = await createAdminClient()
       .from("content_competitors")
@@ -209,6 +210,9 @@ export const getCompetitors = unstable_cache(
   ["content:competitors"],
   { tags: ["content", "content:competitors"], revalidate: 3600 }
 );
+export function getCompetitors(): Promise<Competitor[]> {
+  return safeContent("competitors", () => getCompetitorsCached(), []);
+}
 
 const getPackageGroupsCached = unstable_cache(
   async (locale: Locale): Promise<PackageGroup[]> => {
@@ -233,7 +237,7 @@ const getPackageGroupsCached = unstable_cache(
   { tags: ["content", "content:packages"], revalidate: 3600 }
 );
 export function getPackageGroups(locale: Locale = "uz"): Promise<PackageGroup[]> {
-  return getPackageGroupsCached(locale);
+  return safeContent("packages", () => getPackageGroupsCached(locale), []);
 }
 
 const getProductsCached = unstable_cache(
@@ -250,18 +254,27 @@ const getProductsCached = unstable_cache(
   { tags: ["content", "content:products"], revalidate: 3600 }
 );
 export function getProducts(locale: Locale = "uz"): Promise<Product[]> {
-  return getProductsCached(locale);
+  return safeContent("products", () => getProductsCached(locale), []);
 }
 
-export async function getContentBundle(locale: Locale = "uz"): Promise<ContentBundle> {
-  const [scripts, objections, faqs, competitors, packageGroups] = await Promise.all([
-    getScripts(locale),
-    getObjections(locale),
-    getFaqs(locale),
-    getCompetitors(),
-    getPackageGroups(locale),
-  ]);
-  const bundle = { scripts, objections, faqs, competitors, packageGroups };
-  await assertValidInDev(bundle);
-  return bundle;
+// Each getter above already degrades on its own; the outer safeContent only
+// guards the bundle assembly itself. assertValidInDev throws a
+// ContentValidationError, which safeContent rethrows — dev still fails loudly.
+export function getContentBundle(locale: Locale = "uz"): Promise<ContentBundle> {
+  return safeContent(
+    "bundle",
+    async () => {
+      const [scripts, objections, faqs, competitors, packageGroups] = await Promise.all([
+        getScripts(locale),
+        getObjections(locale),
+        getFaqs(locale),
+        getCompetitors(),
+        getPackageGroups(locale),
+      ]);
+      const bundle = { scripts, objections, faqs, competitors, packageGroups };
+      await assertValidInDev(bundle);
+      return bundle;
+    },
+    { scripts: [], objections: [], faqs: [], competitors: [], packageGroups: [] }
+  );
 }

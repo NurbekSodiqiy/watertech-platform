@@ -1,6 +1,7 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 
 export default function OnboardingPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
@@ -15,7 +16,9 @@ export default function OnboardingPage({ params: { locale } }: { params: { local
         </div>
       </div>
 
-      <OnboardingChecklist />
+      <WidgetBoundary>
+        <OnboardingChecklist />
+      </WidgetBoundary>
     </div>
   );
 }

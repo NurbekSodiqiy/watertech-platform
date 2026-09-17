@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ContentBundle } from "./loader";
+import { ContentValidationError } from "./safe";
 
 export const scriptTurnLinkSchema = z.object({
   label: z.string(),
@@ -22,6 +23,9 @@ export const stageSchema = z.object({
   objectionIds: z.array(z.string()),
   nextStageId: z.string().optional(),
 });
+
+/** Shape of the content_scripts.stages / stages_ru JSONB columns. */
+export const stagesSchema = z.array(stageSchema);
 
 export const scriptSchema = z.object({
   id: z.string(),
@@ -129,7 +133,7 @@ export function validateContentBundle(bundle: unknown): ContentBundle {
     const issues = result.error.issues
       .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
       .join("; ");
-    throw new Error(`Invalid content bundle: ${issues}`);
+    throw new ContentValidationError(`Invalid content bundle: ${issues}`);
   }
   return result.data;
 }

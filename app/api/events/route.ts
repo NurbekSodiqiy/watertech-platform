@@ -9,7 +9,18 @@ export const dynamic = "force-dynamic";
 
 const MAX_CONTENT_LENGTH_BYTES = 16_384;
 
+// Any unexpected throw (session read, rate limiter, Supabase client) becomes a
+// generic 500 — the real error is logged server-side, never sent back.
 export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (error) {
+    console.error("[api/events] unexpected error:", error);
+    return NextResponse.json({ error: "internal" }, { status: 500 });
+  }
+}
+
+async function handlePost(request: Request): Promise<NextResponse> {
   const session = await getServerSession();
 
   if (!session) {

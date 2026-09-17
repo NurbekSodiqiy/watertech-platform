@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { unstable_setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { amoSops } from "@/lib/mock-data/amocrm";
 
 export function generateStaticParams() {
@@ -33,7 +34,9 @@ export default function AmoSopPage({ params }: { params: { locale: string; slug:
           </li>
         ))}
       </ol>
-      <FeedbackWidget />
+      <WidgetBoundary>
+        <FeedbackWidget />
+      </WidgetBoundary>
     </div>
   );
 }
