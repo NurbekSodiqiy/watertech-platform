@@ -81,6 +81,10 @@ export function getSnapshot(): ToastItem[] {
   return toasts;
 }
 
+// One shared instance: useSyncExternalStore requires a stable server snapshot
+// and warns ("should be cached") when each call returns a fresh array.
+const SERVER_SNAPSHOT: ToastItem[] = [];
+
 export function getServerSnapshot(): ToastItem[] {
-  return [];
+  return SERVER_SNAPSHOT;
 }

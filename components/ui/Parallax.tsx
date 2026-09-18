@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
+import { m, useScroll, useSpring, useTransform } from "framer-motion";
+import { useSettledWhenReduced } from "@/hooks/useSettledWhenReduced";
+import { springs } from "@/lib/motion/tokens";
 
 export function Parallax({
   children,
@@ -14,7 +16,9 @@ export function Parallax({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const reduce = useReducedMotion();
+  // Same fluid inertia as ScrollScene, so parallax and scenes move alike.
+  // Under reduced motion progress holds at 0.5, which maps to y = 0.
+  const progress = useSettledWhenReduced(useSpring(scrollYProgress, springs.fluid), 0.5);
 
   // Hydration-safe: starts false (matches server render) and is corrected in
   // an effect once the real viewport width is known.
@@ -28,11 +32,11 @@ export function Parallax({
   }, []);
 
   const range = isMobile ? Math.min(6, rangePx) : rangePx;
-  const y = useTransform(scrollYProgress, [0, 1], [-range, range]);
+  const y = useTransform(progress, [0, 1], [-range, range]);
 
   return (
-    <motion.div ref={ref} style={{ y: reduce ? 0 : y }} className={className}>
+    <m.div ref={ref} style={{ y }} className={className}>
       {children}
-    </motion.div>
+    </m.div>
   );
 }

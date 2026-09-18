@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/routing";
@@ -16,6 +16,7 @@ import { CopilotButton } from "@/components/copilot/CopilotButton";
 import type { CopilotPrefill } from "@/components/copilot/CopilotPanel";
 import type { NavBadges } from "@/lib/types";
 import { scheduleIdle } from "@/lib/idle";
+import { durations, easings } from "@/lib/motion/tokens";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
   ssr: false,
@@ -108,20 +109,20 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
       <AnimatePresence>
         {mobileOpen && (
           <div className="fixed inset-0 z-40 flex lg:hidden">
-            <motion.div
+            <m.div
               className="absolute inset-0 bg-primary-dark/30"
               onClick={() => setMobileOpen(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: reduce ? 0 : 0.15 }}
+              transition={{ duration: reduce ? 0 : durations.instant }}
             />
-            <motion.div
+            <m.div
               className="relative flex h-full w-72 max-w-[85vw] flex-col bg-surface shadow-soft"
               initial={reduce ? undefined : { x: "-100%" }}
               animate={{ x: 0 }}
               exit={reduce ? undefined : { x: "-100%" }}
-              transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
+              transition={{ duration: reduce ? 0 : durations.fast, ease: easings.standard }}
             >
               <div className="flex items-center justify-between border-b border-border px-3 py-3">
                 <span className="text-sm font-semibold text-primary-dark">{t("mobileNavTitle")}</span>
@@ -134,7 +135,7 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
                 </button>
               </div>
               <SidebarNav scope="mobile" navBadges={navBadges} />
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

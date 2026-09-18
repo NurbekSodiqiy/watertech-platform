@@ -1,13 +1,14 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { ChevronRight, ChevronLeft, Home, type LucideIcon } from "lucide-react";
 import { Link, usePathname } from "@/i18n/routing";
 import { siteTree } from "@/lib/site-config";
 import { contentTypeIcons, LockIcon } from "@/lib/content-type-icon";
 import type { NavNode, NavBadges } from "@/lib/types";
+import { durations, easings, noTransition, springs } from "@/lib/motion/tokens";
 import { Logo } from "@/components/Logo";
 
 const COLLAPSE_KEY = "watertech-sidebar-collapsed";
@@ -49,10 +50,10 @@ function chunk<T>(items: T[], sizes: number[]): T[][] {
 function ActivePill({ scope }: { scope: string }) {
   const reduce = useReducedMotion();
   return (
-    <motion.div
+    <m.div
       layoutId={`sidebar-active-pill-${scope}`}
       className="absolute inset-0 rounded-2xl border border-border bg-surface shadow-soft"
-      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+      transition={reduce ? noTransition : springs.snappy}
     />
   );
 }
@@ -219,10 +220,10 @@ function CollapsedNavItem({
   return (
     <div className="group relative flex justify-center">
       {active && (
-        <motion.div
+        <m.div
           layoutId={`sidebar-active-pill-${scope}`}
           className="absolute inset-0 mx-auto h-12 w-12 rounded-2xl border border-border bg-surface shadow-soft"
-          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+          transition={springs.snappy}
         />
       )}
       <Link
@@ -300,10 +301,10 @@ export function SidebarNav({
       <nav className="flex-1 overflow-y-visible px-2.5 py-4">
         <div className="group relative mb-5 flex justify-center">
           {isHome && (
-            <motion.div
+            <m.div
               layoutId={`sidebar-active-pill-${scope}`}
               className="absolute inset-0 mx-auto h-12 w-12 rounded-2xl border border-border bg-surface shadow-soft"
-              transition={{ type: "spring", stiffness: 500, damping: 40 }}
+              transition={springs.snappy}
             />
           )}
           <Link href="/" title={t("home")} className="relative z-10 flex h-12 w-12 items-center justify-center">
@@ -384,10 +385,10 @@ export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
   }
 
   return (
-    <motion.aside
+    <m.aside
       initial={{ width: 256 }}
       animate={{ width: collapsed ? 76 : 256 }}
-      transition={{ duration: mounted && !reduce ? 0.2 : 0, ease: "easeOut" }}
+      transition={{ duration: mounted && !reduce ? durations.fast : 0, ease: easings.standard }}
       className="relative hidden shrink-0 overflow-visible border-r border-border bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:self-start"
     >
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
@@ -412,6 +413,6 @@ export function Sidebar({ navBadges }: { navBadges?: NavBadges }) {
           {tSidebar("footer")}
         </div>
       )}
-    </motion.aside>
+    </m.aside>
   );
 }

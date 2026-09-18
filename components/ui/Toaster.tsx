@@ -1,10 +1,11 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
 import { subscribe, getSnapshot, getServerSnapshot, dismiss } from "./toast-store";
 import type { ToastItem, ToastKind } from "./toast-store";
+import { distances, durations, easings } from "@/lib/motion/tokens";
 
 const ICONS: Record<ToastKind, typeof CheckCircle2> = {
   success: CheckCircle2,
@@ -26,14 +27,14 @@ function ToastCard({ item }: { item: ToastItem }) {
   const Icon = ICONS[item.kind];
 
   return (
-    <motion.div
+    <m.div
       role={item.kind === "error" ? "alert" : "status"}
       aria-live={item.kind === "error" ? undefined : "polite"}
       layout
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: distances.reveal }}
       animate={{ opacity: 1, y: 0 }}
-      exit={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
-      transition={{ duration: reduce ? 0.1 : 0.15, ease: "easeOut" }}
+      exit={reduce ? { opacity: 0 } : { opacity: 0, y: distances.reveal }}
+      transition={{ duration: durations.instant, ease: easings.standard }}
       className="flex w-full max-w-sm items-start gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3 shadow-soft"
     >
       <Icon size={16} className={`mt-0.5 shrink-0 ${TONE_ICON_CLASSES[item.kind]}`} aria-hidden="true" />
@@ -61,7 +62,7 @@ function ToastCard({ item }: { item: ToastItem }) {
       >
         <X size={13} />
       </button>
-    </motion.div>
+    </m.div>
   );
 }
 

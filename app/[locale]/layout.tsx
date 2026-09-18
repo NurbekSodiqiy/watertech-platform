@@ -7,6 +7,7 @@ import { ThemeScript } from "@/components/ThemeScript";
 import { TelemetryProvider } from "@/components/TelemetryProvider";
 import { WebVitalsReporter } from "@/components/providers/WebVitalsReporter";
 import { Toaster } from "@/components/ui/Toaster";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -48,10 +49,12 @@ export default async function LocaleLayout({
       </head>
       <body className={`${inter.variable} font-sans text-primary-dark`}>
         <NextIntlClientProvider messages={messages}>
-          <TelemetryProvider />
-          <WebVitalsReporter />
-          {children}
-          <Toaster />
+          <MotionProvider>
+            <TelemetryProvider />
+            <WebVitalsReporter />
+            {children}
+            <Toaster />
+          </MotionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

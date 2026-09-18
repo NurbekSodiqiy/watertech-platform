@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
@@ -11,6 +11,7 @@ import { ScriptTurns, objectionToTurns } from "./ScriptTurns";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Script, Stage } from "@/lib/content/types";
 import type { PageMeta } from "@/lib/types";
+import { durations, easings } from "@/lib/motion/tokens";
 
 function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; index: number; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -36,11 +37,11 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
 
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <m.div
             initial={reduce ? undefined : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={reduce ? undefined : { opacity: 0, height: 0 }}
-            transition={{ duration: reduce ? 0 : 0.2, ease: "easeOut" }}
+            transition={{ duration: reduce ? 0 : durations.fast, ease: easings.standard }}
             className="overflow-hidden"
           >
             <div className="max-w-prose space-y-3 border-t border-border px-5 py-4">
@@ -66,7 +67,7 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
                 <ScriptTurns turns={stage.turns} />
               )}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </section>

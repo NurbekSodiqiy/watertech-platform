@@ -1,7 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { distances, durations } from "@/lib/motion/tokens";
 
 export function ConfirmDialog({
   open,
@@ -26,22 +27,22 @@ export function ConfirmDialog({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <motion.div
+          <m.div
             className="absolute inset-0 bg-primary-dark/40"
             onClick={onCancel}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0 : 0.15 }}
+            transition={{ duration: reduce ? 0 : durations.instant }}
           />
-          <motion.div
+          <m.div
             role="alertdialog"
             aria-modal="true"
             className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-soft"
-            initial={{ opacity: 0, scale: 0.97, y: -8 }}
+            initial={{ opacity: 0, scale: 0.97, y: -distances.lift }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ duration: reduce ? 0 : 0.15 }}
+            exit={{ opacity: 0, scale: 0.97, y: -distances.lift }}
+            transition={{ duration: reduce ? 0 : durations.instant }}
           >
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-outdated/15 text-status-outdated">
@@ -71,7 +72,7 @@ export function ConfirmDialog({
                 {pending ? "Bajarilmoqda…" : confirmLabel}
               </button>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

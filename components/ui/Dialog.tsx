@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { distances, durations, easings } from "@/lib/motion/tokens";
 
 export interface DialogProps {
   open: boolean;
@@ -28,13 +29,17 @@ export interface DialogProps {
   shouldCloseOnEscape?: (event: KeyboardEvent) => boolean;
 }
 
+// Only ever animated *to* on exit (enter starts from it), so it carries the
+// accelerating exit curve.
+const EXIT_TRANSITION = { duration: durations.instant, ease: easings.exit };
+
 const PANEL_VARIANTS = {
-  hidden: { opacity: 0, scale: 0.97, y: -8 },
+  hidden: { opacity: 0, scale: 0.97, y: -distances.lift, transition: EXIT_TRANSITION },
   visible: { opacity: 1, scale: 1, y: 0 },
 };
 
 const FADE_VARIANTS = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 0, transition: EXIT_TRANSITION },
   visible: { opacity: 1 },
 };
 
@@ -86,16 +91,16 @@ export function Dialog({
       {open && (
         <div className={`fixed inset-0 ${containerClassName}`} role="presentation">
           {backdrop && (
-            <motion.div
+            <m.div
               className={`absolute inset-0 ${backdropClassName}`}
               onClick={onClose}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: reduce ? 0 : 0.15 }}
+              transition={{ duration: reduce ? 0 : durations.instant }}
             />
           )}
-          <motion.div
+          <m.div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
@@ -106,10 +111,10 @@ export function Dialog({
             animate="visible"
             exit={reduce ? undefined : "hidden"}
             variants={variants}
-            transition={{ duration: reduce ? 0 : 0.15, ease: "easeOut" }}
+            transition={{ duration: reduce ? 0 : durations.instant, ease: easings.standard }}
           >
             {children}
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

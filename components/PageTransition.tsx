@@ -1,7 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { usePathname } from "@/i18n/routing";
+import { distances, durations, easings } from "@/lib/motion/tokens";
 
 // Enter-only: no exit animation, so the incoming page mounts immediately
 // instead of waiting on an outgoing one to finish, and Suspense boundaries
@@ -13,14 +14,14 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   const reduce = useReducedMotion();
 
   return (
-    <motion.div
+    <m.div
       key={pathname}
-      initial={reduce ? false : { opacity: 0, y: 4 }}
+      initial={reduce ? false : { opacity: 0, y: distances.nudge }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.12, ease: [0.2, 0, 0, 1] }}
+      transition={{ duration: durations.instant, ease: easings.standard }}
       className="min-w-0"
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

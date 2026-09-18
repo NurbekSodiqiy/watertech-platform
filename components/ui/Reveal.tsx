@@ -1,13 +1,20 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
+import { distances, durations, easings } from "@/lib/motion/tokens";
 
+/**
+ * @deprecated Generic fade-up. Use `MaskReveal` for headings and short text,
+ * or `Stagger` + `StaggerItem` for groups (components/motion/). Unlike those,
+ * this ships its hidden state in the server HTML. Kept only until the
+ * company pages move over.
+ */
 export function Reveal({
   children,
   className,
   delay = 0,
-  y = 20,
+  y = distances.reveal,
   once = true,
 }: {
   children: ReactNode;
@@ -19,14 +26,14 @@ export function Reveal({
   const reduce = useReducedMotion();
 
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={reduce ? false : { opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once, amount: 0.2, margin: "0px 0px -10% 0px" }}
-      transition={{ duration: 0.45, ease: [0.2, 0, 0, 1], delay }}
+      transition={{ duration: durations.base, ease: easings.standard, delay }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

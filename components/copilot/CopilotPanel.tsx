@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { SendHorizontal, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useCopilot } from "@/hooks/useCopilot";
+import { durations, easings } from "@/lib/motion/tokens";
 import { CopilotMessage } from "@/components/copilot/CopilotMessage";
 
 const TITLE_ID = "copilot-panel-title";
@@ -94,15 +95,15 @@ export function CopilotPanel({ open, onClose, prefill }: CopilotPanelProps) {
         <div className="fixed inset-0 z-50 flex justify-end lg:pointer-events-none" role="presentation">
           {/* Full-width on mobile, so the page behind is dimmed there; on lg
               the sheet sits beside the page, which stays readable. */}
-          <motion.div
+          <m.div
             className="absolute inset-0 bg-primary-dark/30 lg:hidden"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0 : 0.15 }}
+            transition={{ duration: reduce ? 0 : durations.instant }}
           />
-          <motion.div
+          <m.div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
@@ -111,7 +112,7 @@ export function CopilotPanel({ open, onClose, prefill }: CopilotPanelProps) {
             initial={reduce ? false : { x: "100%" }}
             animate={{ x: 0 }}
             exit={reduce ? undefined : { x: "100%" }}
-            transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
+            transition={{ duration: reduce ? 0 : durations.fast, ease: easings.standard }}
           >
             <div className="flex items-center gap-2 border-b border-border px-4 py-3">
               <Sparkles size={16} className="shrink-0 text-accent" aria-hidden="true" />
@@ -168,7 +169,7 @@ export function CopilotPanel({ open, onClose, prefill }: CopilotPanelProps) {
               </div>
               <p className="mt-1.5 text-[11px] text-text-secondary">{pending ? t("pending") : t("keyHint")}</p>
             </form>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>
