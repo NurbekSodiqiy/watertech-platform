@@ -161,8 +161,9 @@ function computeIdleMs(rows: TelemetryRow[]): number {
 export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: number, maps: EntityLabelMaps): OperatorSummary[] {
   const byEmail = new Map<string, TelemetryRow[]>();
   for (const r of rows) {
-    if (!byEmail.has(r.user_email)) byEmail.set(r.user_email, []);
-    byEmail.get(r.user_email)!.push(r);
+    const list = byEmail.get(r.user_email) ?? [];
+    list.push(r);
+    byEmail.set(r.user_email, list);
   }
 
   const summaries: OperatorSummary[] = [];
@@ -262,8 +263,9 @@ export function aggregateWebVitals(rows: TelemetryRow[]): WebVitalSummary[] {
     if (r.type !== "web_vital") continue;
     const meta = r.meta as { name?: string; value?: number } | null;
     if (!meta?.name || typeof meta.value !== "number") continue;
-    if (!valuesByName.has(meta.name)) valuesByName.set(meta.name, []);
-    valuesByName.get(meta.name)!.push(meta.value);
+    const values = valuesByName.get(meta.name) ?? [];
+    values.push(meta.value);
+    valuesByName.set(meta.name, values);
   }
 
   return [...valuesByName.entries()]

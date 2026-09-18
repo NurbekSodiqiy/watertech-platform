@@ -105,10 +105,11 @@ const NavItem = memo(function NavItem({
   tSidebar: ReturnType<typeof useTranslations>;
 }) {
   const isActive = pathname === node.path;
-  const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
+  const children = node.children ?? [];
+  const isAncestor = children.length > 0 ? pathname.startsWith(node.path + "/") : false;
   const [open, setOpen] = useState(isAncestor);
   const Icon = contentTypeIcons[node.contentType];
-  const hasChildren = !!node.children?.length;
+  const hasChildren = children.length > 0;
   const rowPaddingLeft = 16 + depth * 16;
   const guideLeft = rowPaddingLeft + 8;
   const isPinned = depth === 0 && node.path === PINNED_PATH;
@@ -168,7 +169,7 @@ const NavItem = memo(function NavItem({
             aria-hidden
           />
           <div className="space-y-0.5">
-            {node.children!.map((child) => (
+            {children.map((child) => (
               <div key={child.path} className="relative">
                 <span
                   className="absolute top-[26px] bg-primary/40"
@@ -208,10 +209,11 @@ function CollapsedNavItem({
   t: ReturnType<typeof useTranslations>;
 }) {
   const isActive = pathname === node.path;
-  const isAncestor = node.children?.length ? pathname.startsWith(node.path + "/") : false;
+  const children = node.children ?? [];
+  const isAncestor = children.length > 0 ? pathname.startsWith(node.path + "/") : false;
   const active = isActive || isAncestor;
   const Icon = contentTypeIcons[node.contentType];
-  const hasChildren = !!node.children?.length;
+  const hasChildren = children.length > 0;
   const isPinned = node.path === PINNED_PATH;
 
   return (
@@ -248,7 +250,7 @@ function CollapsedNavItem({
           <div className="relative">
             <div className="absolute bottom-2 top-1 w-0.5 bg-primary/40" style={{ left: "10px" }} aria-hidden />
             <div className="space-y-0.5">
-              {node.children!.map((child) => {
+              {children.map((child) => {
                 const childActive = pathname === child.path;
                 return (
                   <div key={child.path} className="relative">

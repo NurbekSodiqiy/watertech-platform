@@ -26,11 +26,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<CronRespon
     secret = getServerEnv().CRON_SECRET;
   } catch (error) {
     console.error("[api/cron/content-scan] server env invalid:", error instanceof Error ? error.message : String(error));
-    return NextResponse.json({ error: "Server sozlanmagan" }, { status: 500 });
+    return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
   }
 
   if (!isAuthorized(request.headers.get("authorization"), secret)) {
-    return NextResponse.json({ error: "Ruxsat yo'q" }, { status: 401 });
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   try {
@@ -38,6 +38,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<CronRespon
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[api/cron/content-scan] scan failed:", error instanceof Error ? error.message : String(error));
-    return NextResponse.json({ error: "Tekshiruv bajarilmadi" }, { status: 500 });
+    return NextResponse.json({ error: "scan_failed" }, { status: 500 });
   }
 }

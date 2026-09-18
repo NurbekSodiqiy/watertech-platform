@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
 
 /** Copy-to-clipboard button — the same icon-only pattern DatabaseTemplate's
@@ -21,6 +22,7 @@ export function CopyButton({
 }) {
   const [copied, setCopied] = useState(false);
   const track = useTrack();
+  const t = useTranslations("common");
 
   return (
     <button
@@ -36,7 +38,7 @@ export function CopyButton({
           // Clipboard API unavailable — nothing to fall back to silently
         }
       }}
-      aria-label={label ?? "Nusxalash"}
+      aria-label={label ?? t("copy")}
       className={
         className ??
         (label
@@ -45,7 +47,7 @@ export function CopyButton({
       }
     >
       {copied ? <Check size={13} className="text-status-ok" /> : <Copy size={13} />}
-      {label && <span>{copied ? "Nusxalandi" : label}</span>}
+      {label && <span>{copied ? t("copied") : label}</span>}
     </button>
   );
 }

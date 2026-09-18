@@ -97,9 +97,9 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
 
                 {expandedCategory === category.id && (
                   <div className="bg-surface-alt border-t border-border flex flex-col p-2 space-y-1">
-                    {category.questions.map((item, idx) => (
+                    {category.questions.map((item) => (
                       <button
-                        key={idx}
+                        key={item.question}
                         onClick={() => setSelectedFaqItem(item)}
                         className={`text-left w-full p-3 rounded-lg text-sm transition-colors pl-6 ${
                           selectedFaqItem?.question === item.question

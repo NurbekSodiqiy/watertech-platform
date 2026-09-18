@@ -22,7 +22,8 @@ export function rateLimit(key: string, opts: { limit: number; windowMs: number }
   const recent = existing.filter((ts) => ts > windowStart);
 
   if (recent.length >= limit) {
-    const retryAfterSec = Math.max(1, Math.ceil((recent[0]! + windowMs - now) / 1000));
+    const oldest = recent[0] ?? now;
+    const retryAfterSec = Math.max(1, Math.ceil((oldest + windowMs - now) / 1000));
     hits.set(key, recent);
     return { ok: false, remaining: 0, retryAfterSec };
   }

@@ -3,41 +3,48 @@
 import { useState, useEffect } from "react";
 import { Lightbulb, CheckSquare, Square, ChevronDown, Calendar } from "lucide-react";
 import { useTrack } from "@/hooks/useTrack";
-import { onboardingDays } from "@/lib/content/onboarding";
+import { onboardingDays, onboardingSummaryChecklist } from "@/lib/content/onboarding";
+
+const CHECKLIST_KEY = "onboarding_checklist_v2";
+const LEGACY_CHECKLIST_KEY = "onboarding_checklist";
 
 export function OnboardingChecklist() {
-  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const [openDay, setOpenDay] = useState<number | null>(1);
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem("onboarding_checklist");
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(CHECKLIST_KEY);
+      if (saved) {
         setCheckedItems(JSON.parse(saved));
-      } catch {}
-    }
+        return;
+      }
+      const legacy = localStorage.getItem(LEGACY_CHECKLIST_KEY);
+      if (legacy) {
+        const legacyByIndex: Record<number, boolean> = JSON.parse(legacy);
+        const migrated: Record<string, boolean> = {};
+        onboardingSummaryChecklist.forEach((item, index) => {
+          if (legacyByIndex[index]) migrated[item.id] = true;
+        });
+        setCheckedItems(migrated);
+        localStorage.setItem(CHECKLIST_KEY, JSON.stringify(migrated));
+      }
+    } catch {}
   }, []);
 
   const track = useTrack();
-  const toggleCheck = (index: number) => {
-    const newChecked = { ...checkedItems, [index]: !checkedItems[index] };
+  const toggleCheck = (id: string) => {
+    const newChecked = { ...checkedItems, [id]: !checkedItems[id] };
     setCheckedItems(newChecked);
-    localStorage.setItem("onboarding_checklist", JSON.stringify(newChecked));
-    track("checklist_toggle", { entityType: "onboarding_item", entityId: String(index), meta: { checked: newChecked[index] } });
+    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(newChecked));
+    track("checklist_toggle", { entityType: "onboarding_item", entityId: id, meta: { checked: newChecked[id] } });
   };
 
   const toggleDay = (day: number) => {
     setOpenDay(openDay === day ? null : day);
   };
-
-  const checklist = [
-    "1-kun: Kompaniya missiyasi va qadriyatlarini o'qish.",
-    "2-kun: Jamoa bilan tanishish (Kontaktlar bo'limi).",
-    "3-kun: Mahsulot turlarini yodlash (Katalog).",
-    "4-kun: Skriptlarni o'rganish va imtihon topshirish."
-  ];
 
   return (
     <div className="space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-soft">
@@ -55,12 +62,12 @@ export function OnboardingChecklist() {
         <h2 className="mb-4 text-[18px] font-bold text-primary-dark">4 kunlik checklist</h2>
         {mounted ? (
           <div className="space-y-2">
-            {checklist.map((item, i) => {
-              const isChecked = !!checkedItems[i];
+            {onboardingSummaryChecklist.map((item) => {
+              const isChecked = !!checkedItems[item.id];
               return (
                 <button
-                  key={i}
-                  onClick={() => toggleCheck(i)}
+                  key={item.id}
+                  onClick={() => toggleCheck(item.id)}
                   className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
                     isChecked
                       ? "border-status-ok bg-status-ok/5 text-text-secondary"
@@ -71,7 +78,7 @@ export function OnboardingChecklist() {
                     {isChecked ? <CheckSquare size={20} /> : <Square size={20} />}
                   </span>
                   <span className={`text-[15px] ${isChecked ? "line-through opacity-70" : "font-medium text-primary-dark"}`}>
-                    {item}
+                    {item.text}
                   </span>
                 </button>
               );
@@ -116,8 +123,8 @@ export function OnboardingChecklist() {
                     <strong>Maqsad:</strong> {dayData.objective}
                   </p>
                   <ul className="space-y-2.5">
-                    {dayData.items.map((item, idx) => (
-                      <li key={idx} className="flex gap-2.5 text-[14.5px] leading-relaxed text-text-secondary">
+                    {dayData.items.map((item) => (
+                      <li key={item.id} className="flex gap-2.5 text-[14.5px] leading-relaxed text-text-secondary">
                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                         <span>
                           {item.emphasis && <strong>{item.emphasis} </strong>}

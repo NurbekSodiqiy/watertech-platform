@@ -277,6 +277,8 @@
     "callModeButton": "Qo'ng'iroq rejimi"
   },
   "common": {
+    "copy": "Nusxalash",
+    "copied": "Nusxalandi",
     "copyAll": "Barchasini nusxalash",
     "comingSoon": "Tez orada"
   },

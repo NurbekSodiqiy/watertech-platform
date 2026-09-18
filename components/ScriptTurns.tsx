@@ -228,6 +228,15 @@ export function collectOperatorText(turns: ScriptTurn[], clientName?: string): s
     .join("\n\n");
 }
 
+/** Turns carry no id of their own and the list is swapped wholesale (not
+ * spliced) when the operator switches stage/objection, so the key is
+ * derived from each turn's own content rather than its position — that way
+ * a different turn list forces LinkChip/ConditionNote to remount instead of
+ * inheriting another turn's open/show state at the same index. */
+function turnKey(turn: ScriptTurn, index: number): string {
+  return `${index}:${turn.speaker}:${turn.text}`;
+}
+
 export function ScriptTurns({
   turns,
   clientName,
@@ -244,14 +253,15 @@ export function ScriptTurns({
   return (
     <div className="space-y-4">
       {turns.map((turn, idx) => {
+        const key = turnKey(turn, idx);
         if (turn.speaker === "note") {
           if (turn.condition) {
             return (
-              <ConditionNote key={idx} condition={turn.condition} text={turn.text} clientName={clientName} slots={slots} />
+              <ConditionNote key={key} condition={turn.condition} text={turn.text} clientName={clientName} slots={slots} />
             );
           }
           return (
-            <div key={idx} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
+            <div key={key} className="flex gap-2 text-sm italic text-text-secondary mt-1 ml-10">
               <Info size={16} className="shrink-0 mt-0.5 opacity-70" />
               <span>{withClientName(turn.text, clientName, slots)}</span>
             </div>
@@ -261,7 +271,7 @@ export function ScriptTurns({
         const isOperator = turn.speaker === "operator";
 
         return (
-          <div key={idx} className={`flex flex-col gap-1.5 ${!isOperator ? "pl-8" : ""}`}>
+          <div key={key} className={`flex flex-col gap-1.5 ${!isOperator ? "pl-8" : ""}`}>
             {turn.subStepHeader && (
               <div className={`${idx === 0 ? "mt-0" : "mt-8"} mb-3 text-sm font-bold uppercase tracking-wider text-primary border-b border-border pb-1 w-max`}>
                 {turn.subStepHeader}

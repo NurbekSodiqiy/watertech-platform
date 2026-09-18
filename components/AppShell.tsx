@@ -15,6 +15,7 @@ import { WidgetFallback } from "@/components/ui/WidgetFallback";
 import { CopilotButton } from "@/components/copilot/CopilotButton";
 import type { CopilotPrefill } from "@/components/copilot/CopilotPanel";
 import type { NavBadges } from "@/lib/types";
+import { scheduleIdle } from "@/lib/idle";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
   ssr: false,
@@ -95,11 +96,9 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
 
   useEffect(() => {
     // warms the chunk after the page is idle so Ctrl+K opens instantly
-    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => setTimeout(cb, 1500));
-    const id = idle(() => {
+    return scheduleIdle(() => {
       void import("./CommandPalette");
     });
-    return () => (window.cancelIdleCallback ?? clearTimeout)(id as never);
   }, []);
 
   return (

@@ -277,6 +277,8 @@
     "callModeButton": "Режим звонка"
   },
   "common": {
+    "copy": "Копировать",
+    "copied": "Скопировано",
     "copyAll": "Скопировать всё",
     "comingSoon": "Скоро"
   },

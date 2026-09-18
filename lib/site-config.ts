@@ -121,6 +121,15 @@ export function findNode(path: string): NavNode | undefined {
   return flattenTree().find((n) => n.path === path);
 }
 
+/** Same lookup as `findNode`, for the call sites where the path is a literal
+ * that must exist in `siteTree` — throws instead of forcing a non-null
+ * assertion on every caller. */
+export function getNodeOrThrow(path: string): NavNode {
+  const node = findNode(path);
+  if (!node) throw new Error(`No nav node found for path: ${path}`);
+  return node;
+}
+
 export function getBreadcrumbs(path: string): NavNode[] {
   const segments = path.split("/").filter(Boolean);
   const crumbs: NavNode[] = [];
