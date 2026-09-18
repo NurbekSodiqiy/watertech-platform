@@ -12,10 +12,13 @@ objection handling, product catalog, FAQ, competitor battle-cards; managers see 
 dashboard. ~30 users, Google OAuth, allow-list based roles (`operator` | `manager`).
 
 - Framework: **Next.js 14.2 App Router**, React 18, TypeScript `strict`, Tailwind 3.4.
+- i18n: **next-intl 3.26** — `uz` (default) and `ru`, routed via `app/[locale]/…`. See §13.
 - Backend: **Supabase** (Postgres + Auth + RLS). Browser client via `@supabase/ssr`.
-- Animation: **framer-motion only** (GSAP is being removed — never add it back).
+- Animation: **framer-motion only** (GSAP is being removed — never add it back). See §14.
 - Search: `fuse.js` (client-side index, lazy).
-- UI language: **Uzbek (Latin)**. Product names may be Russian. Code, comments, commit messages: English.
+- PWA: **Serwist** (`app/sw.ts`). Error monitoring: **Sentry** (`sentry.*.config.ts`, `instrumentation.ts`).
+- UI language: **Uzbek (Latin) and Russian** via next-intl, see §13. Product names may be Russian.
+  Code, comments, commit messages: English.
 
 Commands:
 ```
@@ -23,47 +26,91 @@ npm run dev          # local dev (never judge performance in dev mode)
 npm run build        # production build — MUST pass before a task is "done"
 npm run start        # serve the production build
 npm run lint         # eslint (next/core-web-vitals + next/typescript)
-npm run typecheck    # tsc --noEmit   (add if missing: "typecheck": "tsc --noEmit")
+npm run typecheck    # tsc --noEmit
+npm run test         # vitest unit tests
+npm run e2e          # Playwright end-to-end tests
+npm run gen:types    # regenerate Supabase types (scripts/gen-types.sh)
+npm run seed:content # seed Supabase content tables from lib/content/*.ts (supabase/seed/seed-content.ts)
 ```
 
 ## 2. Folder map — where things go
 
+> **Target layout** — new files go into the folders below; existing flat files in `components/` move
+> only in a task that explicitly says "reorganize" (then `git mv` and update every import). Most of
+> `components/` is currently flat; the sub-folders that already exist (`layout/`, `ui/`, `scripts/`,
+> `content/`, `products/`, `providers/`, `admin/`, `copilot/`, `dashboard/`, `tools/`) are real —
+> everything else listed here is where new domain folders should land, not a claim that they exist yet.
+
 ```
 app/
-  layout.tsx                 root: fonts, ThemeScript, providers only — no UI chrome
-  (app)/                     operator app; layout.tsx mounts <AppShell>
-    <section>/page.tsx       one route = one page.tsx; sections mirror lib/site-config.ts
-    <section>/loading.tsx    section-specific skeleton (products, sales-process, dashboard)
-  (admin)/admin/             manager CMS (own layout, never imports AppShell)  [planned]
-  dashboard/                 manager telemetry (own layout)
-  login/                     public
-  api/<name>/route.ts        Route Handlers — auth check + zod validation inside, always
-  auth/callback/route.ts     OAuth exchange
+  layout.tsx                       root: fonts, ThemeScript, providers only — no UI chrome
+  sw.ts                            Serwist service worker
+  [locale]/                        next-intl locale segment (uz | ru) — see §13
+    layout.tsx                     locale layout: unstable_setRequestLocale, NextIntlClientProvider
+    (app)/                         operator app; layout.tsx mounts <AppShell>
+      <section>/page.tsx           one route = one page.tsx; sections mirror lib/site-config.ts
+      <section>/loading.tsx        section-specific skeleton (products, sales-process, dashboard)
+    (admin)/admin/                 manager CMS (own layout, never imports AppShell)
+    dashboard/                     manager telemetry (own layout)
+    login/                         public
+    offline/                      Serwist offline fallback
+  api/
+    <name>/route.ts                Route Handlers — auth check + zod validation inside, always
+    copilot/                       operator copilot endpoint(s)
+    cron/content-scan/             scheduled stale-content scanner
+    search-index/                  search index endpoint
+    events/                        telemetry event ingestion
+  auth/callback/route.ts           OAuth exchange
 components/
-  layout/                    AppShell, Sidebar, TopBar, PageTransition, CommandPalette, Logo
-  ui/                        generic primitives: CopyButton, EmptyState, Breadcrumbs, badges, skeletons
-  scripts/                   sales-script domain: SalesScriptsTab, ScriptTurns, CallModeOverlay, ObjectionChipRow…
-  content/                   DocPageTemplate, PageRenderer, SectionLanding, DatabaseTemplate, BattleCardTemplate
-  home/                      DailyTimeline, HomeGreeting
-  products/                  CertificateGallery/Grid, product lightbox
-  providers/                 SessionProvider, ClientNameContext, CertificateLightboxContext, ThemeScript, TelemetryProvider
-  admin/                     CMS forms/editors  [planned]
+  layout/                          AppShell, Sidebar, TopBar, PageTransition, CommandPalette, Logo
+  ui/                               generic primitives: CopyButton, EmptyState, Breadcrumbs, badges, skeletons
+  scripts/                         sales-script domain: SalesScriptsTab, ScriptTurns, CallModeOverlay, ObjectionChipRow…
+  content/                        DocPageTemplate, PageRenderer, SectionLanding, DatabaseTemplate, BattleCardTemplate
+  home/                            DailyTimeline, HomeGreeting
+  products/                       CertificateGallery/Grid, product lightbox
+  providers/                       SessionProvider, ClientNameContext, CertificateLightboxContext, ThemeScript, TelemetryProvider
+  admin/                           CMS forms/editors
+  copilot/                        operator copilot UI
+  dashboard/                       manager control-center widgets/KPIs
+  motion/                          motion primitives — see §14
+  story/                           scroll-storytelling scenes — see §14
 lib/
-  content/                   types.ts + data files + loader.ts (typed getters). Pages call getters, never arrays directly.
-  supabase/                  client.ts (browser) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
-  auth/                      claims helpers (role from JWT), route guards
-  telemetry/                 client.ts (queue), types.ts, aggregate.ts (server)
-  search/                    index.ts (lazy Fuse), normalize.ts
-  security/                  rate-limit.ts, csp.ts
-  env.ts                     zod-validated process.env — the ONLY place that reads process.env
-  site-config.ts             navigation tree (siteTree), breadcrumbs
-  types.ts                   cross-cutting UI types (NavNode, PageMeta)
-hooks/                       useTrack, useNow, useMounted, useSessionUser…
+  content/                        types.ts + data files + loader.ts (typed getters). Pages call getters, never arrays directly.
+  supabase/                        client.ts (browser) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
+  auth/                            claims helpers (role from JWT), route guards
+  telemetry/                       client.ts (queue), types.ts, aggregate.ts (server)
+  search/                          index.ts (lazy Fuse), normalize.ts
+  security/                        rate-limit.ts, csp.ts
+  admin/                           CMS domain logic
+  copilot/                         copilot prompt/response logic
+  agents/                         copilot agent orchestration
+  notifications/                  publish-gate / stale-content notifications inbox
+  dashboard/                       KPI aggregation for the manager dashboard
+  pwa/                             Serwist config helpers
+  motion/                          tokens.ts — durations, easings, spring presets; see §14
+  i18n/                            small i18n helpers (e.g. strip-locale.ts) — routing lives in i18n/routing.ts, not here
+  env.ts                           zod-validated process.env — the ONLY place that reads process.env
+  site-config.ts                   navigation tree (siteTree), breadcrumbs
+  types.ts                         cross-cutting UI types (NavNode, PageMeta)
+i18n/
+  routing.ts                       next-intl locales, default locale, Link/redirect/usePathname/useRouter — see §13
+  request.ts                       next-intl request config (messages loading)
+messages/
+  uz.json, ru.json                 UI strings, one key set shared across both files — see §13
+hooks/                             useTrack, useNow, useMounted, useSessionUser…
 supabase/
-  migrations/*.sql           every schema change is a numbered migration file
-  seed/                      seed scripts (content TS files are the seed source)
-tests/                       vitest unit tests mirror lib/ paths; e2e/ for Playwright
-public/products/             catalog images (never rename files — referenced by lib/content/products.ts)
+  migrations/*.sql                 every schema change is a numbered migration file
+  seed/                            seed scripts (content TS files are the seed source)
+tests/
+  unit/                            vitest unit tests mirror lib/ paths
+  e2e/                             Playwright end-to-end tests
+  fixtures/, stubs/                shared test fixtures and stubs
+docs/
+  ADDING_A_MODULE.md               how to add a new content/domain module
+  TESTING.md                       how to run/extend the unit and e2e suites
+public/products/                   catalog images (never rename files — referenced by lib/content/products.ts)
+sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts
+instrumentation.ts                 Sentry/Next instrumentation hook
 ```
 
 Rules for placement:
@@ -85,7 +132,7 @@ context providers/consumers.
 - A Client Component must never import `@/lib/supabase/server`, `@/lib/supabase/admin`, `next/headers`,
   `fs`, or `lib/telemetry/aggregate.ts`.
 - A Server Component must never import framer-motion, hooks, or anything from `components/providers`.
-- Do not call `cookies()` / `headers()` in `app/(app)/layout.tsx` or any shared operator layout — it
+- Do not call `cookies()` / `headers()` in `app/[locale]/(app)/layout.tsx` or any shared operator layout — it
   forces every operator page dynamic and kills the router cache. Auth is enforced in `middleware.ts`;
   user display data comes from `SessionProvider` (client, from cookie session, no network).
 - Heavy or rarely-used client modules (CommandPalette, Lightbox, CallModeOverlay, admin editors)
@@ -139,6 +186,8 @@ Tailwind tokens in `tailwind.config.ts`:
 --bg  #EDF3F9 / #121C30     --surface  #FFFFFF / #1B2740    --surface-alt  #F8FBFE / #202E4B
 --border #DCE6F0 / #2A3B58  --text-primary #1E3A5F / #EFF4FA --text-secondary #5B7086 / #9FB2CC
 --accent #3D5A80 / #7FA8D9  --accent-hover #2E4763 / #9DBEE6 --accent-soft, --status-ok/warning/outdated
+--on-accent                 text/icon colour on a solid accent fill (never `text-white` on `bg-accent` —
+                             it fails contrast in dark mode)
 ```
 Use semantic classes only: `bg-background bg-surface bg-surface-alt border-border text-primary-dark
 text-text-secondary bg-primary text-primary bg-accent text-accent text-status-ok …`.
@@ -152,6 +201,11 @@ Forbidden anywhere:
   (`text-[11px] [12px] [12.5px] [13px] [13.5px] [14px] [15px] [18px] [20px] [24px] [28px] [32px]`,
   radii `rounded-lg xl 2xl`, shadows `shadow-soft softer sm lg`).
 - Changing the light/dark mechanism (`ThemeScript` + `class="dark"` + `watertech-theme` key).
+
+Exception: files under `components/story/**` and `components/motion/**` may introduce new visual
+language (SVG line art, scroll scenes) as long as they use only the palette tokens above — no new
+hardcoded colors. A task that explicitly names the design system may add CSS variables to
+`app/globals.css`.
 
 Every UI change must render correctly in **both themes** — check both before finishing.
 
@@ -195,14 +249,15 @@ explicit strings (Tailwind must see full class names — never build class names
 ## 10. How to add a page (checklist)
 
 1. Add the node to `lib/site-config.ts` `siteTree` (title, path, contentType, description).
-2. Create `app/(app)/<path>/page.tsx` as a **Server Component** using `DocPageTemplate` / `PageHeader`.
+2. Create `app/[locale]/(app)/<path>/page.tsx` as a **Server Component** using `DocPageTemplate` / `PageHeader`.
 3. Data via `lib/content/loader.ts` getter. Interactive bits → small client island in `components/<domain>/`.
-4. Add `export const metadata` (title in Uzbek).
-5. Run `npm run typecheck && npm run lint && npm run build`. Open in light + dark. Console: 0 warnings.
+4. Add `export const metadata` and page copy strings via next-intl (both `messages/uz.json` and
+   `messages/ru.json` — see §13).
+5. Run `npm run typecheck && npm run lint && npm run test && npm run build`. Open in light + dark. Console: 0 warnings.
 
 ## 11. Definition of Done (every task)
 
-- [ ] `npm run typecheck`, `npm run lint`, `npm run build` all pass locally.
+- [ ] `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` all pass locally.
 - [ ] No hydration warnings, no React key warnings, no console errors on the touched pages.
 - [ ] Both themes verified. Mobile (375px) and desktop (1440px) verified for UI changes.
 - [ ] No new dependency unless the task explicitly allows it; if allowed, pin a version and explain why.
@@ -216,3 +271,44 @@ explicit strings (Tailwind must see full class names — never build class names
 - If a rule here blocks the task, or a needed detail is missing, **stop and ask one precise question**.
   Do not guess at design decisions, data models, or auth semantics.
 - Commit message style: `type(scope): summary` (`perf(middleware): verify JWT locally via getClaims`).
+
+## 13. i18n rules
+
+- Every user-visible string goes through **next-intl**. Server Components call
+  `unstable_setRequestLocale(locale)` (already done in `app/[locale]/layout.tsx`) then
+  `getTranslations()`. Client Components use `useTranslations()`.
+- A new key is added to **both** `messages/uz.json` and `messages/ru.json` in the same commit. Key
+  parity between the two files is a hard rule — never add a key to one and not the other.
+- Long-form page copy lives under the `pages.<section>.<page>` namespace; shared chrome (nav, header,
+  buttons, common labels) lives under the existing shared namespaces — don't invent a new top-level
+  namespace for copy that belongs in an existing one.
+- Navigation uses `Link` / `useRouter` / `usePathname` from `@/i18n/routing` (see `i18n/routing.ts`),
+  never `next/link` or `next/navigation` directly, anywhere in operator UI.
+- `aria-label`, `title`, `placeholder`, and toast text are user-visible strings — they go through
+  next-intl too, not hardcoded.
+- Content-layer data (products, scripts, objections, etc.) uses the existing `*_ru` column pattern
+  (see `supabase/migrations/0004_content_ru_columns.sql` and the locale-fallback logic in
+  `lib/content/loader.ts`). Do not invent a second localization pattern for content data — that's
+  next-intl's job only for UI copy, not for database content rows.
+
+## 14. Motion system
+
+- **framer-motion only.** GSAP, Lenis, locomotive-scroll, and any smooth-scroll or scroll-jacking
+  library are forbidden. Never call `preventDefault()` on a wheel/touch event, and never animate the
+  window's scroll position programmatically.
+- Tokens (durations, easings, spring presets) live in `lib/motion/tokens.ts`. Components import the
+  tokens; no inline magic numbers for `duration` / `ease`.
+- Motion primitives live in `components/motion/`. Scroll-storytelling scenes live in
+  `components/story/`.
+- Scroll-linked animation uses motion values only: `useScroll` → `useTransform`/`useSpring`. Never a
+  scroll event listener that calls `setState` per frame.
+- Allowed animated properties: `transform`, `opacity`, and for SVG line art `pathLength` /
+  `stroke-dashoffset`. No filters, no blur, no box-shadow animation, no animating layout properties.
+- Reduced motion: render the final state statically — call `useReducedMotion()` and skip the animated
+  path entirely. Content must never depend on an animation to become visible or readable; with JS
+  disabled, all content is present in normal DOM order.
+- Budget: at most one orchestrated scroll scene per page. Everything else is motion that answers a
+  user action (open, expand, copy, select) — no generic fade-up on every section.
+- Operator work pages (scripts, objections, FAQ, products, calculator, call mode) never get scroll
+  scenes — only ≤200 ms response motion. Scroll storytelling is reserved for `/company/*` and
+  empty/onboarding states.
