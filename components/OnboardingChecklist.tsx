@@ -100,12 +100,12 @@ export function OnboardingChecklist() {
                   </div>
                 </div>
                 <div className="flex flex-1 items-center justify-between gap-4 bg-accent px-5 py-5 transition-colors hover:bg-accent-hover">
-                  <h2 className="text-[16px] font-bold text-white">
+                  <h2 className="text-[16px] font-bold text-on-accent">
                     {dayData.day}-kun: {dayData.title}
                   </h2>
                   <ChevronDown
                     size={20}
-                    className={`shrink-0 text-white transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 text-on-accent transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                   />
                 </div>
               </button>

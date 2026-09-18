@@ -108,11 +108,11 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
               <AccentIconVisual icon={MissiyaIcon} />
             </Parallax>
             <AccentTextPanel>
-              <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-white">Missiya</h2>
-              <p className="mb-3 text-[18px] font-medium leading-relaxed text-white md:text-[22px]">
+              <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-on-accent">Missiya</h2>
+              <p className="mb-3 text-[18px] font-medium leading-relaxed text-on-accent md:text-[22px]">
                 &quot;Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish.&quot;
               </p>
-              <p className="text-[15px] italic text-white/80">
+              <p className="text-[15px] italic text-on-accent/80">
                 Suv hayot manbai, biz esa uning xavfsiz oqimini ta&apos;minlaymiz.
               </p>
             </AccentTextPanel>
@@ -126,9 +126,9 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
           {/* "2030" — text left, image right */}
           <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
-              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">2030</span>
-              <p className="text-[14px] leading-relaxed text-white/80">
+              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-on-accent md:mx-0" />
+              <span className="mb-2 block text-[28px] font-extrabold leading-none text-on-accent">2030</span>
+              <p className="text-[14px] leading-relaxed text-on-accent/80">
                 2030-yilga kelib O&apos;zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o&apos;rnatilgan bo&apos;lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
               </p>
             </AccentTextPanel>
@@ -143,9 +143,9 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
               <AccentIconVisual icon={No1Icon} />
             </Parallax>
             <AccentTextPanel>
-              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-white md:mx-0" />
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-white">№1</span>
-              <p className="text-[14px] leading-relaxed text-white/80">
+              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-on-accent md:mx-0" />
+              <span className="mb-2 block text-[28px] font-extrabold leading-none text-on-accent">№1</span>
+              <p className="text-[14px] leading-relaxed text-on-accent/80">
                 Markaziy Osiyoda muhandislik santexnikasi bo&apos;yicha №1 ekspert-hamkorga aylanish.
               </p>
             </AccentTextPanel>
@@ -159,8 +159,8 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
           {/* Sifat — text left, image right */}
           <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
-              <h3 className="mb-2 text-[16px] font-bold text-white">Sifat – bu vijdon</h3>
-              <p className="text-[14px] leading-relaxed text-white/80">
+              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Sifat – bu vijdon</h3>
+              <p className="text-[14px] leading-relaxed text-on-accent/80">
                 Quvur devorlarining ichida nima borligini mijoz ko&apos;rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
               </p>
             </AccentTextPanel>
@@ -175,8 +175,8 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
               <AccentIconVisual icon={InnovatsiyaIcon} />
             </Parallax>
             <AccentTextPanel>
-              <h3 className="mb-2 text-[16px] font-bold text-white">Innovatsiya</h3>
-              <p className="text-[14px] leading-relaxed text-white/80">
+              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Innovatsiya</h3>
+              <p className="text-[14px] leading-relaxed text-on-accent/80">
                 Biz kechagi texnologiya bilan bugungi bozorni egallay olmaymiz.
               </p>
             </AccentTextPanel>
@@ -185,8 +185,8 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
           {/* Xavfsizlik — text left, image right */}
           <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
             <AccentTextPanel className="md:order-1">
-              <h3 className="mb-2 text-[16px] font-bold text-white">Xavfsizlik</h3>
-              <p className="text-[14px] leading-relaxed text-white/80">
+              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Xavfsizlik</h3>
+              <p className="text-[14px] leading-relaxed text-on-accent/80">
                 Bizning mahsulotimiz o&apos;rnatilgan joyda suv toshqini bo&apos;lmasligi kerak.
               </p>
             </AccentTextPanel>

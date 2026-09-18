@@ -22,6 +22,7 @@
   --status-ok: 76 154 106; /* #4C9A6A */
   --status-warning: 217 164 65; /* #D9A441 */
   --status-outdated: 201 105 91; /* #C9695B */
+  --on-accent: 255 255 255; /* #FFFFFF */
   --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
@@ -38,6 +39,7 @@
   --status-ok: 107 191 140; /* #6BBF8C */
   --status-warning: 230 189 106; /* #E6BD6A */
   --status-outdated: 224 135 118; /* #E08776 */
+  --on-accent: 18 28 48; /* #121C30 */
   --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 

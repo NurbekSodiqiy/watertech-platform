@@ -11,8 +11,10 @@ import type { ReactNode } from "react";
  * chip inside a white card" look this replaced). It fills the full cell
  * height via h-full plus a min-height floor, so short copy still looks
  * intentional while long copy (e.g. the Mission block's two paragraphs)
- * is never clipped. Text inside must use white/near-white — the page's
- * normal text-primary-dark token is unreadable on a solid accent fill.
+ * is never clipped. Text inside must use text-on-accent (near-white in
+ * light mode, near-bg in dark mode) — the page's normal text-primary-dark
+ * token is unreadable on a solid accent fill, and hard-coded white text
+ * fails contrast against the lighter dark-mode accent color.
  */
 export function AccentTextPanel({
   children,

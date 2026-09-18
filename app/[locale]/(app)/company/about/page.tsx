@@ -78,8 +78,8 @@ export default function AboutPage({ params: { locale } }: { params: { locale: st
 
           const textColumn = (
             <AccentTextPanel className={iconLeft ? "" : "md:order-1"}>
-              <h2 className="mb-3 text-[18px] font-bold text-white">{title}</h2>
-              <p className="text-[15px] leading-relaxed text-white/80">{body}</p>
+              <h2 className="mb-3 text-[18px] font-bold text-on-accent">{title}</h2>
+              <p className="text-[15px] leading-relaxed text-on-accent/80">{body}</p>
             </AccentTextPanel>
           );
 

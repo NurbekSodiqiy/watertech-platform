@@ -24,6 +24,7 @@ const config: Config = {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
         },
+        "on-accent": "rgb(var(--on-accent) / <alpha-value>)",
         "text-secondary": "rgb(var(--text-secondary) / <alpha-value>)",
         status: {
           ok: "rgb(var(--status-ok) / <alpha-value>)",
