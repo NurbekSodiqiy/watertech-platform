@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { homeForRole, roleFromClaims } from "@/lib/auth/claims";
+import { localeOrDefault, localizedPath } from "@/lib/i18n/localized-path";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // Set by GoogleSignInButton on redirectTo. The only caller-supplied input
+  // that shapes the redirect, and only after it matches routing.locales —
+  // every target below is `origin` + a fixed app path, so there is no way to
+  // steer the redirect to another path or host (no open redirect).
+  const locale = localeOrDefault(searchParams.get("locale"));
+
+  function redirectTo(pathname: string, search = "") {
+    return NextResponse.redirect(`${origin}${localizedPath(pathname, locale)}${search}`);
+  }
 
   if (!code) {
     console.warn("[auth/callback] no ?code in the request — nothing to exchange");
-    return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    return redirectTo("/login", "?error=not_allowed");
   }
 
   const supabase = createClient();
@@ -20,7 +30,7 @@ export async function GET(request: Request) {
     // branch — the code/PKCE exchange itself failing, unrelated to the
     // allow-list — would otherwise look identical from the browser.
     console.error("[auth/callback] exchangeCodeForSession failed:", error.message);
-    return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    return redirectTo("/login", "?error=not_allowed");
   }
 
   // The allow-list lookup already happened in the Custom Access Token Hook
@@ -30,8 +40,8 @@ export async function GET(request: Request) {
 
   if (!role) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    return redirectTo("/login", "?error=not_allowed");
   }
 
-  return NextResponse.redirect(`${origin}${homeForRole(role)}`);
+  return redirectTo(homeForRole(role));
 }

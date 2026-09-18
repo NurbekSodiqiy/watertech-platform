@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { clientEnv } from "@/lib/env";
@@ -9,7 +9,7 @@ import { routing } from "@/i18n/routing";
 // and that request doesn't necessarily carry the session cookie — gating it
 // would cache a redirect to /login as the offline fallback. The page holds no
 // user data.
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/offline"];
+const PUBLIC_PATHS = ["/login", "/offline"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -50,6 +50,12 @@ export async function middleware(request: NextRequest) {
 
   let response = intlResponse;
 
+  // Everything setAll() wrote during this request (a refreshed session), kept
+  // so redirectTo() can replay it — a bare NextResponse.redirect() would
+  // otherwise drop the new tokens and the browser keeps the stale ones.
+  let refreshedCookies: { name: string; value: string; options: CookieOptions }[] = [];
+  let refreshedHeaders: Record<string, string> = {};
+
   const supabase = createServerClient(
     clientEnv.NEXT_PUBLIC_SUPABASE_URL,
     clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -58,13 +64,18 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
+          refreshedCookies = cookiesToSet;
+          refreshedHeaders = headers;
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           // Carry over next-intl's locale-resolution headers — otherwise
           // rebuilding the response here would silently drop them.
           intlResponse.headers.forEach((value, key) => response.headers.set(key, value));
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          // Cache-Control: private/no-store — a response carrying a session
+          // cookie must never be cached by a shared cache.
+          Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
         },
       },
     }
@@ -87,7 +98,10 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = withLocale(targetPathname, locale);
     url.search = search;
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    refreshedCookies.forEach(({ name, value, options }) => redirect.cookies.set(name, value, options));
+    Object.entries(refreshedHeaders).forEach(([key, value]) => redirect.headers.set(key, value));
+    return redirect;
   }
 
   const isPublic = isPublicPath(pathname);
@@ -123,8 +137,14 @@ export async function middleware(request: NextRequest) {
 // normal page: the browser requests the manifest without credentials, and a
 // service worker script must be served from the origin root unredirected — a
 // locale rewrite or an auth redirect on either one breaks installation.
+// /auth/callback is a locale-less Route Handler (app/auth/callback) like
+// /api/*: next-intl would rewrite it to /uz/auth/callback, which doesn't
+// exist (404), and it needs no auth gate — it establishes the session itself.
+// /monitoring is the Sentry tunnel (next.config.js tunnelRoute): a rewrite
+// Sentry adds that forwards the browser SDK's error envelopes to the ingest
+// host. A locale rewrite or an auth redirect on it would swallow the reports.
 export const config = {
   matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|products/|fonts/|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
+    "/((?!api/|auth/callback|monitoring|_next/static|_next/image|favicon.ico|products/|fonts/|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
   ],
 };

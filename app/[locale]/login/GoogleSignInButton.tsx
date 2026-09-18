@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useToast } from "@/hooks/useToast";
 import { createClient } from "@/lib/supabase/client";
 
 function GoogleIcon() {
@@ -16,16 +17,24 @@ function GoogleIcon() {
 
 export function GoogleSignInButton() {
   const t = useTranslations("login");
+  const locale = useLocale();
+  const { toast } = useToast();
 
   async function handleSignIn() {
     // Top-level redirect to accounts.google.com (window.location, not a frame or
     // same-origin form POST), so the CSP's frame-ancestors 'none' / form-action
     // 'self' directives (next.config.js) do not block this flow.
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    // The locale rides along so the callback can land the user back in the
+    // language they signed in from; it validates it against routing.locales.
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?locale=${encodeURIComponent(locale)}` },
     });
+    if (error) {
+      console.error("[login] signInWithOAuth failed:", error.message);
+      toast({ kind: "error", title: t("signInFailed") });
+    }
   }
 
   return (

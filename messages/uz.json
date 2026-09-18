@@ -246,7 +246,8 @@
     "title": "WaterTech Bilimlar Bazasi",
     "subtitle": "Davom etish uchun tizimga kiring",
     "notAllowed": "Sizga kirish huquqi berilmagan, administrator bilan bog'laning.",
-    "googleSignIn": "Google bilan kirish"
+    "googleSignIn": "Google bilan kirish",
+    "signInFailed": "Google orqali kirishni boshlab bo'lmadi. Qayta urinib ko'ring."
   },
   "docPage": {
     "placeholder": "[Kontent shu yerga qo'yiladi — bu bo'lim tarkibiy joy egallovchi. “{title}” uchun haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]"

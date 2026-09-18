@@ -1,6 +1,7 @@
 // Source of truth for the CSP directive string. next.config.js is CommonJS and
 // runs before the Next.js TS pipeline, so it cannot `require` this module —
-// keep the same directive list duplicated there and update both together.
+// keep the same directive list duplicated there and update both together
+// (tests/unit/security/csp-parity.test.ts enforces it).
 export function buildCsp(opts: { supabaseUrl: string; isDev: boolean }): string {
   const { supabaseUrl, isDev } = opts;
   const supabaseWs = supabaseUrl.replace(/^https:/, "wss:");

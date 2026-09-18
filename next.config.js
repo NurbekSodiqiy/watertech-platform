@@ -1,6 +1,7 @@
 // Duplicated from lib/security/csp.ts (kept as the tested source of truth) because
 // this file is CommonJS and runs outside the Next.js TS pipeline, so it cannot
-// `require` a TS module. Update both together.
+// `require` a TS module. Update both together — tests/unit/security/csp-parity.test.ts
+// fails if they drift.
 function buildCsp(opts) {
   const { supabaseUrl, isDev } = opts;
   const supabaseWs = supabaseUrl.replace(/^https:/, "wss:");
@@ -137,18 +138,31 @@ const withSerwist = require("@serwist/next").default({
 
 let exportedConfig = withSerwist(withNextIntl(withBundleAnalyzer(nextConfig)));
 
-// Only wraps (and uploads source maps) when a Sentry auth token is present —
-// unset in local dev, so local builds are unaffected.
-if (process.env.SENTRY_AUTH_TOKEN) {
+// Wraps whenever Sentry is in use at all: the DSN alone needs tunnelRoute
+// (see below), the auth token additionally enables source-map upload — unset
+// in local dev, so local builds are unaffected when neither is set.
+if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_AUTH_TOKEN) {
   const { withSentryConfig } = require("@sentry/nextjs");
   exportedConfig = withSentryConfig(exportedConfig, {
     silent: true,
     authToken: process.env.SENTRY_AUTH_TOKEN,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
+    sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
     widenClientFileUpload: true,
     disableLogger: true,
+    // The browser SDK posts to this same-origin path and a Sentry-added
+    // rewrite forwards it to the ingest host, so connect-src stays 'self'
+    // (no ingest host to derive from the DSN and keep in sync across both CSP
+    // builders) and ad-blockers that block *.sentry.io don't drop reports.
+    // Excluded from the middleware matcher (middleware.ts).
+    tunnelRoute: "/monitoring",
   });
 }
 
 module.exports = exportedConfig;
+
+// For tests/unit/security/csp-parity.test.ts only. Non-enumerable so Next's
+// config validation (which walks the object's keys) doesn't flag it as an
+// unknown option.
+Object.defineProperty(module.exports, "buildCsp", { value: buildCsp, enumerable: false });

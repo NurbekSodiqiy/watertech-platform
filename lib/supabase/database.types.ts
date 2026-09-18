@@ -1,4 +1,5 @@
-// Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17.
+// Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17,
+// rate_limits / rate_limit_hit added by hand from 0008 on 2026-09-18 (Supabase CLI unavailable locally).
 //
 // allowed_users and telemetry_events are NOT created by any migration in
 // supabase/migrations (they predate the migrations folder). Their columns are
@@ -590,6 +591,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          expires_at: string
+          hits: number
+          key: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          expires_at: string
+          hits: number
+          key: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          expires_at?: string
+          hits?: number
+          key?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       telemetry_events: {
         Row: {
           created_at: string
@@ -640,6 +665,10 @@ export type Database = {
       custom_access_token_hook: {
         Args: { event: Json }
         Returns: Json
+      }
+      rate_limit_hit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
       }
     }
     Enums: {

@@ -32,6 +32,10 @@ async function handlePost(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "payload too large" }, { status: 413 });
   }
 
+  // In-memory limiter only, deliberately: telemetry is high-volume and cheap,
+  // so a per-instance limit that resets on cold start is an acceptable
+  // backstop, and a durable Postgres check (rate_limit_hit, as /api/copilot
+  // uses for its paid Gemini calls) would add a DB round trip to every batch.
   const rl = rateLimit(`events:${session.email}`, { limit: 60, windowMs: 60_000 });
   if (!rl.ok) {
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/server-session";
 import { getServerEnv } from "@/lib/env";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { durableRateLimitHit } from "@/lib/security/durable-rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { copilotRequestSchema } from "@/lib/copilot/schema";
 import { retrieve } from "@/lib/copilot/retrieve";
@@ -14,6 +15,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 8_192;
+
+// Our own limits, well under Gemini's quota: the app should refuse before
+// Google does, and per operator rather than for everyone at once. Both are
+// enforced durably in Postgres (rate_limit_hit, migration 0008) because the
+// in-memory limiter is per serverless instance; the per-minute one is also
+// checked in memory first so a burst on one warm instance never reaches the DB.
+const COPILOT_PER_MINUTE_LIMIT = 20;
+const COPILOT_DAILY_LIMIT = 200;
 
 const STREAM_HEADERS = {
   "Content-Type": "text/plain; charset=utf-8",
@@ -62,6 +71,12 @@ function logCopilot(entry: LogEntry): void {
   }
 }
 
+/** Seconds until an epoch-aligned window ends — rate_limit_hit() aligns its
+ * windows the same way, so this is when the counter actually resets. */
+function secondsUntilWindowEnds(windowSeconds: number): number {
+  return windowSeconds - (Math.floor(Date.now() / 1000) % windowSeconds);
+}
+
 function toSources(chunks: CopilotChunk[]): CopilotSource[] {
   return chunks.map((chunk, i) => ({ n: i + 1, title: chunk.title, href: chunk.href, type: chunk.type }));
 }
@@ -88,9 +103,10 @@ async function handlePost(request: Request): Promise<Response> {
     return NextResponse.json({ error: "copilot_disabled" }, { status: 503 });
   }
 
-  // Our own limit, well under Gemini's quota: the app should refuse before
-  // Google does, and per operator rather than for everyone at once.
-  const rl = rateLimit(`copilot:${session.email}`, { limit: 20, windowMs: 60_000 });
+  // Role: both operator and manager may ask the copilot — getServerSession()
+  // has already rejected any session without a valid allow-list role.
+
+  const rl = rateLimit(`copilot:${session.email}`, { limit: COPILOT_PER_MINUTE_LIMIT, windowMs: 60_000 });
   if (!rl.ok) {
     logCopilot({
       email: session.email, locale: null, question: null, hitIds: [], answerChars: 0,
@@ -124,6 +140,32 @@ async function handlePost(request: Request): Promise<Response> {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
   const { question, locale, history } = parsed.data;
+
+  // Durable check after validation, so a malformed request never costs a DB
+  // round trip or a unit of the operator's daily quota. Fails closed: if the
+  // limit can't be checked, no paid Gemini call is made.
+  let perMinute: boolean;
+  let perDay: boolean;
+  try {
+    [perMinute, perDay] = await Promise.all([
+      durableRateLimitHit(`copilot:minute:${session.email}`, { limit: COPILOT_PER_MINUTE_LIMIT, windowSeconds: 60 }),
+      durableRateLimitHit(`copilot:day:${session.email}`, { limit: COPILOT_DAILY_LIMIT, windowSeconds: 86_400 }),
+    ]);
+  } catch (error) {
+    console.error("[api/copilot] durable rate limit check failed:", error);
+    return NextResponse.json({ error: "rate_limit_unavailable" }, { status: 503 });
+  }
+  if (!perMinute || !perDay) {
+    logCopilot({
+      email: session.email, locale, question: null, hitIds: [], answerChars: 0,
+      startedAt, model, finishReason: null, status: "rate_limited",
+    });
+    const retryAfterSec = perDay ? secondsUntilWindowEnds(60) : secondsUntilWindowEnds(86_400);
+    return NextResponse.json(
+      { error: perDay ? "rate_limited" : "daily_limit_reached" },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
+  }
 
   const chunks = await retrieve(question, locale);
   const hitIds = chunks.map((chunk) => chunk.id);
