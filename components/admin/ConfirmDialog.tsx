@@ -2,7 +2,7 @@
 
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
-import { distances, durations } from "@/lib/motion/tokens";
+import { overlayFadeVariants, overlayPanelVariants } from "@/components/ui/Dialog";
 
 export function ConfirmDialog({
   open,
@@ -30,19 +30,19 @@ export function ConfirmDialog({
           <m.div
             className="absolute inset-0 bg-primary-dark/40"
             onClick={onCancel}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0 : durations.instant }}
+            initial={reduce ? false : "hidden"}
+            animate="visible"
+            exit={reduce ? undefined : "hidden"}
+            variants={overlayFadeVariants}
           />
           <m.div
             role="alertdialog"
             aria-modal="true"
             className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-soft"
-            initial={{ opacity: 0, scale: 0.97, y: -distances.lift }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -distances.lift }}
-            transition={{ duration: reduce ? 0 : durations.instant }}
+            initial={reduce ? false : "hidden"}
+            animate="visible"
+            exit={reduce ? undefined : "hidden"}
+            variants={overlayPanelVariants}
           >
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-outdated/15 text-status-outdated">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/routing";
@@ -12,6 +13,7 @@ import { normalizeSearchText } from "@/lib/search/normalize";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { EMPTY_STATES } from "@/lib/empty-states";
+import { noTransition, springs } from "@/lib/motion/tokens";
 
 const TITLE_ID = "command-palette-title";
 
@@ -39,6 +41,15 @@ function buildIndex(nodes: NavNode[], categoryKey?: string): SearchItem[] {
 
 const SEARCH_INDEX = buildIndex(siteTree);
 
+/** Which row is highlighted. Tied to the `results` array it was set for, so a
+ * new result list (typing, or the search index arriving) drops back to the
+ * first row without animating — the highlight only slides when the index moves. */
+interface RowNav {
+  index: number;
+  animated: boolean;
+  results: ResolvedItem[] | null;
+}
+
 export function CommandPalette({
   open,
   onClose,
@@ -50,6 +61,9 @@ export function CommandPalette({
 }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const [nav, setNav] = useState<RowNav>({ index: 0, animated: false, results: null });
   const router = useRouter();
   const pathname = usePathname();
   const track = useTrack();
@@ -136,6 +150,30 @@ export function CommandPalette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, searcherRef.current]);
 
+  const navCurrent = nav.results === results;
+  const activeIndex = navCurrent ? nav.index : 0;
+  const highlightAnimated = navCurrent && nav.animated;
+
+  useEffect(() => {
+    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, results]);
+
+  function moveHighlight(index: number) {
+    setNav({ index, animated: true, results });
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!results || results.length === 0 || event.nativeEvent.isComposing) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      moveHighlight((activeIndex + step + results.length) % results.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      go(results[activeIndex].path);
+    }
+  }
+
   // Debounced so this logs once per pause in typing, not once per keystroke.
   useEffect(() => {
     if (!query.trim()) return;
@@ -178,6 +216,7 @@ export function CommandPalette({
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleInputKeyDown}
           placeholder={tChrome("topBar.searchPlaceholder")}
           className="min-w-0 flex-1 bg-transparent text-[15px] text-primary-dark placeholder:text-text-secondary focus:outline-none"
         />
@@ -186,38 +225,59 @@ export function CommandPalette({
         </span>
       </div>
 
-      <div className="max-h-[50vh] overflow-y-auto p-2">
+      <div ref={listRef} className="max-h-[50vh] overflow-y-auto p-2">
         {results ? (
           <>
             <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
               {tChrome("commandPalette.results")}
             </p>
-            <div className="space-y-0.5">
-              {results.length === 0 && indexLoading && (
-                <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
-              )}
-              {results.length === 0 && !indexLoading && (
-                <EmptyState
-                  variant="compact"
-                  icon={EMPTY_STATES.searchNoResults.icon}
-                  title={tEmpty("title")}
-                  reason={tEmpty("reason", { query: query.trim() })}
-                  action={{ label: tEmpty("cta"), onClick: () => onAskCopilot(query.trim()) }}
-                />
-              )}
-              {results.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => go(item.path)}
-                  className="flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left hover:bg-primary/5"
-                >
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-                    {item.category}
-                  </span>
-                  <span className="text-[14px] font-semibold text-primary-dark">{item.title}</span>
-                </button>
-              ))}
-            </div>
+            {/* Never exits — it only gives the highlight pill a presence context of
+                its own. Inside <Dialog>'s AnimatePresence, a layoutId element that
+                has moved never reports "safe to remove", so closing the palette
+                after arrowing through it would hang. */}
+            <AnimatePresence initial={false}>
+              <div key="rows" className="space-y-0.5">
+                {results.length === 0 && indexLoading && (
+                  <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
+                )}
+                {results.length === 0 && !indexLoading && (
+                  <EmptyState
+                    variant="compact"
+                    icon={EMPTY_STATES.searchNoResults.icon}
+                    title={tEmpty("title")}
+                    reason={tEmpty("reason", { query: query.trim() })}
+                    action={{ label: tEmpty("cta"), onClick: () => onAskCopilot(query.trim()) }}
+                  />
+                )}
+                {results.map((item, index) => {
+                  const isActive = index === activeIndex;
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => go(item.path)}
+                      onMouseMove={() => {
+                        if (!isActive) moveHighlight(index);
+                      }}
+                      data-active={isActive ? "true" : undefined}
+                      className="relative flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left"
+                    >
+                      {isActive && (
+                        <m.span
+                          layoutId="command-palette-active-row"
+                          className="absolute inset-0 rounded-xl bg-primary/5"
+                          transition={reduce || !highlightAnimated ? noTransition : springs.snappy}
+                          aria-hidden
+                        />
+                      )}
+                      <span className="relative text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+                        {item.category}
+                      </span>
+                      <span className="relative text-[14px] font-semibold text-primary-dark">{item.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </AnimatePresence>
           </>
         ) : (
           <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.startTyping")}</p>

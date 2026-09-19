@@ -1,7 +1,9 @@
 "use client";
 
+import { m, useReducedMotion } from "framer-motion";
 import { Link, usePathname } from "@/i18n/routing";
 import { Activity, FileStack, Star, type LucideIcon } from "lucide-react";
+import { noTransition, springs } from "@/lib/motion/tokens";
 
 interface DashboardTab {
   path: string;
@@ -21,6 +23,7 @@ const TABS: DashboardTab[] = [
  * searchParams to derive that from itself. */
 export function DashboardTabs() {
   const pathname = usePathname();
+  const reduce = useReducedMotion();
 
   return (
     <nav className="flex flex-wrap gap-1 border-b border-border">
@@ -31,12 +34,18 @@ export function DashboardTabs() {
           <Link
             key={tab.path}
             href={tab.path}
-            className={`flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13px] font-medium transition-colors ${
-              isActive
-                ? "border-primary text-primary-dark"
-                : "border-transparent text-text-secondary hover:text-primary-dark"
+            className={`relative flex items-center gap-1.5 border-b-2 border-transparent px-3.5 py-2.5 text-[13px] font-medium transition-colors ${
+              isActive ? "text-primary-dark" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
+            {isActive && (
+              <m.span
+                layoutId="dashboard-tab-underline"
+                className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-primary"
+                transition={reduce ? noTransition : springs.snappy}
+                aria-hidden
+              />
+            )}
             <Icon size={14} />
             {tab.label}
           </Link>

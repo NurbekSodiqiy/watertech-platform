@@ -1,5 +1,6 @@
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
+import { ContentFade } from "@/components/motion/ContentFade";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getFaqs } from "@/lib/content/loader";
 import type { Faq } from "@/lib/content/types";
@@ -27,7 +28,7 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
   const telegramHandle = supportContact.messenger.replace(/^@/, "");
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <ContentFade className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/faq"
         title="Savol-javob"
@@ -60,6 +61,6 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
           Bizga yozing
         </a>
       </div>
-    </div>
+    </ContentFade>
   );
 }

@@ -1,6 +1,7 @@
 import { unstable_setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 import { getContentBundle } from "@/lib/content/loader";
+import { ContentFade } from "@/components/motion/ContentFade";
 import { ScriptsWorkspace } from "@/components/scripts/ScriptsWorkspace";
 import type { Locale } from "@/i18n/routing";
 
@@ -13,8 +14,10 @@ export default async function ScriptsPage({ params: { locale } }: { params: { lo
 
   const content = await getContentBundle(locale);
   return (
-    <Suspense fallback={null}>
-      <ScriptsWorkspace content={content} />
-    </Suspense>
+    <ContentFade>
+      <Suspense fallback={null}>
+        <ScriptsWorkspace content={content} />
+      </Suspense>
+    </ContentFade>
   );
 }

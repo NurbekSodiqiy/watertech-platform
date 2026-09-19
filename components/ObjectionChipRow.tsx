@@ -1,4 +1,5 @@
 import type { Objection } from "@/lib/content/types";
+import { Pressable } from "@/components/motion/Pressable";
 
 /** One-click objection row — shared by the scripts page's left panel and
  * Call Mode, so "look up an objection without digging into an accordion"
@@ -16,7 +17,7 @@ export function ObjectionChipRow({
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
       {objections.map((o) => (
-        <button
+        <Pressable
           key={o.id}
           onClick={() => onSelect(o)}
           className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
@@ -26,7 +27,7 @@ export function ObjectionChipRow({
           }`}
         >
           {o.label}
-        </button>
+        </Pressable>
       ))}
     </div>
   );

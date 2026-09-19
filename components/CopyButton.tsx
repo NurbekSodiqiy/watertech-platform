@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Copy, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
+import { durations, noTransition, tween } from "@/lib/motion/tokens";
+import { Pressable } from "@/components/motion/Pressable";
+
+const ICON_SWAP_FROM = { opacity: 0, scale: 0.8 };
+const ICON_SWAP_TO = { opacity: 1, scale: 1 };
 
 /** Copy-to-clipboard button — the same icon-only pattern DatabaseTemplate's
  * "longtext" cells have used since it was first added there (1.5s "copied"
@@ -23,9 +29,10 @@ export function CopyButton({
   const [copied, setCopied] = useState(false);
   const track = useTrack();
   const t = useTranslations("common");
+  const reduce = useReducedMotion();
 
   return (
-    <button
+    <Pressable
       type="button"
       onClick={async (e) => {
         e.stopPropagation();
@@ -46,8 +53,19 @@ export function CopyButton({
           : "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent")
       }
     >
-      {copied ? <Check size={13} className="text-status-ok" /> : <Copy size={13} />}
+      <AnimatePresence mode="wait" initial={false}>
+        <m.span
+          key={copied ? "check" : "copy"}
+          className="flex shrink-0"
+          initial={reduce ? false : ICON_SWAP_FROM}
+          animate={ICON_SWAP_TO}
+          exit={reduce ? undefined : ICON_SWAP_FROM}
+          transition={reduce ? noTransition : tween(durations.instant)}
+        >
+          {copied ? <Check size={13} className="text-status-ok" /> : <Copy size={13} />}
+        </m.span>
+      </AnimatePresence>
       {label && <span>{copied ? t("copied") : label}</span>}
-    </button>
+    </Pressable>
   );
 }

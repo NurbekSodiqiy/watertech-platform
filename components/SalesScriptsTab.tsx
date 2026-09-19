@@ -3,6 +3,7 @@
 import { Link } from "@/i18n/routing";
 import { useState, type RefObject } from "react";
 import { ChevronDown, ChevronRight, Check, ArrowUpRight, Target, Phone, PhoneCall, Wrench, RotateCcw, type LucideIcon } from "lucide-react";
+import { m, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import type { Script, Stage, Objection, ScriptTurn } from "@/lib/content/types";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
@@ -12,6 +13,8 @@ import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { CopyButton } from "@/components/CopyButton";
 import { collectOperatorText } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
+import { Pressable } from "@/components/motion/Pressable";
+import { noTransition, springs } from "@/lib/motion/tokens";
 
 const salesScriptIcons: Record<string, LucideIcon> = {
   "lead-orqali-tushgan": Target,
@@ -19,6 +22,19 @@ const salesScriptIcons: Record<string, LucideIcon> = {
   "ustalar-uchun": Wrench,
   "qayta-aloqa": RotateCcw,
 };
+
+/** Sliding highlight behind the selected stage row, same pattern as Sidebar's ActivePill. */
+function StagePill() {
+  const reduce = useReducedMotion();
+  return (
+    <m.span
+      layoutId="scripts-stage-pill"
+      className="absolute inset-0 bg-surface-alt"
+      transition={reduce ? noTransition : springs.snappy}
+      aria-hidden
+    />
+  );
+}
 
 function objectionsForStage(stage: Stage, objections: Objection[]): Objection[] {
   return stage.objectionIds
@@ -103,14 +119,14 @@ export function SalesScriptsTab({
                       label={tCommon("copyAll")}
                     />
                   )}
-                  <button
+                  <Pressable
                     type="button"
                     onClick={onOpenCallMode}
                     className="flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[13px] font-medium text-accent transition-colors hover:bg-accent/20"
                   >
                     <PhoneCall size={15} />
                     {t("callModeButton")}
-                  </button>
+                  </Pressable>
                 </div>
               </div>
             </div>
@@ -190,21 +206,22 @@ export function SalesScriptsTab({
                         toggleScriptStage(stage.id);
                       }
                     }}
-                    className={`w-full flex items-center justify-between p-4 text-left transition-colors font-medium text-primary-dark ${
-                      selectedScriptStage?.id === stage.id && !isAccordion ? "bg-surface-alt" : "hover:bg-surface-alt"
+                    className={`relative w-full flex items-center justify-between p-4 text-left transition-colors font-medium text-primary-dark ${
+                      selectedScriptStage?.id === stage.id && !isAccordion ? "" : "hover:bg-surface-alt"
                     }`}
                   >
-                    <span className="flex items-center gap-2">
+                    {selectedScriptStage?.id === stage.id && !isAccordion && <StagePill />}
+                    <span className="relative flex items-center gap-2">
                       {index + 1}. {stage.label}
                     </span>
                     {isAccordion ? (
                       expandedScriptStageId === stage.id ? (
-                        <ChevronDown className="w-5 h-5 text-text-secondary" />
+                        <ChevronDown className="relative w-5 h-5 text-text-secondary" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-text-secondary" />
+                        <ChevronRight className="relative w-5 h-5 text-text-secondary" />
                       )
                     ) : (
-                      <ChevronRight className={`w-5 h-5 ${selectedScriptStage?.id === stage.id ? "text-primary" : "text-text-secondary"}`} />
+                      <ChevronRight className={`relative w-5 h-5 ${selectedScriptStage?.id === stage.id ? "text-primary" : "text-text-secondary"}`} />
                     )}
                   </button>
 

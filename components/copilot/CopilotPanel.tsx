@@ -6,7 +6,8 @@ import { SendHorizontal, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useCopilot } from "@/hooks/useCopilot";
-import { durations, easings } from "@/lib/motion/tokens";
+import { durations, easings, tween } from "@/lib/motion/tokens";
+import { overlayFadeVariants } from "@/components/ui/Dialog";
 import { CopilotMessage } from "@/components/copilot/CopilotMessage";
 
 const TITLE_ID = "copilot-panel-title";
@@ -98,10 +99,10 @@ export function CopilotPanel({ open, onClose, prefill }: CopilotPanelProps) {
           <m.div
             className="absolute inset-0 bg-primary-dark/30 lg:hidden"
             onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0 : durations.instant }}
+            initial={reduce ? false : "hidden"}
+            animate="visible"
+            exit={reduce ? undefined : "hidden"}
+            variants={overlayFadeVariants}
           />
           <m.div
             ref={panelRef}
@@ -110,9 +111,8 @@ export function CopilotPanel({ open, onClose, prefill }: CopilotPanelProps) {
             aria-labelledby={TITLE_ID}
             className="pointer-events-auto relative flex h-full w-full flex-col border-l border-border bg-surface shadow-soft lg:w-[380px]"
             initial={reduce ? false : { x: "100%" }}
-            animate={{ x: 0 }}
-            exit={reduce ? undefined : { x: "100%" }}
-            transition={{ duration: reduce ? 0 : durations.fast, ease: easings.standard }}
+            animate={{ x: 0, transition: tween(durations.fast, easings.standard) }}
+            exit={reduce ? undefined : { x: "100%", transition: tween(durations.instant, easings.exit) }}
           >
             <div className="flex items-center gap-2 border-b border-border px-4 py-3">
               <Sparkles size={16} className="shrink-0 text-accent" aria-hidden="true" />

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { m, useReducedMotion } from "framer-motion";
 import { Compass } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Stage, Objection, ScriptTurn } from "@/lib/content/types";
@@ -20,6 +21,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { EMPTY_STATES } from "@/lib/empty-states";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { useTrack } from "@/hooks/useTrack";
+import { noTransition, springs } from "@/lib/motion/tokens";
 
 // Last opened script/stage — restored on mount from the URL (?script=&stage=)
 // if present, else from localStorage, so an F5 reload or the browser's back
@@ -27,6 +29,19 @@ import { useTrack } from "@/hooks/useTrack";
 // of the first script every time.
 const STORAGE_SCRIPT_KEY = "watertech-scripts-last-script";
 const STORAGE_STAGE_KEY = "watertech-scripts-last-stage";
+
+/** Sliding active tab, same pattern as Sidebar's ActivePill. */
+function TabPill() {
+  const reduce = useReducedMotion();
+  return (
+    <m.span
+      layoutId="scripts-tab-pill"
+      className="absolute inset-0 rounded-full bg-primary shadow-softer"
+      transition={reduce ? noTransition : springs.snappy}
+      aria-hidden
+    />
+  );
+}
 
 type ScriptsTab = "faq" | "packages" | "competitors" | "sales_scripts";
 
@@ -308,35 +323,39 @@ function ScriptsPageContentBody() {
         <div className="flex flex-wrap w-fit shrink-0 items-center gap-0.5 rounded-[20px] border border-border bg-surface-alt p-1">
           <button
             onClick={() => handleTabClick("sales_scripts")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "sales_scripts" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            className={`relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "sales_scripts" ? "text-surface" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            Sotuv skriptlari
+            {activeTab === "sales_scripts" && <TabPill />}
+            <span className="relative">Sotuv skriptlari</span>
           </button>
           <button
             onClick={() => handleTabClick("packages")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "packages" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            className={`relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "packages" ? "text-surface" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            Hamkorlik paketlari
+            {activeTab === "packages" && <TabPill />}
+            <span className="relative">Hamkorlik paketlari</span>
           </button>
           <button
             onClick={() => handleTabClick("competitors")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "competitors" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            className={`relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "competitors" ? "text-surface" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            Raqobatchilar
+            {activeTab === "competitors" && <TabPill />}
+            <span className="relative">Raqobatchilar</span>
           </button>
           <button
             onClick={() => handleTabClick("faq")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "faq" ? "bg-primary text-surface shadow-softer" : "text-text-secondary hover:text-primary-dark"
+            className={`relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "faq" ? "text-surface" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            FAQ savollar
+            {activeTab === "faq" && <TabPill />}
+            <span className="relative">FAQ savollar</span>
           </button>
         </div>
 

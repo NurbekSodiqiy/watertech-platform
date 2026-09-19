@@ -2,14 +2,31 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { m, useReducedMotion } from "framer-motion";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/content/products";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { EMPTY_STATES } from "@/lib/empty-states";
+import { noTransition, springs } from "@/lib/motion/tokens";
 
 const LIGHTBOX_TITLE_ID = "product-lightbox-title";
+
+/** Sliding active mark, same pattern as Sidebar's ActivePill. Each group
+ * passes its own layoutId so the line tabs and the category chips never
+ * animate into one another. */
+function ActiveMark({ layoutId, className }: { layoutId: string; className: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <m.span
+      layoutId={layoutId}
+      className={className}
+      transition={reduce ? noTransition : springs.snappy}
+      aria-hidden
+    />
+  );
+}
 
 // Turlari va ularning yorliqlari
 const CATEGORIES = [
@@ -68,22 +85,24 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
       <div className="flex border-b border-border">
         <button
           onClick={() => setActiveLine("ppr")}
-          className={`px-4 py-3 font-medium transition-none text-[15px] ${
-            activeLine === "ppr"
-              ? "border-b-2 border-primary text-primary-dark"
-              : "text-text-secondary hover:text-primary-dark"
+          className={`relative border-b-2 border-transparent px-4 py-3 font-medium transition-none text-[15px] ${
+            activeLine === "ppr" ? "text-primary-dark" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
+          {activeLine === "ppr" && (
+            <ActiveMark layoutId="products-line-tab" className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-primary" />
+          )}
           PPR liniyasi
         </button>
         <button
           onClick={() => setActiveLine("kanalizatsiya")}
-          className={`px-4 py-3 font-medium transition-none text-[15px] ${
-            activeLine === "kanalizatsiya"
-              ? "border-b-2 border-primary text-primary-dark"
-              : "text-text-secondary hover:text-primary-dark"
+          className={`relative border-b-2 border-transparent px-4 py-3 font-medium transition-none text-[15px] ${
+            activeLine === "kanalizatsiya" ? "text-primary-dark" : "text-text-secondary hover:text-primary-dark"
           }`}
         >
+          {activeLine === "kanalizatsiya" && (
+            <ActiveMark layoutId="products-line-tab" className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-primary" />
+          )}
           Kanalizatsiya liniyasi
         </button>
       </div>
@@ -109,13 +128,19 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-3 py-1.5 text-[13px] font-medium rounded-full border transition-none ${
+              className={`relative px-3 py-1.5 text-[13px] font-medium rounded-full border transition-none ${
                 activeCategory === cat.id
-                  ? "bg-primary-light/20 border-primary text-primary-dark"
+                  ? "border-transparent text-primary-dark"
                   : "bg-surface border-border text-text-secondary hover:bg-surface-alt hover:text-primary-dark"
               }`}
             >
-              {cat.label}
+              {activeCategory === cat.id && (
+                <ActiveMark
+                  layoutId="products-category-chip"
+                  className="absolute -inset-px rounded-full border border-primary bg-primary-light/20"
+                />
+              )}
+              <span className="relative">{cat.label}</span>
             </button>
           ))}
         </div>

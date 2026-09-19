@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
-import { distances, durations, easings } from "@/lib/motion/tokens";
+import { durations, easings, tween } from "@/lib/motion/tokens";
 
 export interface DialogProps {
   open: boolean;
@@ -21,26 +21,29 @@ export interface DialogProps {
   /** Off for panels that already cover the viewport opaquely (Call Mode). */
   backdrop?: boolean;
   backdropClassName?: string;
-  /** "panel" is the lift-and-scale the command palette has always used;
-   * "fade" suits full-screen surfaces, where scaling looks like a glitch. */
+  /** "panel" fades and scales in (0.98 → 1); "fade" is opacity only and suits
+   * full-screen surfaces, where scaling looks like a glitch. */
   motionStyle?: "panel" | "fade";
   /** Return false to let a particular Escape press through — Call Mode uses
    * this to keep Escape meaning "clear the search box" while typing. */
   shouldCloseOnEscape?: (event: KeyboardEvent) => boolean;
 }
 
-// Only ever animated *to* on exit (enter starts from it), so it carries the
-// accelerating exit curve.
-const EXIT_TRANSITION = { duration: durations.instant, ease: easings.exit };
+// The one overlay enter/exit, exported so overlays that can't use <Dialog>
+// (ConfirmDialog, the Copilot sheet's backdrop) stay aligned with it. `hidden` is only ever animated *to* on exit
+// (enter starts from it), so it carries the accelerating exit curve;
+// `visible` carries the decelerating enter.
+const ENTER_TRANSITION = tween(durations.fast, easings.standard);
+const EXIT_TRANSITION = tween(durations.instant, easings.exit);
 
-const PANEL_VARIANTS = {
-  hidden: { opacity: 0, scale: 0.97, y: -distances.lift, transition: EXIT_TRANSITION },
-  visible: { opacity: 1, scale: 1, y: 0 },
+export const overlayPanelVariants = {
+  hidden: { opacity: 0, scale: 0.98, transition: EXIT_TRANSITION },
+  visible: { opacity: 1, scale: 1, transition: ENTER_TRANSITION },
 };
 
-const FADE_VARIANTS = {
+export const overlayFadeVariants = {
   hidden: { opacity: 0, transition: EXIT_TRANSITION },
-  visible: { opacity: 1 },
+  visible: { opacity: 1, transition: ENTER_TRANSITION },
 };
 
 /**
@@ -84,7 +87,7 @@ export function Dialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose, shouldCloseOnEscape]);
 
-  const variants = motionStyle === "fade" ? FADE_VARIANTS : PANEL_VARIANTS;
+  const variants = motionStyle === "fade" ? overlayFadeVariants : overlayPanelVariants;
 
   return (
     <AnimatePresence>
@@ -94,10 +97,10 @@ export function Dialog({
             <m.div
               className={`absolute inset-0 ${backdropClassName}`}
               onClick={onClose}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: reduce ? 0 : durations.instant }}
+              initial={reduce ? false : "hidden"}
+              animate="visible"
+              exit={reduce ? undefined : "hidden"}
+              variants={overlayFadeVariants}
             />
           )}
           <m.div
@@ -111,7 +114,6 @@ export function Dialog({
             animate="visible"
             exit={reduce ? undefined : "hidden"}
             variants={variants}
-            transition={{ duration: reduce ? 0 : durations.instant, ease: easings.standard }}
           >
             {children}
           </m.div>

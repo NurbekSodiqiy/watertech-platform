@@ -1,4 +1,4 @@
-import { Link } from "@/i18n/routing";
+import { RangePickerLink } from "@/components/dashboard/RangePickerLink";
 import { buildRangePresets, type DashboardRange } from "@/lib/dashboard/range";
 
 /** Plain GET links, no client state — each preset sets from/to while
@@ -14,17 +14,12 @@ export function RangePicker({ range, basePath }: { range: DashboardRange; basePa
         const params = new URLSearchParams({ from: preset.from, to: preset.to });
         if (range.operatorEmail) params.set("op", range.operatorEmail);
         return (
-          <Link
+          <RangePickerLink
             key={preset.key}
             href={`${basePath}?${params.toString()}`}
-            className={`rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-              isActive
-                ? "border-primary bg-primary/10 text-primary-dark"
-                : "border-border bg-surface text-text-secondary hover:bg-surface-alt"
-            }`}
-          >
-            {preset.label}
-          </Link>
+            label={preset.label}
+            active={isActive}
+          />
         );
       })}
     </div>
