@@ -353,6 +353,38 @@
         "finale": {
           "caption": "Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz."
         }
+      },
+      "missionValues": {
+        "title": "Missiya va qadriyatlar",
+        "chapters": {
+          "missiya": {
+            "title": "Missiya",
+            "body": "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish."
+          },
+          "vizyon2030": {
+            "title": "Vizyon 2030",
+            "body": "2030-yilga kelib O'zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o'rnatilgan bo'lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish."
+          },
+          "no1": {
+            "title": "№1",
+            "body": "Markaziy Osiyoda muhandislik santexnikasi bo'yicha №1 ekspert-hamkorga aylanish."
+          },
+          "sifat": {
+            "title": "Sifat – bu vijdon",
+            "body": "Quvur devorlarining ichida nima borligini mijoz ko'rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz."
+          },
+          "innovatsiya": {
+            "title": "Innovatsiya",
+            "body": "Biz kechagi texnologiya bilan bugungi bozorni egallay olmaymiz."
+          },
+          "xavfsizlik": {
+            "title": "Xavfsizlik",
+            "body": "Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak."
+          }
+        },
+        "finale": {
+          "caption": "Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz."
+        }
       }
     }
   }

@@ -1,9 +1,10 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { AccentIconVisual } from "@/components/AccentIconVisual";
-import { AccentTextPanel } from "@/components/AccentTextPanel";
-import { Reveal } from "@/components/ui/Reveal";
-import { Parallax } from "@/components/ui/Parallax";
+import { PipelineChapter } from "@/components/story/PipelineChapter";
+import { PipelineStory } from "@/components/story/PipelineStory";
+import type { FittingKind } from "@/components/story/fittings";
+import type { Locale } from "@/i18n/routing";
 
 // Icons are inlined (stroke="currentColor") rather than referenced via
 // <img src>, because currentColor in an externally-loaded SVG resolves
@@ -86,8 +87,24 @@ function XavfsizlikIcon({ size = 40 }: { size?: number | string }) {
   );
 }
 
-export default function MissionValuesPage({ params: { locale } }: { params: { locale: string } }) {
+// Reading order down the pipeline; the scene alternates card sides itself.
+const CHAPTERS: { key: string; fitting: FittingKind; Icon: (props: { size?: number | string }) => JSX.Element }[] = [
+  { key: "missiya", fitting: "coupling", Icon: MissiyaIcon },
+  { key: "vizyon2030", fitting: "elbow", Icon: Vizyon2030Icon },
+  { key: "no1", fitting: "tee", Icon: No1Icon },
+  { key: "sifat", fitting: "valve", Icon: SifatIcon },
+  { key: "innovatsiya", fitting: "tee", Icon: InnovatsiyaIcon },
+  { key: "xavfsizlik", fitting: "coupling", Icon: XavfsizlikIcon },
+];
+
+export async function generateMetadata({ params: { locale } }: { params: { locale: Locale } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "pages.company.missionValues" });
+  return { title: t("title") };
+}
+
+export default async function MissionValuesPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.company.missionValues");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
@@ -95,108 +112,20 @@ export default function MissionValuesPage({ params: { locale } }: { params: { lo
       <div className="space-y-4">
         <Breadcrumbs path="/company/mission-values" />
         <div>
-          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Missiya va qadriyatlar</h1>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">{t("title")}</h1>
         </div>
       </div>
 
-      <div className="space-y-12 rounded-2xl border border-border bg-surface p-6 shadow-soft">
-
-        {/* Mission Section — image left, text right */}
-        <section>
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <Parallax rangePx={10}>
-              <AccentIconVisual icon={MissiyaIcon} />
-            </Parallax>
-            <AccentTextPanel>
-              <h2 className="mb-4 text-[20px] font-bold uppercase tracking-wider text-on-accent">Missiya</h2>
-              <p className="mb-3 text-[18px] font-medium leading-relaxed text-on-accent md:text-[22px]">
-                &quot;Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish.&quot;
-              </p>
-              <p className="text-[15px] italic text-on-accent/80">
-                Suv hayot manbai, biz esa uning xavfsiz oqimini ta&apos;minlaymiz.
-              </p>
-            </AccentTextPanel>
-          </Reveal>
-        </section>
-
-        {/* Vision Section */}
-        <section className="space-y-8">
-          <h2 className="text-[20px] font-bold text-primary-dark">Vizyon 2030</h2>
-
-          {/* "2030" — text left, image right */}
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentTextPanel className="md:order-1">
-              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-on-accent md:mx-0" />
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-on-accent">2030</span>
-              <p className="text-[14px] leading-relaxed text-on-accent/80">
-                2030-yilga kelib O&apos;zbekistondagi har 3 ta yangi qurilgan uyda bizning mahsulotimiz o&apos;rnatilgan bo&apos;lishi va MDH davlatlariga eksport hajmini 3 barobar oshirish.
-              </p>
-            </AccentTextPanel>
-            <Parallax rangePx={10} className="md:order-2">
-              <AccentIconVisual icon={Vizyon2030Icon} />
-            </Parallax>
-          </Reveal>
-
-          {/* "№1" — image left, text right */}
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <Parallax rangePx={10}>
-              <AccentIconVisual icon={No1Icon} />
-            </Parallax>
-            <AccentTextPanel>
-              <span className="mx-auto mb-2 block h-1 w-9 rounded-full bg-on-accent md:mx-0" />
-              <span className="mb-2 block text-[28px] font-extrabold leading-none text-on-accent">№1</span>
-              <p className="text-[14px] leading-relaxed text-on-accent/80">
-                Markaziy Osiyoda muhandislik santexnikasi bo&apos;yicha №1 ekspert-hamkorga aylanish.
-              </p>
-            </AccentTextPanel>
-          </Reveal>
-        </section>
-
-        {/* Values Section */}
-        <section className="space-y-8">
-          <h2 className="text-[20px] font-bold text-primary-dark">Qadriyatlarimiz</h2>
-
-          {/* Sifat — text left, image right */}
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentTextPanel className="md:order-1">
-              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Sifat – bu vijdon</h3>
-              <p className="text-[14px] leading-relaxed text-on-accent/80">
-                Quvur devorlarining ichida nima borligini mijoz ko&apos;rmaydi, lekin biz bilamiz. Biz nuqsonli mahsulotni chiqarmaymiz.
-              </p>
-            </AccentTextPanel>
-            <Parallax rangePx={10} className="md:order-2">
-              <AccentIconVisual icon={SifatIcon} />
-            </Parallax>
-          </Reveal>
-
-          {/* Innovatsiya — image left, text right */}
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <Parallax rangePx={10}>
-              <AccentIconVisual icon={InnovatsiyaIcon} />
-            </Parallax>
-            <AccentTextPanel>
-              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Innovatsiya</h3>
-              <p className="text-[14px] leading-relaxed text-on-accent/80">
-                Biz kechagi texnologiya bilan bugungi bozorni egallay olmaymiz.
-              </p>
-            </AccentTextPanel>
-          </Reveal>
-
-          {/* Xavfsizlik — text left, image right */}
-          <Reveal className="grid grid-cols-1 items-stretch overflow-hidden rounded-2xl border border-border shadow-sm md:grid-cols-2">
-            <AccentTextPanel className="md:order-1">
-              <h3 className="mb-2 text-[16px] font-bold text-on-accent">Xavfsizlik</h3>
-              <p className="text-[14px] leading-relaxed text-on-accent/80">
-                Bizning mahsulotimiz o&apos;rnatilgan joyda suv toshqini bo&apos;lmasligi kerak.
-              </p>
-            </AccentTextPanel>
-            <Parallax rangePx={10} className="md:order-2">
-              <AccentIconVisual icon={XavfsizlikIcon} />
-            </Parallax>
-          </Reveal>
-        </section>
-
-      </div>
+      <PipelineStory finale={{ kind: "tank", caption: t("finale.caption") }}>
+        {CHAPTERS.map(({ key, fitting, Icon }) => (
+          <PipelineChapter key={key} fitting={fitting} title={t(`chapters.${key}.title`)}>
+            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-accent/20 bg-accent/[0.08] text-accent dark:bg-accent/[0.12]">
+              <Icon size={20} />
+            </span>
+            <p>{t(`chapters.${key}.body`)}</p>
+          </PipelineChapter>
+        ))}
+      </PipelineStory>
     </div>
   );
 }
