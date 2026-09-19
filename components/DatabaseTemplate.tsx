@@ -34,9 +34,14 @@ export interface DbColumn<T> {
    * "longtext" is for prose-length cell values (a full sentence or more)
    * that need to actually be read at a glance — larger, higher-contrast
    * text plus a copy-to-clipboard button, instead of the compact table
-   * styling meant for short values like prices or stock status. */
-  type?: "text" | "stock" | "link" | "longtext";
+   * styling meant for short values like prices or stock status.
+   * "phone" renders a tel: link plus a copy button; "messenger" links
+   * Telegram-style handles to t.me and shows anything else as plain text. */
+  type?: "text" | "stock" | "link" | "longtext" | "phone" | "messenger";
 }
+
+/** Telegram usernames: 5–32 characters, letters/digits/underscore, starting with a letter. */
+const TELEGRAM_HANDLE = /^@?([A-Za-z][A-Za-z0-9_]{4,31})$/;
 
 export interface DbFilter {
   key: string;
@@ -207,6 +212,34 @@ export function DatabaseTemplate<T extends { id: string }>({
                         ) : (
                           <span className="text-text-secondary/50">—</span>
                         )
+                      ) : col.type === "phone" ? (
+                        row[col.key] ? (
+                          <div className="flex items-center gap-2">
+                            <a href={`tel:${String(row[col.key]).replace(/[^\d+]/g, "")}`} className="whitespace-nowrap text-primary hover:underline">
+                              {String(row[col.key])}
+                            </a>
+                            <CopyButton value={String(row[col.key])} />
+                          </div>
+                        ) : (
+                          <span className="text-text-secondary/50">—</span>
+                        )
+                      ) : col.type === "messenger" ? (
+                        (() => {
+                          const value = String(row[col.key] ?? "");
+                          const handle = TELEGRAM_HANDLE.exec(value)?.[1];
+                          return handle ? (
+                            <a
+                              href={`https://t.me/${handle}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {value}
+                            </a>
+                          ) : (
+                            value || <span className="text-text-secondary/50">—</span>
+                          );
+                        })()
                       ) : linkBase && col === columns[0] ? (
                         <Link
                           href={`${linkBase}/${row[linkKeyField]}`}

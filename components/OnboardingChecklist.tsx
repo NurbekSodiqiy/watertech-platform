@@ -2,13 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { Lightbulb, CheckSquare, Square, ChevronDown, Calendar } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { CountUp } from "@/components/motion/CountUp";
+import { OnboardingNode } from "@/components/onboarding/OnboardingNode";
+import { OnboardingRail } from "@/components/onboarding/OnboardingRail";
+import type { FittingKind } from "@/components/story/fittings";
 import { useTrack } from "@/hooks/useTrack";
-import { onboardingDays, onboardingSummaryChecklist } from "@/lib/content/onboarding";
+import { onboardingDays, onboardingSummaryChecklist, type OnboardingDay } from "@/lib/content/onboarding";
 
 const CHECKLIST_KEY = "onboarding_checklist_v2";
 const LEGACY_CHECKLIST_KEY = "onboarding_checklist";
 
+/** One fitting per day, in day order. */
+const DAY_FITTINGS: FittingKind[] = ["coupling", "elbow", "tee", "valve"];
+
+/** The only checkable items are the summary checklist, one per day (`summary-d<day>`). */
+const summaryIdForDay = (day: number): string => `summary-d${day}`;
+
 export function OnboardingChecklist() {
+  const t = useTranslations("pages.company.onboarding");
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const [openDay, setOpenDay] = useState<number | null>(1);
@@ -46,6 +58,67 @@ export function OnboardingChecklist() {
     setOpenDay(openDay === day ? null : day);
   };
 
+  // Counted over the current summary items only, so stale keys in storage
+  // (legacy or renamed ids) cannot push the count past the total.
+  const total = onboardingSummaryChecklist.length;
+  const checkedCount = onboardingSummaryChecklist.filter((item) => checkedItems[item.id]).length;
+  const progress = total === 0 ? 0 : checkedCount / total;
+
+  const renderDay = (dayData: OnboardingDay, index: number) => {
+    const isOpen = openDay === dayData.day;
+    return (
+      <div key={dayData.day} className="relative">
+        <OnboardingNode
+          kind={DAY_FITTINGS[index % DAY_FITTINGS.length]}
+          seated={!!checkedItems[summaryIdForDay(dayData.day)]}
+        />
+        <div className="overflow-hidden rounded-2xl border border-border shadow-soft">
+          <button
+            onClick={() => toggleDay(dayData.day)}
+            className="flex w-full items-stretch text-left"
+          >
+            <div className="flex shrink-0 items-center justify-center bg-surface px-5 py-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <Calendar size={20} />
+              </div>
+            </div>
+            <div className="flex flex-1 items-center justify-between gap-4 bg-accent px-5 py-5 transition-colors hover:bg-accent-hover">
+              <h2 className="text-[16px] font-bold text-on-accent">
+                {t("dayHeading", { day: dayData.day, title: dayData.title })}
+              </h2>
+              <ChevronDown
+                size={20}
+                className={`shrink-0 text-on-accent transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+              />
+            </div>
+          </button>
+
+          {isOpen && (
+            <div className="border-t border-border bg-surface-alt p-6">
+              <p className="mb-4 text-[15px] text-primary-dark">
+                <strong>{t("objective")}</strong> {dayData.objective}
+              </p>
+              <ul className="space-y-2.5">
+                {dayData.items.map((item) => (
+                  <li key={item.id} className="flex gap-2.5 text-[14.5px] leading-relaxed text-text-secondary">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                    <span>
+                      {item.emphasis && <strong>{item.emphasis} </strong>}
+                      {item.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const leadingDays = onboardingDays.slice(0, -1);
+  const lastDay = onboardingDays[onboardingDays.length - 1];
+
   return (
     <div className="space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-soft">
 
@@ -53,13 +126,20 @@ export function OnboardingChecklist() {
       <div className="flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-accent">
         <Lightbulb className="mt-0.5 shrink-0" size={20} />
         <p className="text-[15px] leading-relaxed">
-          <strong>Xush kelibsiz!</strong> Ushbu 4 kunlik rejani bajaring va jamoamizning to&apos;laqonli a&apos;zosiga aylaning.
+          <strong>{t("welcomeTitle")}</strong> {t("welcomeBody", { days: onboardingDays.length })}
         </p>
       </div>
 
       {/* Checklist */}
       <section>
-        <h2 className="mb-4 text-[18px] font-bold text-primary-dark">4 kunlik checklist</h2>
+        <div className="mb-4 flex items-baseline gap-3">
+          <h2 className="text-[18px] font-bold text-primary-dark">
+            {t("checklistHeading", { days: onboardingDays.length })}
+          </h2>
+          <p className="text-[15px] font-semibold text-accent">
+            <CountUp value={checkedCount} /> / {total}
+          </p>
+        </div>
         {mounted ? (
           <div className="space-y-2">
             {onboardingSummaryChecklist.map((item) => {
@@ -92,52 +172,22 @@ export function OnboardingChecklist() {
       <hr className="border-border" />
 
       {/* Call operator 4-day program — merged in from the former /company/onboarding/call-operator page */}
-      <section className="space-y-4">
-        {onboardingDays.map((dayData) => {
-          const isOpen = openDay === dayData.day;
-          return (
-            <div key={dayData.day} className="overflow-hidden rounded-2xl border border-border shadow-soft">
-              <button
-                onClick={() => toggleDay(dayData.day)}
-                className="flex w-full items-stretch text-left"
-              >
-                <div className="flex shrink-0 items-center justify-center bg-surface px-5 py-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                    <Calendar size={20} />
-                  </div>
-                </div>
-                <div className="flex flex-1 items-center justify-between gap-4 bg-accent px-5 py-5 transition-colors hover:bg-accent-hover">
-                  <h2 className="text-[16px] font-bold text-on-accent">
-                    {dayData.day}-kun: {dayData.title}
-                  </h2>
-                  <ChevronDown
-                    size={20}
-                    className={`shrink-0 text-on-accent transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                  />
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-border bg-surface-alt p-6">
-                  <p className="mb-4 text-[15px] text-primary-dark">
-                    <strong>Maqsad:</strong> {dayData.objective}
-                  </p>
-                  <ul className="space-y-2.5">
-                    {dayData.items.map((item) => (
-                      <li key={item.id} className="flex gap-2.5 text-[14.5px] leading-relaxed text-text-secondary">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                        <span>
-                          {item.emphasis && <strong>{item.emphasis} </strong>}
-                          {item.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {/* From md up the days hang off a completion rail: the pipe runs from the
+          first fitting's centre to the last one's. Rows before the last live in
+          the wrapper the rail is sized against (its pb-4 is the gap to the last
+          row; 40px = the last fitting's centre below that row's top). */}
+      <section className="md:pl-16">
+        {leadingDays.length > 0 && (
+          <div className="relative flex flex-col gap-4 pb-4">
+            {/* The svg is a replaced element and would not stretch between top and
+                bottom on its own, so this box sizes it. */}
+            <div className="pointer-events-none absolute -left-[50px] -bottom-10 top-10 hidden w-3 md:block">
+              <OnboardingRail progress={progress} className="h-full w-full" />
             </div>
-          );
-        })}
+            {leadingDays.map(renderDay)}
+          </div>
+        )}
+        {lastDay && renderDay(lastDay, leadingDays.length)}
       </section>
 
     </div>

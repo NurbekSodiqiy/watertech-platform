@@ -385,6 +385,46 @@
         "finale": {
           "caption": "Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz."
         }
+      },
+      "onboarding": {
+        "welcomeTitle": "Xush kelibsiz!",
+        "welcomeBody": "Ushbu {days} kunlik rejani bajaring va jamoamizning to'laqonli a'zosiga aylaning.",
+        "checklistHeading": "{days} kunlik checklist",
+        "dayHeading": "{day}-kun: {title}",
+        "objective": "Maqsad:"
+      },
+      "internalRules": {
+        "title": "Ichki qoidalar",
+        "comingSoon": {
+          "description": "Bu bo'lim tez orada to'ldiriladi. Unda quyidagilar bo'ladi:",
+          "items": {
+            "workflow": "Ish tartibi va kundalik ish jadvali",
+            "communication": "Mijozlar va hamkasblar bilan muloqot qoidalari",
+            "approvals": "Chegirma va bitimlarni tasdiqlash tartibi"
+          }
+        }
+      },
+      "factoryTour": {
+        "title": "Zavod bo'ylab sayohat",
+        "comingSoon": {
+          "description": "Bu bo'lim tez orada to'ldiriladi. Unda quyidagilar bo'ladi:",
+          "items": {
+            "production": "Ishlab chiqarish liniyalari",
+            "quality": "Sifat nazorati va sinov jarayoni",
+            "warehouse": "Tayyor mahsulot ombori va jo'natish"
+          }
+        }
+      },
+      "contacts": {
+        "title": "Ichki kontaktlar",
+        "description": "Qaysi masala bo'yicha kimga murojaat qilish — ichki eskalatsiya yo'nalgichi.",
+        "columns": {
+          "name": "Ism",
+          "role": "Lavozim",
+          "topic": "Mavzu",
+          "phone": "Telefon",
+          "messenger": "Messenjer"
+        }
       }
     }
   }
