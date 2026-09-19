@@ -10,6 +10,8 @@ import {
   staggerStep,
   staggers,
   tween,
+  unitless,
+  UNITLESS_REST_DELTA,
 } from "@/lib/motion/tokens";
 
 describe("motion tokens", () => {
@@ -41,6 +43,15 @@ describe("motion tokens", () => {
   it("keeps the fluid spring softer than the snappy one", () => {
     const naturalFrequency = (s: { stiffness: number; mass: number }) => Math.sqrt(s.stiffness / s.mass);
     expect(naturalFrequency(springs.fluid)).toBeLessThan(naturalFrequency(springs.snappy));
+  });
+
+  it("derives unitless springs with the same motion and a fine restDelta", () => {
+    const seat = unitless(springs.snappy);
+    expect(seat).toEqual({ ...springs.snappy, restDelta: UNITLESS_REST_DELTA });
+    expect(dampingRatio(seat)).toBe(dampingRatio(springs.snappy));
+    // Must settle well inside a 0 → 1 travel, unlike snappy's pixel-sized 0.5.
+    expect(seat.restDelta).toBeLessThan(0.01);
+    expect(springs.snappy.restDelta).toBe(0.5);
   });
 
   it("keeps travel distances short", () => {

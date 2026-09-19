@@ -1,8 +1,8 @@
 import type { ElementType } from "react";
 
 /**
- * Shared icon-container visual used only by /company/mission-values and
- * /company/about — the plain pale-white zone + small accent-tinted badge
+ * Icon-container visual used only by /company/mission-values
+ * — the plain pale-white zone + small accent-tinted badge
  * convention. This is one of two edge-to-edge zones tiled inside a parent
  * grid that owns the card's own border/radius/overflow-hidden clip — so this
  * zone has no border or radius of its own (that would show as a seam against

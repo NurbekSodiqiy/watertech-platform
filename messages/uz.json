@@ -321,5 +321,39 @@
       "reload": "Qayta yuklash",
       "rateLimitedHint": "{seconds} soniyadan keyin qayta urinib ko'ring"
     }
+  },
+  "pages": {
+    "company": {
+      "about": {
+        "title": "Kompaniya haqida",
+        "badges": {
+          "since2021": "2021-yildan buyon",
+          "germanTechnology": "Germaniya texnologiyasi",
+          "internationalStandards": "Xalqaro standartlar",
+          "export": "Xorijga eksport"
+        },
+        "chapters": {
+          "about": {
+            "title": "Biz haqimizda",
+            "body": "WATERTECH – bu 2021-yildan buyon O'zbekistonda faoliyat yuritayotgan, kanalizatsiya tizimlari uchun truba va fitinglar ishlab chiqaruvchi mahalliy brenddir. Kompaniyamiz o'z faoliyatini Germaniya texnologiyasi asosida tashkil etgan bo'lib, har bir mahsulotda sifat, ishonchlilik va uzoq muddatli xizmat kafolatini ta'minlaydi."
+          },
+          "production": {
+            "title": "Ishlab chiqarish",
+            "body": "Ishlab chiqarish jarayonida biz yuqori sifatli polipropilen xom ashyolaridan foydalanamiz. Natijada WATERTECH truba va fitinglari nafaqat mahalliy bozorda, balki xorijiy bozorlarda ham o'z o'rnini topmoqda."
+          },
+          "goal": {
+            "title": "Maqsadimiz",
+            "body": "Kompaniyamizning asosiy maqsadi – mijozlarga zamonaviy, chidamli va samarali kanalizatsiya tizimlarini taqdim etishdir. Har bir mahsulot texnik talab va xalqaro standartlarga muvofiq sinovdan o'tkaziladi."
+          },
+          "whyUs": {
+            "title": "Nega WATERTECH",
+            "body": "WATERTECH – bu yangilik, texnologiya va ishonch uyg'unlashgan brend. Biz mijozlarimiz bilan uzoq muddatli hamkorlikni qadrlaymiz va har bir loyiha uchun eng optimal yechimlarni taklif etamiz."
+          }
+        },
+        "finale": {
+          "caption": "Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz."
+        }
+      }
+    }
   }
 }

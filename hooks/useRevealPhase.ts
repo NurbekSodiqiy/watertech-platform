@@ -18,6 +18,10 @@ export type RevealPhase = "static" | "armed" | "revealed";
 export interface RevealPhaseOptions {
   amount?: UseInViewOptions["amount"];
   margin?: UseInViewOptions["margin"];
+  /** Reveal when this turns true instead of when the element scrolls into
+   * view (e.g. when a pipeline fitting seats). Arming is unchanged: content
+   * already visible at mount still stays put. */
+  when?: boolean;
 }
 
 /**
@@ -29,11 +33,12 @@ export interface RevealPhaseOptions {
  * can be seen, then revealed when it scrolls in.
  */
 export function useRevealPhase(ref: RefObject<Element>, options: RevealPhaseOptions = {}): RevealPhase {
-  const { amount = 0.2, margin = "0px 0px -10% 0px" } = options;
+  const { amount = 0.2, margin = "0px 0px -10% 0px", when } = options;
   const reduce = useReducedMotion();
   const ready = useMotionReady();
   const [phase, setPhase] = useState<RevealPhase>("static");
   const inView = useInView(ref, { once: true, amount, margin });
+  const trigger = when ?? inView;
 
   // Arms only once the animation features are loaded (see useMotionReady),
   // measuring position at that moment; a layout effect, so the switch to the
@@ -51,8 +56,8 @@ export function useRevealPhase(ref: RefObject<Element>, options: RevealPhaseOpti
   }, [ref, reduce, ready]);
 
   useEffect(() => {
-    if (phase === "armed" && inView) setPhase("revealed");
-  }, [phase, inView]);
+    if (phase === "armed" && trigger) setPhase("revealed");
+  }, [phase, trigger]);
 
   return phase;
 }

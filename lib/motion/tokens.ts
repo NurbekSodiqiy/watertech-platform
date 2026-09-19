@@ -56,6 +56,15 @@ export const springs: {
   snappy: { type: "spring", stiffness: 500, damping: 45, mass: 1, restDelta: 0.5 },
 } as const;
 
+/** restDelta for springs on unitless values (scale, 0 → 1 progress). */
+export const UNITLESS_REST_DELTA = 0.001;
+
+/** The same spring for a unitless value. A pixel-sized restDelta such as
+ * snappy's 0.5 would count a 0 → 1 spring as settled halfway and jump. */
+export function unitless(spring: SpringPreset): SpringPreset {
+  return { ...spring, restDelta: UNITLESS_REST_DELTA };
+}
+
 /** Pixels. Reveals travel a short distance only — never 20px or more. */
 export const distances: {
   readonly nudge: number;
