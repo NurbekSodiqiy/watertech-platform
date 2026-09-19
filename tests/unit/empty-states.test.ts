@@ -42,6 +42,7 @@ const NO_CTA: ReadonlySet<EmptyStateKey> = new Set([
   "dashboardNoStale",
   "dashboardNoMissingRu",
   "dashboardNoFeedback",
+  "dashboardNoOperators",
   "versionsNone",
 ]);
 

@@ -21,14 +21,9 @@ import { EmptyState } from "@/components/EmptyState";
 import { EMPTY_STATES } from "@/lib/empty-states";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { useTrack } from "@/hooks/useTrack";
+import { useUserState } from "@/hooks/useUserState";
+import { scriptsPositionKey } from "@/lib/user-state/keys";
 import { noTransition, springs } from "@/lib/motion/tokens";
-
-// Last opened script/stage — restored on mount from the URL (?script=&stage=)
-// if present, else from localStorage, so an F5 reload or the browser's back
-// button drops the operator back where they were instead of the first stage
-// of the first script every time.
-const STORAGE_SCRIPT_KEY = "watertech-scripts-last-script";
-const STORAGE_STAGE_KEY = "watertech-scripts-last-stage";
 
 /** Sliding active tab, same pattern as Sidebar's ActivePill. */
 function TabPill() {
@@ -157,39 +152,64 @@ function ScriptsPageContentBody() {
     track(callModeOn ? "call_mode_on" : "call_mode_off");
   }, [callModeOn, track]);
 
-  // Fallback restore from localStorage — only when the URL didn't already
-  // specify a position (e.g. the operator navigated here fresh from the
-  // sidebar rather than reloading/returning to a specific stage's link).
-  // Mount-only: a `replace` so it doesn't create an extra history entry.
-  useEffect(() => {
-    if (scriptParam) return;
-    try {
-      const savedScriptId = localStorage.getItem(STORAGE_SCRIPT_KEY);
-      const savedStageId = localStorage.getItem(STORAGE_STAGE_KEY);
-      const script = savedScriptId ? scripts.find((s) => s.id === savedScriptId) : undefined;
-      if (!script) return;
-      const stage = savedStageId ? script.stages.find((s) => s.id === savedStageId) : undefined;
-      setUrlState({ script: script.id, stage: stage?.id ?? null }, "replace");
-    } catch {
-      // localStorage unavailable — position just won't be restored
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Last opened script/stage, now per user rather than per browser: an
+  // operator who starts on the office desktop and continues on a laptop lands
+  // in the same place. The old `watertech-scripts-last-*` localStorage values
+  // are imported once on first run.
+  const [savedPosition, setSavedPosition, positionStatus] = useUserState(
+    scriptsPositionKey.key,
+    scriptsPositionKey.schema,
+    scriptsPositionKey.defaultValue,
+    scriptsPositionKey
+  );
 
-  // Keep localStorage in sync with the current script/stage whenever the
-  // operator is on the scripts tab, so a later fresh visit (no URL params
-  // yet) lands back in the same place. No URL work here — the URL is
-  // already authoritative and kept up to date by setUrlState.
+  // Fallback restore — only when the URL didn't already specify a position
+  // (e.g. the operator navigated here fresh from the sidebar rather than
+  // reloading/returning to a specific stage's link). The URL still wins, and
+  // the restore happens exactly once: the ref guard keeps a server value that
+  // arrives a moment later from yanking the operator somewhere else mid-read.
+  // A `replace`, so it doesn't create an extra history entry.
+  const restoredPosition = useRef(false);
+  // The position the restore just put in the URL — the sync effect below
+  // waits for the URL to actually carry it before it starts saving again.
+  const awaitingUrl = useRef<{ scriptId: string; stageId: string | null } | null>(null);
+  useEffect(() => {
+    if (restoredPosition.current) return;
+    if (scriptParam) {
+      restoredPosition.current = true;
+      return;
+    }
+    if (positionStatus === "loading") return;
+    restoredPosition.current = true;
+    if (!savedPosition) return;
+    const script = scripts.find((s) => s.id === savedPosition.scriptId);
+    if (!script) return;
+    const stage = savedPosition.stageId ? script.stages.find((s) => s.id === savedPosition.stageId) : undefined;
+    awaitingUrl.current = { scriptId: script.id, stageId: stage?.id ?? null };
+    setUrlState({ script: script.id, stage: stage?.id ?? null }, "replace");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positionStatus, savedPosition, scriptParam]);
+
+  // Keep the saved position in sync with the current script/stage whenever
+  // the operator is on the scripts tab, so a later fresh visit (no URL params
+  // yet) lands back in the same place. No URL work here — the URL is already
+  // authoritative and kept up to date by setUrlState. Writing only on an
+  // actual change keeps the debounced storage/network work off unrelated
+  // renders.
   useEffect(() => {
     if (activeTab !== "sales_scripts") return;
-    try {
-      localStorage.setItem(STORAGE_SCRIPT_KEY, activeSalesScript.id);
-      if (selectedScriptStage) localStorage.setItem(STORAGE_STAGE_KEY, selectedScriptStage.id);
-      else localStorage.removeItem(STORAGE_STAGE_KEY);
-    } catch {
-      // localStorage unavailable — position just won't persist
+    // Never before the restore above has had its turn — on a fresh visit the
+    // first render already has scripts[0] selected, and writing that would
+    // erase the position being restored.
+    if (!restoredPosition.current) return;
+    const stageId = selectedScriptStage?.id ?? null;
+    if (awaitingUrl.current) {
+      if (awaitingUrl.current.scriptId !== activeSalesScript.id || awaitingUrl.current.stageId !== stageId) return;
+      awaitingUrl.current = null;
     }
-  }, [activeTab, activeSalesScript.id, selectedScriptStage]);
+    if (savedPosition?.scriptId === activeSalesScript.id && savedPosition.stageId === stageId) return;
+    setSavedPosition({ scriptId: activeSalesScript.id, stageId });
+  }, [activeTab, activeSalesScript.id, selectedScriptStage, savedPosition, setSavedPosition]);
 
   // The left ("TV screen") panel scrolls internally now instead of the
   // whole window — resetting it to the top on selection change no longer

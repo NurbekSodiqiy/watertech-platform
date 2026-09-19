@@ -1,5 +1,6 @@
 // Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17,
-// rate_limits / rate_limit_hit added by hand from 0008 on 2026-09-18 (Supabase CLI unavailable locally).
+// rate_limits / rate_limit_hit added by hand from 0008 on 2026-09-18, user_state by hand
+// from 0009 on 2026-09-19 (Supabase CLI unavailable locally: SUPABASE_PROJECT_ID unset).
 //
 // allowed_users and telemetry_events are NOT created by any migration in
 // supabase/migrations (they predate the migrations folder). Their columns are
@@ -654,6 +655,27 @@ export type Database = {
           ts?: string
           type?: string
           user_email?: string
+        }
+        Relationships: []
+      }
+      user_state: {
+        Row: {
+          key: string
+          updated_at: string
+          user_email: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          user_email?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          user_email?: string
+          value?: Json
         }
         Relationships: []
       }

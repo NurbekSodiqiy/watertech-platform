@@ -1,5 +1,8 @@
 import "server-only";
 import { resolveEntityLabel, resolveAdminHref, type TelemetryRow, type EntityLabelMaps } from "@/lib/telemetry/aggregate";
+import { createClient } from "@/lib/supabase/server";
+import { ONBOARDING_KEY, onboardingStateSchema } from "@/lib/user-state/keys";
+import { onboardingSummaryChecklist } from "@/lib/content/onboarding";
 
 export interface NotHelpfulGroup {
   path: string;
@@ -92,4 +95,65 @@ export function aggregateMostViewed(rows: TelemetryRow[], maps: EntityLabelMaps,
     }
   }
   return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
+export interface OnboardingProgressRow {
+  email: string;
+  completed: number;
+  total: number;
+  /** When that operator last ticked something, or null if they never have. */
+  updatedAtIso: string | null;
+}
+
+/** One row per operator on the allow-list — including the ones who have never
+ * opened the checklist, which is exactly who a manager is looking for — with
+ * the least advanced first. Progress is counted over the checklist's current
+ * items only, the same way OnboardingChecklist counts it, so a renamed item id
+ * left behind in a stored value can never push the count past the total. */
+export function aggregateOnboardingProgress(
+  operators: readonly string[],
+  states: readonly { user_email: string; value: unknown; updated_at: string }[],
+  itemIds: readonly string[]
+): OnboardingProgressRow[] {
+  const byEmail = new Map(states.map((state) => [state.user_email, state]));
+
+  return operators
+    .map((email) => {
+      const state = byEmail.get(email);
+      // Written by the operator's own browser, so it is validated here like
+      // anywhere else a stored value is read (lib/user-state/merge.ts).
+      const parsed = state ? onboardingStateSchema.safeParse(state.value) : null;
+      if (!parsed?.success) return { email, completed: 0, total: itemIds.length, updatedAtIso: null };
+      return {
+        email,
+        completed: itemIds.filter((id) => parsed.data[id] === true).length,
+        total: itemIds.length,
+        updatedAtIso: state?.updated_at ?? null,
+      };
+    })
+    .sort((a, b) => a.completed - b.completed || a.email.localeCompare(b.email));
+}
+
+/** Manager-only read: the "user_state_manager_select_all" policy in
+ * 0009_user_state.sql is what lets a manager's own session see every
+ * operator's row, the same way OperatorFilter reads allowed_users under 0005.
+ * The caller has already checked the role — a session without it simply gets
+ * nothing back. */
+export async function fetchOnboardingProgress(operatorEmail: string | null): Promise<OnboardingProgressRow[]> {
+  const supabase = createClient();
+
+  const [operatorsResult, statesResult] = await Promise.all([
+    supabase.from("allowed_users").select("email").eq("role", "operator").order("email"),
+    supabase.from("user_state").select("user_email, value, updated_at").eq("key", ONBOARDING_KEY),
+  ]);
+
+  const operators = (operatorsResult.data ?? [])
+    .map((row) => row.email)
+    .filter((email) => !operatorEmail || email === operatorEmail);
+
+  return aggregateOnboardingProgress(
+    operators,
+    statesResult.data ?? [],
+    onboardingSummaryChecklist.map((item) => item.id)
+  );
 }

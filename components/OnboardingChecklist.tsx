@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Lightbulb, CheckSquare, Square, ChevronDown, Calendar } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CountUp } from "@/components/motion/CountUp";
@@ -8,10 +8,15 @@ import { OnboardingNode } from "@/components/onboarding/OnboardingNode";
 import { OnboardingRail } from "@/components/onboarding/OnboardingRail";
 import type { FittingKind } from "@/components/story/fittings";
 import { useTrack } from "@/hooks/useTrack";
+import { useUserState } from "@/hooks/useUserState";
+import { onboardingKeyDef } from "@/lib/user-state/keys";
 import { onboardingDays, onboardingSummaryChecklist, type OnboardingDay } from "@/lib/content/onboarding";
 
-const CHECKLIST_KEY = "onboarding_checklist_v2";
-const LEGACY_CHECKLIST_KEY = "onboarding_checklist";
+/** Module level so the definition — and with it the setter and the hydration
+ * effect inside useUserState — stays identical across renders. The item ids
+ * are only needed to import the oldest storage format, which was keyed by
+ * each item's index in this same array (see lib/user-state/legacy.ts). */
+const ONBOARDING_STATE = onboardingKeyDef(onboardingSummaryChecklist.map((item) => item.id));
 
 /** One fitting per day, in day order. */
 const DAY_FITTINGS: FittingKind[] = ["coupling", "elbow", "tee", "valve"];
@@ -21,37 +26,22 @@ const summaryIdForDay = (day: number): string => `summary-d${day}`;
 
 export function OnboardingChecklist() {
   const t = useTranslations("pages.company.onboarding");
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
-  const [mounted, setMounted] = useState(false);
+  // Synced per user, not per browser: progress follows the operator to another
+  // device, and their manager can see it on /dashboard/quality. The old
+  // `onboarding_checklist_v2` localStorage value is imported once on first run.
+  const [checkedItems, setCheckedItems, status] = useUserState(
+    ONBOARDING_STATE.key,
+    ONBOARDING_STATE.schema,
+    ONBOARDING_STATE.defaultValue,
+    ONBOARDING_STATE
+  );
   const [openDay, setOpenDay] = useState<number | null>(1);
-
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const saved = localStorage.getItem(CHECKLIST_KEY);
-      if (saved) {
-        setCheckedItems(JSON.parse(saved));
-        return;
-      }
-      const legacy = localStorage.getItem(LEGACY_CHECKLIST_KEY);
-      if (legacy) {
-        const legacyByIndex: Record<number, boolean> = JSON.parse(legacy);
-        const migrated: Record<string, boolean> = {};
-        onboardingSummaryChecklist.forEach((item, index) => {
-          if (legacyByIndex[index]) migrated[item.id] = true;
-        });
-        setCheckedItems(migrated);
-        localStorage.setItem(CHECKLIST_KEY, JSON.stringify(migrated));
-      }
-    } catch {}
-  }, []);
 
   const track = useTrack();
   const toggleCheck = (id: string) => {
-    const newChecked = { ...checkedItems, [id]: !checkedItems[id] };
-    setCheckedItems(newChecked);
-    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(newChecked));
-    track("checklist_toggle", { entityType: "onboarding_item", entityId: id, meta: { checked: newChecked[id] } });
+    const checked = !checkedItems[id];
+    setCheckedItems({ ...checkedItems, [id]: checked });
+    track("checklist_toggle", { entityType: "onboarding_item", entityId: id, meta: { checked } });
   };
 
   const toggleDay = (day: number) => {
@@ -140,7 +130,7 @@ export function OnboardingChecklist() {
             <CountUp value={checkedCount} /> / {total}
           </p>
         </div>
-        {mounted ? (
+        {status !== "loading" ? (
           <div className="space-y-2">
             {onboardingSummaryChecklist.map((item) => {
               const isChecked = !!checkedItems[item.id];

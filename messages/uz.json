@@ -199,6 +199,10 @@
       "title": "Salbiy fikr yo'q",
       "reason": "Hech kim \"Foydali emas\" deb belgilamagan"
     },
+    "dashboardNoOperators": {
+      "title": "Operatorlar ro'yxati bo'sh",
+      "reason": "Ruxsat ro'yxatida hali birorta operator yo'q"
+    },
     "notificationsNone": {
       "title": "Bildirishnomalar yo'q",
       "reason": "Nashr qorovuli ham, kunlik kontent tekshiruvi ham hozircha hech narsa topmadi",
@@ -320,6 +324,15 @@
       "unauthorizedHint": "Sahifani qayta yuklab, qaytadan kiring",
       "reload": "Qayta yuklash",
       "rateLimitedHint": "{seconds} soniyadan keyin qayta urinib ko'ring"
+    }
+  },
+  "dashboard": {
+    "onboardingProgress": {
+      "heading": "Onboarding jarayoni",
+      "operator": "Operator",
+      "progress": "Bajarilgan",
+      "lastUpdate": "Oxirgi yangilanish",
+      "never": "Boshlanmagan"
     }
   },
   "pages": {

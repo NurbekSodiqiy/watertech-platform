@@ -12,7 +12,9 @@ import { collectOperatorText } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
 import { buildSearchDocs, createSearcher, type SearchNav } from "@/lib/search";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
-import { CHECKLIST_KEY_PREFIX, getTodayKey } from "@/components/DailyTimeline";
+import { useNow } from "@/hooks/useNow";
+import { useUserState } from "@/hooks/useUserState";
+import { dailyKeyForDay, dateKey } from "@/lib/user-state/keys";
 import { dailySchedule } from "@/lib/content/daily-schedule";
 import { Dialog } from "@/components/ui/Dialog";
 import { setCallModeOpen } from "@/components/copilot/call-mode-store";
@@ -59,12 +61,15 @@ export function CallModeOverlay({
   const searcher = useMemo(() => createSearcher(buildSearchDocs(content)), [content]);
   const [elapsed, setElapsed] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  // Read once, on open — this is a display-only glance at "how far into
-  // today's plan am I", not a live subscription to DailyTimeline's own
-  // state (which lives in a different part of the tree entirely, on the
-  // dashboard page). Same localStorage key DailyTimeline itself reads/
-  // writes, so it reflects whatever was last saved there.
-  const [checklistDone, setChecklistDone] = useState(0);
+  // A display-only glance at "how far into today's plan am I". Same
+  // user_state key DailyTimeline reads and writes, so the two now share one
+  // store rather than passing a number through localStorage: whichever tab or
+  // device last ticked something is what shows here.
+  const now = useNow();
+  const day = now ? dateKey(now) : null;
+  const dailyState = useMemo(() => dailyKeyForDay(day ?? "1970-01-01"), [day]);
+  const [daily] = useUserState(day ? dailyState.key : null, dailyState.schema, dailyState.defaultValue, dailyState);
+  const checklistDone = Object.values(daily.checked).filter(Boolean).length;
 
   // Lets AppShell's floating Copilot button step aside while this covers the screen.
   useEffect(() => {
@@ -76,16 +81,6 @@ export function CallModeOverlay({
     const startedAt = Date.now();
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CHECKLIST_KEY_PREFIX + getTodayKey());
-      const checked: Record<number, boolean> = saved ? JSON.parse(saved) : {};
-      setChecklistDone(Object.values(checked).filter(Boolean).length);
-    } catch {
-      // localStorage unavailable/corrupt — progress just shows 0
-    }
   }, []);
 
   // While typing in the inline search box, Escape should clear/blur the

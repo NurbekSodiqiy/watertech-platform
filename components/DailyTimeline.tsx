@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { ListTodo, PhoneCall, Send, Coffee, Headset, FileText, CheckCircle2, CheckSquare, Square, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
 import { useNow } from "@/hooks/useNow";
+import { useUserState } from "@/hooks/useUserState";
+import { dailyKeyForDay, dateKey } from "@/lib/user-state/keys";
 import { dailySchedule } from "@/lib/content/daily-schedule";
 
 const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
@@ -46,59 +48,35 @@ function getTimeMinutes(timeStr: string) {
   return h * 60 + m;
 }
 
-// Local calendar date (not UTC) so the key rolls over at the viewer's own
-// midnight — checked items from a prior day are simply under a different
-// key, never explicitly cleared.
-export function getTodayKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-// Exported so CallModeOverlay's progress indicator can read the same
-// per-day checklist state straight out of localStorage — the simplest way
-// to share a "done today" number across two components with no existing
-// state channel between them, instead of adding a new provider/store.
-export const CHECKLIST_KEY_PREFIX = "watertech-daily-checklist-";
-const CALL_COUNT_KEY_PREFIX = "watertech-daily-callcount-";
-
 export function DailyTimeline() {
   const now = useNow(60_000);
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : null;
-  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
-  const [callCounts, setCallCounts] = useState<Record<number, string>>({});
   const track = useTrack();
   const t = useTranslations("dailyTimeline");
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CHECKLIST_KEY_PREFIX + getTodayKey());
-      if (saved) setCheckedItems(JSON.parse(saved));
-      const savedCounts = localStorage.getItem(CALL_COUNT_KEY_PREFIX + getTodayKey());
-      if (savedCounts) setCallCounts(JSON.parse(savedCounts));
-    } catch {
-      // localStorage unavailable/corrupt — start unchecked/empty
-    }
-  }, []);
+  // One user_state row per calendar day, in the viewer's own timezone, so the
+  // day rolls over at their midnight and yesterday's ticks are simply under a
+  // different key — never explicitly cleared (rows older than two weeks are
+  // pruned on write, see lib/user-state/prune.ts). The day is unknown until
+  // useNow() resolves after mount, since `new Date()` must not run during
+  // render; the key is null until then and the hook reports the default.
+  const day = now ? dateKey(now) : null;
+  const dailyState = useMemo(() => dailyKeyForDay(day ?? "1970-01-01"), [day]);
+  const [daily, setDaily] = useUserState(
+    day ? dailyState.key : null,
+    dailyState.schema,
+    dailyState.defaultValue,
+    dailyState
+  );
 
   function toggleCheck(id: number) {
-    const next = { ...checkedItems, [id]: !checkedItems[id] };
-    setCheckedItems(next);
-    try {
-      localStorage.setItem(CHECKLIST_KEY_PREFIX + getTodayKey(), JSON.stringify(next));
-    } catch {
-      // localStorage unavailable — state just won't persist across reloads
-    }
-    track("checklist_toggle", { entityType: "daily_task", entityId: String(id), meta: { checked: next[id] } });
+    const checked = !daily.checked[id];
+    setDaily({ ...daily, checked: { ...daily.checked, [id]: checked } });
+    track("checklist_toggle", { entityType: "daily_task", entityId: String(id), meta: { checked } });
   }
 
   function setCallCount(id: number, value: string) {
-    const next = { ...callCounts, [id]: value };
-    setCallCounts(next);
-    try {
-      localStorage.setItem(CALL_COUNT_KEY_PREFIX + getTodayKey(), JSON.stringify(next));
-    } catch {
-      // localStorage unavailable — state just won't persist across reloads
-    }
+    setDaily({ ...daily, calls: { ...daily.calls, [id]: value } });
     track("call_count_log", { entityType: "daily_task", entityId: String(id), meta: { count: value } });
   }
 
@@ -169,14 +147,14 @@ export function DailyTimeline() {
                     <button
                       type="button"
                       onClick={() => toggleCheck(item.id)}
-                      aria-label={checkedItems[item.id] ? t("markUndone") : t("markDone")}
-                      className={`mt-0.5 shrink-0 ${checkedItems[item.id] ? "text-status-ok" : "text-text-secondary/50 hover:text-primary"}`}
+                      aria-label={daily.checked[item.id] ? t("markUndone") : t("markDone")}
+                      className={`mt-0.5 shrink-0 ${daily.checked[item.id] ? "text-status-ok" : "text-text-secondary/50 hover:text-primary"}`}
                     >
-                      {checkedItems[item.id] ? <CheckSquare size={16} /> : <Square size={16} />}
+                      {daily.checked[item.id] ? <CheckSquare size={16} /> : <Square size={16} />}
                     </button>
                     <p
                       className={`text-[14px] leading-relaxed ${
-                        checkedItems[item.id]
+                        daily.checked[item.id]
                           ? "text-text-secondary line-through opacity-70"
                           : item.isLunch
                           ? "italic text-text-secondary"
@@ -200,7 +178,7 @@ export function DailyTimeline() {
                       type="number"
                       min="0"
                       inputMode="numeric"
-                      value={callCounts[item.id] ?? ""}
+                      value={daily.calls[item.id] ?? ""}
                       onChange={(e) => setCallCount(item.id, e.target.value)}
                       placeholder="0"
                       aria-label={t("callsAriaLabel")}

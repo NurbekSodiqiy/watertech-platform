@@ -11,9 +11,10 @@
 --   Failed: an error whose message starts with "RLS FAIL:".
 --
 -- Policies under test: 0002 (content_* + content_versions), 0006 (copilot_logs),
--- 0007 (admin_notifications, content_gate_reports). telemetry_events has no
--- migration in this repo (it predates supabase/migrations), so its checks test
--- whatever policy the project actually has.
+-- 0007 (admin_notifications, content_gate_reports), 0009 (user_state).
+-- telemetry_events has no migration in this repo (it predates
+-- supabase/migrations), so its checks test whatever policy the project
+-- actually has.
 
 begin;
 
@@ -47,6 +48,12 @@ insert into public.content_gate_reports (table_name, row_id, passed, actor) valu
 insert into public.telemetry_events (user_email, session_id, ts, type, path) values
   ('op@test', 'rls-test', now(), 'page_enter', '/'),
   ('rls-other-op@test', 'rls-test', now(), 'page_enter', '/');
+
+-- user_state (0009). user_email is spelled out here because its default reads
+-- auth.jwt(), which is empty for the editor's own role.
+insert into public.user_state (user_email, key, value) values
+  ('op@test', 'onboarding.v2', '{"summary-d1":true}'),
+  ('rls-other-op@test', 'onboarding.v2', '{"summary-d1":true}');
 
 -- === As an operator ============================================================
 
@@ -83,7 +90,8 @@ begin
       ('copilot_logs',                     'public.copilot_logs',           $f$true$f$),
       ('admin_notifications',              'public.admin_notifications',    $f$true$f$),
       ('content_gate_reports',             'public.content_gate_reports',   $f$true$f$),
-      ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$)
+      ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$),
+      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$)
     ) as t(label, relation, filter)
   loop
     begin
@@ -95,6 +103,60 @@ begin
       raise exception 'RLS FAIL: operator can select % (% rows visible)', c.label, n;
     end if;
   end loop;
+end $$;
+
+-- user_state (0009) is the only table an operator may write, so its policies
+-- need more than the select sweep above: own row readable and writable, every
+-- other operator's row invisible and untouchable.
+do $$
+declare
+  n bigint;
+begin
+  select count(*) into n from public.user_state where user_email = 'op@test';
+  if n <> 1 then
+    raise exception 'RLS FAIL: operator cannot select their OWN user_state row (% visible)', n;
+  end if;
+
+  -- The insert policy takes the email from the JWT via the column default, so
+  -- no email is spelled out here — exactly what hooks/useUserState.ts sends.
+  insert into public.user_state (key, value) values ('scripts.position', '{"scriptId":"x","stageId":null}');
+  select count(*) into n from public.user_state where user_email = 'op@test' and key = 'scripts.position';
+  if n <> 1 then
+    raise exception 'RLS FAIL: operator cannot insert their own user_state row';
+  end if;
+
+  update public.user_state set value = '{"summary-d2":true}' where key = 'onboarding.v2';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: operator cannot update their own user_state row (% rows)', n;
+  end if;
+
+  delete from public.user_state where key = 'scripts.position';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: operator cannot delete their own user_state row (% rows)', n;
+  end if;
+
+  -- Another operator's row: invisible to update/delete (0 rows, no error), and
+  -- an insert claiming their email must be rejected by the WITH CHECK.
+  update public.user_state set value = '{"hacked":true}' where user_email = 'rls-other-op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: operator can update ANOTHER operator''s user_state row (% rows)', n;
+  end if;
+
+  delete from public.user_state where user_email = 'rls-other-op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: operator can delete ANOTHER operator''s user_state row (% rows)', n;
+  end if;
+
+  begin
+    insert into public.user_state (user_email, key, value) values ('rls-other-op@test', 'pins', '[]');
+    raise exception 'RLS FAIL: operator can insert a user_state row for ANOTHER operator';
+  exception
+    when insufficient_privilege then null; -- the WITH CHECK rejected it, as it should
+  end;
 end $$;
 
 -- === As a manager ==============================================================
@@ -124,7 +186,8 @@ begin
       ('copilot_logs',                     'public.copilot_logs',           $f$email = 'rls-other-op@test'$f$),
       ('admin_notifications',              'public.admin_notifications',    $f$row_id = 'rls-test-draft'$f$),
       ('content_gate_reports',             'public.content_gate_reports',   $f$row_id = 'rls-test-draft'$f$),
-      ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$)
+      ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$),
+      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$)
     ) as t(label, relation, filter)
   loop
     begin
@@ -136,6 +199,33 @@ begin
       raise exception 'RLS FAIL: manager cannot select % (0 rows visible)', c.label;
     end if;
   end loop;
+end $$;
+
+-- A manager may READ every user_state row (the onboarding progress table on
+-- /dashboard/quality) and nothing more — there is deliberately no manager
+-- insert/update/delete policy in 0009.
+do $$
+declare
+  n bigint;
+begin
+  update public.user_state set value = '{"hacked":true}' where user_email = 'op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: manager can update an operator''s user_state row (% rows)', n;
+  end if;
+
+  delete from public.user_state where user_email = 'op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: manager can delete an operator''s user_state row (% rows)', n;
+  end if;
+
+  begin
+    insert into public.user_state (user_email, key, value) values ('op@test', 'pins', '[]');
+    raise exception 'RLS FAIL: manager can insert a user_state row for an operator';
+  exception
+    when insufficient_privilege then null; -- no manager insert policy, as intended
+  end;
 end $$;
 
 rollback;
