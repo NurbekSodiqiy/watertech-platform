@@ -13,6 +13,8 @@ const TABLE_INFO: Record<string, { label: string; backHref: string }> = {
   content_products: { label: "Mahsulot", backHref: "/admin/products" },
   content_scripts: { label: "Skript", backHref: "/admin/scripts" },
   content_changelog: { label: "O'zgarish", backHref: "/admin/changelog" },
+  content_contacts: { label: "Kontakt", backHref: "/admin/contacts" },
+  content_sops: { label: "amoCRM reglamenti", backHref: "/admin/sops" },
 };
 
 export const metadata = { title: "Kontent boshqaruvi — Versiyalar" };

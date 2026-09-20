@@ -3,17 +3,20 @@ import type { z } from "zod";
 import {
   changelogSchema,
   competitorSchema,
+  contactSchema,
   faqSchema,
   objectionSchema,
   packageGroupSchema,
   packageSchema,
   productSchema,
   scriptSchema,
+  sopSchema,
+  sopStepsSchema,
   stagesSchema,
 } from "@/lib/content/schemas";
 import { flattenTree } from "@/lib/site-config";
 import { normalizeSearchText } from "@/lib/search/normalize";
-import type { Stage } from "@/lib/content/types";
+import type { SopStep, Stage } from "@/lib/content/types";
 import type { Json } from "@/lib/supabase/database.types";
 import type { GateCheck, GateContext, GateIssue, GateResult, GateTarget } from "./types";
 
@@ -36,6 +39,14 @@ function isBlank(value: string | null | undefined): boolean {
 function parseStages(value: Json | null): Stage[] | null {
   if (value === null) return null;
   const result = stagesSchema.safeParse(value);
+  return result.success ? result.data : null;
+}
+
+/** JSONB steps -> SopStep[], or null when the column is null or malformed
+ * (schemaValid reports the malformed shape, so the other checks skip it). */
+function parseSopSteps(value: Json | null): SopStep[] | null {
+  if (value === null) return null;
+  const result = sopStepsSchema.safeParse(value);
   return result.success ? result.data : null;
 }
 
@@ -62,6 +73,10 @@ export function targetTitle(target: GateTarget): string {
       return target.row.name_ru;
     case "content_changelog":
       return target.row.title;
+    case "content_contacts":
+      return target.row.name;
+    case "content_sops":
+      return target.row.title;
   }
 }
 
@@ -77,6 +92,13 @@ function stringColumns<Row>(row: Row, names: readonly (keyof Row & string)[]): T
     if (typeof value === "string" && value !== "") out.push({ field: name, text: value });
   }
   return out;
+}
+
+function sopStepTextFields(steps: SopStep[] | null, column: "steps" | "steps_ru"): TextField[] {
+  return (steps ?? []).flatMap((step, i) => [
+    { field: `${column}[${i}].title`, text: step.title },
+    { field: `${column}[${i}].body`, text: step.body },
+  ]);
 }
 
 function stageTextFields(stages: Stage[] | null, column: "stages" | "stages_ru"): TextField[] {
@@ -165,6 +187,17 @@ export function textFields(target: GateTarget): TextField[] {
     // reports a path into /sales-process, /products or /faq that does not exist.
     case "content_changelog":
       return stringColumns(target.row, ["title", "body", "linked_path", "approved_by", "title_ru", "body_ru"]);
+    // phone and messenger are format-checked by schemaValid, not prose.
+    case "content_contacts":
+      return stringColumns(target.row, ["name", "role", "topic", "role_ru", "topic_ru"]);
+    case "content_sops": {
+      const { row } = target;
+      return [
+        ...stringColumns(row, ["title", "summary", "title_ru", "summary_ru"]),
+        ...sopStepTextFields(parseSopSteps(row.steps), "steps"),
+        ...sopStepTextFields(parseSopSteps(row.steps_ru), "steps_ru"),
+      ];
+    }
   }
 }
 
@@ -327,6 +360,35 @@ export const schemaValid: GateCheck = (target) => {
         })
       );
     }
+    case "content_contacts": {
+      const { row } = target;
+      return schemaIssues(
+        contactSchema.safeParse({
+          id: row.id,
+          name: row.name,
+          role: row.role,
+          topic: row.topic,
+          phone: row.phone,
+          messenger: row.messenger,
+          roleRu: row.role_ru ?? undefined,
+          topicRu: row.topic_ru ?? undefined,
+        })
+      );
+    }
+    case "content_sops": {
+      const { row } = target;
+      return schemaIssues(
+        sopSchema.safeParse({
+          id: row.id,
+          title: row.title,
+          summary: row.summary,
+          steps: row.steps,
+          titleRu: row.title_ru ?? undefined,
+          summaryRu: row.summary_ru ?? undefined,
+          stepsRu: row.steps_ru ?? undefined,
+        })
+      );
+    }
   }
 };
 
@@ -369,6 +431,21 @@ export const requiredNotBlank: GateCheck = (target) => {
         ["body", "Matn"],
         ["approved_by", "Tasdiqlagan"],
       ]);
+    case "content_contacts":
+      return blankRequired(target.row, [
+        ["name", "Ism"],
+        ["role", "Lavozim"],
+        ["topic", "Mavzu"],
+      ]);
+    case "content_sops": {
+      // A SOP page with no steps is an empty page. A malformed steps column is
+      // schemaValid's to report, not this check's.
+      const steps = parseSopSteps(target.row.steps);
+      return [
+        ...blankRequired(target.row, [["title", "Nomi"]]),
+        ...(steps !== null && steps.length === 0 ? [issue("steps_none", "error", "Reglamentda birorta ham qadam yo'q", "steps")] : []),
+      ];
+    }
   }
 };
 
@@ -581,6 +658,13 @@ export function missingRuFields(target: GateTarget): string[] {
       return blankColumns(target.row, ["question_ru", "answer_ru"]);
     case "content_changelog":
       return blankColumns(target.row, ["title_ru", "body_ru"]);
+    case "content_contacts":
+      return blankColumns(target.row, ["role_ru", "topic_ru"]);
+    case "content_sops": {
+      const { row } = target;
+      const stepsRuEmpty = row.steps_ru === null || (Array.isArray(row.steps_ru) && row.steps_ru.length === 0);
+      return [...blankColumns(row, ["title_ru", "summary_ru"]), ...(stepsRuEmpty ? ["steps_ru"] : [])];
+    }
     case "content_package_groups":
       return blankColumns(target.row, ["title_ru", "subtitle_ru"]);
     case "content_packages":

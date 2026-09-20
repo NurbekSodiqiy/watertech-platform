@@ -75,7 +75,7 @@ components/
   motion/                          motion primitives — see §14
   story/                           scroll-storytelling scenes — see §14
 lib/
-  content/                        types.ts + data files + loader.ts (typed getters). Pages call getters, never arrays directly.
+  content/                        types.ts + seed data files + loader.ts (typed getters, incl. getContacts/getSops). Pages call getters, never arrays directly. No mock-data folder: every content kind lives in Supabase.
   supabase/                        client.ts (browser) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
   auth/                            claims helpers (role from JWT), route guards
   telemetry/                       client.ts (queue), types.ts, aggregate.ts (server)

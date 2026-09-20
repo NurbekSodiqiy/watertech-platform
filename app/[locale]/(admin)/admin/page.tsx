@@ -9,7 +9,9 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
 
   // Counts only (head: true) — never full rows; scripts carry large JSONB.
   const t = await getTranslations("pages.admin.changelog");
-  const [scripts, objections, faqs, competitors, packages, products, changelog] = await Promise.all([
+  const tContacts = await getTranslations("pages.admin.contacts");
+  const tSops = await getTranslations("pages.admin.sops");
+  const [scripts, objections, faqs, competitors, packages, products, changelog, contacts, sops] = await Promise.all([
     countRowsByStatus("content_scripts"),
     countRowsByStatus("content_objections"),
     countRowsByStatus("content_faqs"),
@@ -17,6 +19,8 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
     countRowsByStatus("content_packages"),
     countRowsByStatus("content_products"),
     countRowsByStatus("content_changelog"),
+    countRowsByStatus("content_contacts"),
+    countRowsByStatus("content_sops"),
   ]);
 
   const sections = [
@@ -27,6 +31,8 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
     { label: "Paketlar", href: "/admin/packages", counts: packages },
     { label: "Mahsulotlar", href: "/admin/products", counts: products },
     { label: t("nav"), href: "/admin/changelog", counts: changelog },
+    { label: tContacts("nav"), href: "/admin/contacts", counts: contacts },
+    { label: tSops("nav"), href: "/admin/sops", counts: sops },
   ];
 
   return (

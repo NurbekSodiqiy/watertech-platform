@@ -14,6 +14,8 @@ import { faqs } from "@/lib/content/faq";
 import { competitors } from "@/lib/content/competitors";
 import { packageGroups } from "@/lib/content/packages";
 import { products } from "@/lib/content/products";
+import { contacts } from "@/lib/content/contacts";
+import { sops } from "@/lib/content/sops";
 import {
   scriptToRow,
   objectionToRow,
@@ -22,6 +24,8 @@ import {
   packageGroupToRow,
   packageToRow,
   productToRow,
+  contactToRow,
+  sopToRow,
 } from "@/lib/content/db";
 
 async function upsertTable(admin: SupabaseClient, table: string, rows: Record<string, unknown>[]): Promise<number> {
@@ -52,6 +56,15 @@ async function main() {
   );
   const productRows = products.map((p, i) => ({ ...productToRow(p), sort_order: i }));
 
+  // The contacts are still placeholders (lib/content/contacts.ts), so they land
+  // as drafts — operators see the "no contacts yet" state instead of fake
+  // people and numbers until a manager fills them in and publishes. Note the
+  // upsert resets every column it writes, status included, so re-running the
+  // seed after publishing real contacts would put them back to draft.
+  const contactRows = contacts.map((c, i) => ({ ...contactToRow(c), status: "draft", sort_order: i }));
+
+  const sopRows = sops.map((s, i) => ({ ...sopToRow(s), sort_order: i }));
+
   const counts: Record<string, number> = {};
 
   // content_packages.group_id references content_package_groups(id) — groups
@@ -71,6 +84,8 @@ async function main() {
   counts.content_faqs = faqsCount;
   counts.content_competitors = competitorsCount;
   counts.content_products = productsCount;
+  counts.content_contacts = await upsertTable(admin, "content_contacts", contactRows);
+  counts.content_sops = await upsertTable(admin, "content_sops", sopRows);
 
   console.log("Seeded content tables:");
   for (const [table, count] of Object.entries(counts)) {

@@ -102,7 +102,8 @@
         "script_stage": "Skript bosqichi",
         "faq": "FAQ",
         "competitor": "Raqobatchi",
-        "package": "Paket"
+        "package": "Paket",
+        "sop": "amoCRM reglamenti"
       }
     },
     "offline": {
@@ -162,6 +163,11 @@
       "title": "Savol-javob — mijozlarga tez-tez beriladigan savollarga javoblar",
       "reason": "Hali nashr qilingan savol-javob yo'q",
       "cta": "Qidiruvni ochish"
+    },
+    "contactsNone": {
+      "title": "Kontaktlar hali qo'shilmagan",
+      "reason": "Menejer kontaktlarni qo'shgach, ular shu yerda ko'rinadi.",
+      "cta": "Bosh sahifaga"
     },
     "changelogNone": {
       "title": "Yangiliklar shu yerda paydo bo'ladi",
@@ -232,7 +238,9 @@
         "package": "paket",
         "packageGroup": "guruh",
         "product": "mahsulot",
-        "changelog": "o'zgarish yozuvi"
+        "changelog": "o'zgarish yozuvi",
+        "contact": "kontakt",
+        "sop": "reglament"
       }
     },
     "versionsNone": {
@@ -397,6 +405,75 @@
       "openPage": "Sahifani ochish"
     },
     "admin": {
+      "contacts": {
+        "nav": "Kontaktlar",
+        "title": "Kontaktlar",
+        "description": "Operatorlar «Ichki kontaktlar» sahifasida ko'radigan odamlar. Telefon +998 formatida yoki ichki raqam bo'lishi kerak.",
+        "columns": {
+          "name": "Ism",
+          "role": "Lavozim",
+          "topic": "Mavzu",
+          "phone": "Telefon"
+        },
+        "newTitle": "Yangi kontakt",
+        "editTitle": "Kontaktni tahrirlash",
+        "versions": "Versiyalar tarixi",
+        "fields": {
+          "id": "ID (slug)",
+          "idPlaceholder": "masalan: logistika",
+          "name": "Ism",
+          "role": "Lavozim",
+          "topic": "Mavzu",
+          "phone": "Telefon",
+          "phonePlaceholder": "+998 90 123 45 67",
+          "messenger": "Telegram",
+          "messengerPlaceholder": "@watertech_savdo",
+          "status": "Holat",
+          "statusDraft": "Qoralama",
+          "statusPublished": "Nashr etilgan"
+        }
+      },
+      "sops": {
+        "nav": "amoCRM reglamentlari",
+        "title": "amoCRM reglamentlari",
+        "description": "«amoCRM» bo'limidagi qisqa standart tartib-qoidalar. Har bir reglament — tartiblangan qadamlar ro'yxati.",
+        "columns": {
+          "title": "Nomi",
+          "summary": "Qisqa tavsif",
+          "stepCount": "Qadamlar soni"
+        },
+        "newTitle": "Yangi reglament",
+        "editTitle": "Reglamentni tahrirlash",
+        "versions": "Versiyalar tarixi",
+        "fields": {
+          "id": "ID (slug)",
+          "idPlaceholder": "masalan: lead-creation",
+          "idHint": "Sahifa manzili: /tools/amocrm/ID. Yangi ID uchun menyuga alohida havola qo'shish kerak.",
+          "status": "Holat",
+          "statusDraft": "Qoralama",
+          "statusPublished": "Nashr etilgan",
+          "title": "Nomi",
+          "summary": "Qisqa tavsif"
+        },
+        "steps": {
+          "heading": "Qadamlar",
+          "headingRu": "Qadamlar (ruscha)",
+          "add": "Qadam qo'shish",
+          "title": "Qadam",
+          "titlePlaceholder": "Nima qilish kerak",
+          "body": "Izoh (ixtiyoriy)",
+          "moveUp": "Yuqoriga",
+          "moveDown": "Pastga",
+          "remove": "Qadamni o'chirish",
+          "empty": "Hali qadam yo'q"
+        },
+        "form": {
+          "save": "Saqlash",
+          "saving": "Saqlanmoqda…",
+          "cancel": "Bekor qilish",
+          "ruSummary": "Ruscha (ixtiyoriy)"
+        }
+      },
       "changelog": {
         "nav": "O'zgarishlar",
         "title": "O'zgarishlar tarixi",

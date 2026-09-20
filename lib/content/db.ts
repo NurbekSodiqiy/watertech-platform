@@ -7,10 +7,21 @@ import type {
   Package,
   PackageGroup,
   ChangelogEntry,
+  Contact,
+  Sop,
+  SopStep,
 } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import { z } from "zod";
-import { stagesSchema, competitorSchema, productSchema, sitePathSchema } from "@/lib/content/schemas";
+import {
+  stagesSchema,
+  competitorSchema,
+  productSchema,
+  sitePathSchema,
+  contactPhoneSchema,
+  contactMessengerSchema,
+  sopStepsSchema,
+} from "@/lib/content/schemas";
 import type { Json } from "@/lib/supabase/database.types";
 import type { Tables } from "@/lib/supabase/typed";
 
@@ -22,6 +33,8 @@ export type PackageGroupRow = Tables<"content_package_groups">;
 export type PackageRow = Tables<"content_packages">;
 export type ProductRow = Tables<"content_products">;
 export type ChangelogRow = Tables<"content_changelog">;
+export type ContactRow = Tables<"content_contacts">;
+export type SopRow = Tables<"content_sops">;
 
 // Generated row types widen CHECK-constrained text columns (threat_level,
 // line, category, material) to plain string. The constraints make an invalid
@@ -40,6 +53,19 @@ function parseStages(value: Json, id: string): Stage[] {
   if (result.success) return result.data;
   console.error("[content] invalid stages for script", id);
   return [];
+}
+
+/** JSONB steps -> SopStep[]. The only place steps/steps_ru are narrowed. */
+function parseSopSteps(value: Json, id: string): SopStep[] {
+  const result = sopStepsSchema.safeParse(value);
+  if (result.success) return result.data;
+  console.error("[content] invalid steps for sop", id);
+  return [];
+}
+
+/** SopStep[] -> JSONB, as plain object literals (see stagesToJson). */
+function sopStepsToJson(steps: SopStep[]): Json {
+  return steps.map((step) => ({ title: step.title, body: step.body }));
 }
 
 /** Stage[] -> JSONB. Rebuilt as plain object literals because interfaces
@@ -124,6 +150,33 @@ export function rowToChangelog(row: ChangelogRow): ChangelogEntry {
     approvedBy: row.approved_by,
     titleRu: row.title_ru ?? undefined,
     bodyRu: row.body_ru ?? undefined,
+  };
+}
+
+export function rowToContact(row: ContactRow): Contact {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    topic: row.topic,
+    // The CHECKs keep a malformed phone or handle out; if one ever gets in
+    // anyway it is blanked here rather than rendered as a tel:/t.me link.
+    phone: narrowColumn(contactPhoneSchema, row.phone, "", "phone", row.id),
+    messenger: narrowColumn(contactMessengerSchema, row.messenger, "", "messenger", row.id),
+    roleRu: row.role_ru ?? undefined,
+    topicRu: row.topic_ru ?? undefined,
+  };
+}
+
+export function rowToSop(row: SopRow): Sop {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    steps: parseSopSteps(row.steps, row.id),
+    titleRu: row.title_ru ?? undefined,
+    summaryRu: row.summary_ru ?? undefined,
+    stepsRu: row.steps_ru === null ? undefined : parseSopSteps(row.steps_ru, row.id),
   };
 }
 
@@ -254,6 +307,31 @@ export function changelogToRow(entry: ChangelogEntry) {
     approved_by: entry.approvedBy,
     title_ru: ru(entry.titleRu),
     body_ru: ru(entry.bodyRu),
+  };
+}
+
+export function contactToRow(contact: Contact) {
+  return {
+    id: contact.id,
+    name: contact.name,
+    role: contact.role,
+    topic: contact.topic,
+    phone: contact.phone,
+    messenger: contact.messenger,
+    role_ru: ru(contact.roleRu),
+    topic_ru: ru(contact.topicRu),
+  };
+}
+
+export function sopToRow(sop: Sop) {
+  return {
+    id: sop.id,
+    title: sop.title,
+    summary: sop.summary,
+    steps: sopStepsToJson(sop.steps),
+    title_ru: ru(sop.titleRu),
+    summary_ru: ru(sop.summaryRu),
+    steps_ru: sop.stepsRu && sop.stepsRu.length > 0 ? sopStepsToJson(sop.stepsRu) : null,
   };
 }
 

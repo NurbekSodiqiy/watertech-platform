@@ -7,6 +7,8 @@ import type {
   PackageRow,
   ProductRow,
   ChangelogRow,
+  ContactRow,
+  SopRow,
 } from "@/lib/content/db";
 import type { AdminContentBundle } from "@/lib/admin/queries";
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
@@ -43,7 +45,9 @@ export type GateTarget =
   | { table: "content_package_groups"; row: ContentColumns<PackageGroupRow> }
   | { table: "content_packages"; row: ContentColumns<PackageRow> }
   | { table: "content_products"; row: ContentColumns<ProductRow> }
-  | { table: "content_changelog"; row: ContentColumns<ChangelogRow> };
+  | { table: "content_changelog"; row: ContentColumns<ChangelogRow> }
+  | { table: "content_contacts"; row: ContentColumns<ContactRow> }
+  | { table: "content_sops"; row: ContentColumns<SopRow> };
 
 /** Everything a check may look at besides the row itself: the unlocalised
  * bundle (drafts included), products, and which ids are published per table

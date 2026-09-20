@@ -120,6 +120,40 @@ export interface ChangelogEntry {
   bodyRu?: string;
 }
 
+export interface Contact {
+  id: string;
+  name: string;
+  role: string;
+  topic: string;
+  /** "+998 …" number or an internal extension (see contactPhoneSchema). */
+  phone: string;
+  /** Telegram handle with the leading "@". */
+  messenger: string;
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract. `name` has none: it is a person's name. */
+  roleRu?: string;
+  topicRu?: string;
+}
+
+export interface SopStep {
+  title: string;
+  body: string;
+}
+
+/** A short standard operating procedure — one page under /tools/amocrm/<id>. */
+export interface Sop {
+  /** URL slug: /tools/amocrm/<id>. */
+  id: string;
+  title: string;
+  summary: string;
+  steps: SopStep[];
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract (`stepsRu` mirrors `steps`, like Script.stagesRu). */
+  titleRu?: string;
+  summaryRu?: string;
+  stepsRu?: SopStep[];
+}
+
 export interface Package {
   id: string;
   name: string;

@@ -18,12 +18,16 @@ export type DashboardTableName =
   | "content_package_groups"
   | "content_packages"
   | "content_products"
-  | "content_changelog";
+  | "content_changelog"
+  | "content_contacts"
+  | "content_sops";
 
-// content_changelog is a dashboard table for its action links and the publish
-// gate, but deliberately absent from TABLES below: a changelog entry is a dated
-// record, not something that goes "stale" after 90 days, and its Russian twins
-// are optional per entry.
+// content_changelog, content_contacts and content_sops are dashboard tables for
+// their action links and the publish gate, but deliberately absent from TABLES
+// below: a changelog entry is a dated record, not something that goes "stale"
+// after 90 days, and its Russian twins are optional per entry; a contact is a
+// person's details, edited when they change, with optional Russian twins; a
+// SOP's Russian twins are optional too.
 export const DASHBOARD_TABLE_KIND: Record<DashboardTableName, ContentKind> = {
   content_scripts: "scripts",
   content_objections: "objections",
@@ -33,6 +37,8 @@ export const DASHBOARD_TABLE_KIND: Record<DashboardTableName, ContentKind> = {
   content_packages: "packages",
   content_products: "products",
   content_changelog: "changelog",
+  content_contacts: "contacts",
+  content_sops: "sops",
 };
 
 interface TableConfig {
@@ -170,5 +176,9 @@ export function adminEditHref(table: DashboardTableName, id: string): string {
       return `/admin/products/${id}`;
     case "content_changelog":
       return `/admin/changelog/${id}`;
+    case "content_contacts":
+      return `/admin/contacts/${id}`;
+    case "content_sops":
+      return `/admin/sops/${id}`;
   }
 }

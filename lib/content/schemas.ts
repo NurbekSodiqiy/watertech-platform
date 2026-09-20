@@ -108,6 +108,49 @@ export const changelogSchema = z.object({
   bodyRu: z.string().optional(),
 });
 
+/** "+998 90 123 45 67" (spaces or dashes between the groups optional) or an
+ * internal extension of 2-5 digits. Kept in step with the CHECK in
+ * 0011_content_contacts.sql. */
+export const contactPhoneSchema = z
+  .string()
+  .regex(
+    /^(?:\+998[ -]?\d{2}[ -]?\d{3}[ -]?\d{2}[ -]?\d{2}|\d{2,5})$/,
+    "Telefon +998 90 123 45 67 ko'rinishida yoki 2–5 xonali ichki raqam bo'lishi kerak"
+  );
+
+/** Telegram handle — it becomes a t.me link, so nothing but the handle itself. */
+export const contactMessengerSchema = z
+  .string()
+  .regex(/^@[A-Za-z][A-Za-z0-9_]{4,31}$/, "Telegram nomi @ bilan boshlanadi (masalan: @watertech_savdo)");
+
+export const contactSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  role: z.string(),
+  topic: z.string(),
+  phone: contactPhoneSchema,
+  messenger: contactMessengerSchema,
+  roleRu: z.string().optional(),
+  topicRu: z.string().optional(),
+});
+
+export const sopStepSchema = z.object({
+  title: z.string(),
+  body: z.string(),
+});
+
+export const sopStepsSchema = z.array(sopStepSchema);
+
+export const sopSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  steps: sopStepsSchema,
+  titleRu: z.string().optional(),
+  summaryRu: z.string().optional(),
+  stepsRu: sopStepsSchema.optional(),
+});
+
 export const packageSchema = z.object({
   id: z.string(),
   name: z.string(),

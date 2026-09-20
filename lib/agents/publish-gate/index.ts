@@ -58,6 +58,16 @@ async function loadTarget(table: GateTable, id: string): Promise<GateTarget | nu
       if (error) throw new Error(`${table}: ${error.message}`);
       return data && { table, row: data };
     }
+    case "content_contacts": {
+      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
+      if (error) throw new Error(`${table}: ${error.message}`);
+      return data && { table, row: data };
+    }
+    case "content_sops": {
+      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
+      if (error) throw new Error(`${table}: ${error.message}`);
+      return data && { table, row: data };
+    }
   }
 }
 

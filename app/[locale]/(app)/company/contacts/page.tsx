@@ -1,11 +1,17 @@
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
-import { contacts, type Contact } from "@/lib/mock-data/contacts";
+import { getContacts } from "@/lib/content/loader";
+import type { Contact } from "@/lib/content/types";
+import type { Locale } from "@/i18n/routing";
 
-export default async function ContactsPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function ContactsPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("pages.company.contacts");
+  const [t, tEmpty, contacts] = await Promise.all([
+    getTranslations("pages.company.contacts"),
+    getTranslations("emptyState.contactsNone"),
+    getContacts(locale),
+  ]);
 
   const columns: DbColumn<Contact>[] = [
     { key: "name", label: t("columns.name"), sortable: true },
@@ -24,6 +30,12 @@ export default async function ContactsPage({ params: { locale } }: { params: { l
         columns={columns}
         rows={contacts}
         filters={[{ key: "role", label: t("columns.role"), options: roles }]}
+        emptyState={{
+          stateKey: "contactsNone",
+          title: tEmpty("title"),
+          reason: tEmpty("reason"),
+          cta: { kind: "link", label: tEmpty("cta"), href: "/" },
+        }}
       />
     </div>
   );

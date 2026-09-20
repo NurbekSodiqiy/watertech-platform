@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/server-session";
-import { getContentBundle } from "@/lib/content/loader";
+import { getContentBundle, getSops } from "@/lib/content/loader";
 import { buildSearchDocs, type SearchDoc } from "@/lib/search";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -16,12 +16,13 @@ const localeSchema = z.enum(routing.locales).catch(routing.defaultLocale);
 // land in separate cache entries under the same "content" tag — same
 // pattern as lib/content/loader.ts's per-locale getters.
 //
-// getContentBundle degrades to an empty bundle on a Supabase outage; an empty
+// getContentBundle and getSops degrade to empty on a Supabase outage; an empty
 // index is thrown here instead of returned so unstable_cache never stores it
 // (the palette then falls back to page-title matches and retries next open).
 const getCachedSearchDocs = unstable_cache(
   async (locale: Locale): Promise<SearchDoc[]> => {
-    const docs = buildSearchDocs(await getContentBundle(locale));
+    const [bundle, sops] = await Promise.all([getContentBundle(locale), getSops(locale)]);
+    const docs = buildSearchDocs(bundle, sops);
     if (docs.length === 0) throw new Error("search index is empty");
     return docs;
   },

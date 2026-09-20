@@ -9,8 +9,20 @@ import {
   rowToPackageGroup,
   rowToProduct,
   rowToChangelog,
+  rowToContact,
+  rowToSop,
 } from "@/lib/content/db";
-import type { Script, Objection, Faq, Competitor, PackageGroup, Package, ChangelogEntry } from "@/lib/content/types";
+import type {
+  Script,
+  Objection,
+  Faq,
+  Competitor,
+  PackageGroup,
+  Package,
+  ChangelogEntry,
+  Contact,
+  Sop,
+} from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import type { Locale } from "@/i18n/routing";
 import { safeContent } from "@/lib/content/safe";
@@ -98,6 +110,28 @@ function localizeChangelog(entry: ChangelogEntry, locale: Locale): ChangelogEntr
     body: loc(entry.body, entry.bodyRu, locale),
     titleRu: undefined,
     bodyRu: undefined,
+  };
+}
+
+function localizeContact(contact: Contact, locale: Locale): Contact {
+  return {
+    ...contact,
+    role: loc(contact.role, contact.roleRu, locale),
+    topic: loc(contact.topic, contact.topicRu, locale),
+    roleRu: undefined,
+    topicRu: undefined,
+  };
+}
+
+function localizeSop(sop: Sop, locale: Locale): Sop {
+  return {
+    ...sop,
+    title: loc(sop.title, sop.titleRu, locale),
+    summary: loc(sop.summary, sop.summaryRu, locale),
+    steps: locale === "ru" && sop.stepsRu && sop.stepsRu.length > 0 ? sop.stepsRu : sop.steps,
+    titleRu: undefined,
+    summaryRu: undefined,
+    stepsRu: undefined,
   };
 }
 
@@ -288,6 +322,51 @@ const getChangelogCached = unstable_cache(
 );
 export function getChangelog(locale: Locale = "uz"): Promise<ChangelogEntry[]> {
   return safeContent("changelog", () => getChangelogCached(locale), []);
+}
+
+// Not part of ContentBundle, same as the changelog: contacts are not searchable
+// content and no cross-content check reads them.
+const getContactsCached = unstable_cache(
+  async (locale: Locale): Promise<Contact[]> => {
+    const { data, error } = await createAdminClient()
+      .from("content_contacts")
+      .select("*")
+      .eq("status", "published")
+      .order("sort_order");
+    if (error) throw new Error(`content_contacts: ${error.message}`);
+    return data.map((row) => localizeContact(rowToContact(row), locale));
+  },
+  ["content:contacts"],
+  { tags: ["content", "content:contacts"], revalidate: 3600 }
+);
+export function getContacts(locale: Locale = "uz"): Promise<Contact[]> {
+  return safeContent("contacts", () => getContactsCached(locale), []);
+}
+
+// Not part of ContentBundle either: a SOP is searched through the separate
+// `sops` argument of buildSearchDocs (lib/search), which keeps it out of the
+// Copilot's index and out of the payload Call Mode ships to the client.
+const getSopsCached = unstable_cache(
+  async (locale: Locale): Promise<Sop[]> => {
+    const { data, error } = await createAdminClient()
+      .from("content_sops")
+      .select("*")
+      .eq("status", "published")
+      .order("sort_order");
+    if (error) throw new Error(`content_sops: ${error.message}`);
+    return data.map((row) => localizeSop(rowToSop(row), locale));
+  },
+  ["content:sops"],
+  { tags: ["content", "content:sops"], revalidate: 3600 }
+);
+export function getSops(locale: Locale = "uz"): Promise<Sop[]> {
+  return safeContent("sops", () => getSopsCached(locale), []);
+}
+
+/** One published SOP by its slug, or undefined when there is none. */
+export async function getSop(locale: Locale, slug: string): Promise<Sop | undefined> {
+  const sops = await getSops(locale);
+  return sops.find((sop) => sop.id === slug);
 }
 
 // Each getter above already degrades on its own; the outer safeContent only

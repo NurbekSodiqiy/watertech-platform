@@ -1,6 +1,7 @@
 // Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17,
 // rate_limits / rate_limit_hit added by hand from 0008 on 2026-09-18, user_state by hand
-// from 0009 on 2026-09-19, content_changelog by hand from 0010 on 2026-09-20
+// from 0009 on 2026-09-19, content_changelog by hand from 0010 on 2026-09-20,
+// content_contacts / content_sops by hand from 0011 / 0012 on 2026-09-20
 // (Supabase CLI unavailable locally: SUPABASE_PROJECT_ID unset).
 //
 // allowed_users and telemetry_events are NOT created by any migration in
@@ -246,6 +247,57 @@ export type Database = {
           updated_by?: string | null
           version?: number
           volume_discount?: string | null
+        }
+        Relationships: []
+      }
+      content_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          messenger: string
+          name: string
+          phone: string
+          role: string
+          role_ru: string | null
+          sort_order: number
+          status: string
+          topic: string
+          topic_ru: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          messenger: string
+          name: string
+          phone: string
+          role: string
+          role_ru?: string | null
+          sort_order?: number
+          status?: string
+          topic: string
+          topic_ru?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          messenger?: string
+          name?: string
+          phone?: string
+          role?: string
+          role_ru?: string | null
+          sort_order?: number
+          status?: string
+          topic?: string
+          topic_ru?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Relationships: []
       }
@@ -611,6 +663,54 @@ export type Database = {
           stages?: Json
           stages_ru?: Json | null
           status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      content_sops: {
+        Row: {
+          created_at: string
+          id: string
+          sort_order: number
+          status: string
+          steps: Json
+          steps_ru: Json | null
+          summary: string
+          summary_ru: string | null
+          title: string
+          title_ru: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          sort_order?: number
+          status?: string
+          steps?: Json
+          steps_ru?: Json | null
+          summary?: string
+          summary_ru?: string | null
+          title: string
+          title_ru?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          status?: string
+          steps?: Json
+          steps_ru?: Json | null
+          summary?: string
+          summary_ru?: string | null
+          title?: string
+          title_ru?: string | null
           updated_at?: string
           updated_by?: string | null
           version?: number

@@ -24,6 +24,8 @@ import type {
   PackageRow,
   ProductRow,
   ChangelogRow,
+  ContactRow,
+  SopRow,
 } from "@/lib/content/db";
 import type { Competitor } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
@@ -45,6 +47,8 @@ export type AdminScriptRow = WithStatus<ScriptRow>;
 export type AdminObjectionRow = WithStatus<ObjectionRow>;
 export type AdminFaqRow = WithStatus<FaqRow>;
 export type AdminChangelogRow = WithStatus<ChangelogRow>;
+export type AdminContactRow = WithStatus<ContactRow>;
+export type AdminSopRow = WithStatus<SopRow>;
 export type AdminCompetitorRow = Omit<WithStatus<CompetitorRow>, "threat_level"> & {
   threat_level: Competitor["threatLevel"];
 };
@@ -138,6 +142,30 @@ export async function getChangelogRow(id: string): Promise<AdminChangelogRow | n
   return data && withStatus(data);
 }
 
+export async function listContactRows(): Promise<AdminContactRow[]> {
+  const { data, error } = await createClient().from("content_contacts").select("*").order("sort_order");
+  if (error) throw new Error(`content_contacts: ${error.message}`);
+  return data.map(withStatus);
+}
+
+export async function getContactRow(id: string): Promise<AdminContactRow | null> {
+  const { data, error } = await createClient().from("content_contacts").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`content_contacts: ${error.message}`);
+  return data && withStatus(data);
+}
+
+export async function listSopRows(): Promise<AdminSopRow[]> {
+  const { data, error } = await createClient().from("content_sops").select("*").order("sort_order");
+  if (error) throw new Error(`content_sops: ${error.message}`);
+  return data.map(withStatus);
+}
+
+export async function getSopRow(id: string): Promise<AdminSopRow | null> {
+  const { data, error } = await createClient().from("content_sops").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`content_sops: ${error.message}`);
+  return data && withStatus(data);
+}
+
 /** "Read by n / total operators" for the admin changelog list. Manager-only
  * read, same as lib/dashboard/quality.ts's onboarding table: the
  * "user_state_manager_select_all" policy (0009) is what lets a manager's own
@@ -227,9 +255,9 @@ export type CountableTable =
   | "content_products";
 
 /** Tables the admin overview counts. A superset of CountableTable: the
- * changelog has an overview card but takes no part in the publish gate's
- * cross-reference sets (AdminContentBundle.publishedIds). */
-export type OverviewTable = CountableTable | "content_changelog";
+ * changelog, contacts and SOPs have an overview card but take no part in the
+ * publish gate's cross-reference sets (AdminContentBundle.publishedIds). */
+export type OverviewTable = CountableTable | "content_changelog" | "content_contacts" | "content_sops";
 
 export interface StatusCounts {
   total: number;

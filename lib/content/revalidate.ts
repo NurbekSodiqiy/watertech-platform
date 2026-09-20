@@ -1,7 +1,16 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
 
-export type ContentKind = "scripts" | "objections" | "faqs" | "competitors" | "packages" | "products" | "changelog";
+export type ContentKind =
+  | "scripts"
+  | "objections"
+  | "faqs"
+  | "competitors"
+  | "packages"
+  | "products"
+  | "changelog"
+  | "contacts"
+  | "sops";
 
 /** Clears the cached loader output for one content kind (or everything, with
  * no argument) after a write to its content_* table. Only the shared

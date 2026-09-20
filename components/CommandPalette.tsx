@@ -89,6 +89,7 @@ export function CommandPalette({
     faq: tChrome("commandPalette.categories.faq"),
     competitor: tChrome("commandPalette.categories.competitor"),
     package: tChrome("commandPalette.categories.package"),
+    sop: tChrome("commandPalette.categories.sop"),
   };
 
   // Empty query: the operator's own pins and recents. They resolve through

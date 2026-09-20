@@ -1,8 +1,9 @@
 import Fuse from "fuse.js";
 import type { ContentBundle } from "@/lib/content/loader";
+import type { Sop } from "@/lib/content/types";
 import { normalizeSearchText } from "@/lib/search/normalize";
 
-export type SearchResultType = "objection" | "script_stage" | "faq" | "competitor" | "package";
+export type SearchResultType = "objection" | "script_stage" | "faq" | "competitor" | "package" | "sop";
 
 /** Where a result should take the operator. Kept separate from display
  * fields so CommandPalette (which can navigate anywhere) and Call Mode's
@@ -14,7 +15,8 @@ export type SearchNav =
   | { kind: "objection"; objectionId: string; scriptId: string; stageId: string }
   | { kind: "faq" }
   | { kind: "package" }
-  | { kind: "competitor"; competitorId: string };
+  | { kind: "competitor"; competitorId: string }
+  | { kind: "sop"; sopId: string };
 
 export interface SearchDoc {
   id: string;
@@ -41,8 +43,13 @@ export function findStageFor(scripts: ContentBundle["scripts"], objectionId: str
 
 /** Builds the flat, Fuse-ready document set from a content bundle. Pure —
  * no module-level cache here; callers (the /api/search-index route, Call
- * Mode) decide their own caching strategy. */
-export function buildSearchDocs(bundle: ContentBundle): SearchDoc[] {
+ * Mode) decide their own caching strategy.
+ *
+ * `sops` is a separate argument, not part of ContentBundle, so the callers
+ * that only want the bundle's content (Call Mode's inline search, the
+ * Copilot's index) keep getting exactly that. Only the palette's index route
+ * passes it. */
+export function buildSearchDocs(bundle: ContentBundle, sops: readonly Sop[] = []): SearchDoc[] {
   const { scripts, objections, faqs, competitors, packageGroups } = bundle;
   const docs: SearchDoc[] = [];
 
@@ -122,6 +129,19 @@ export function buildSearchDocs(bundle: ContentBundle): SearchDoc[] {
         body: normalizeSearchText([pkg.orderVolume, pkg.paymentTerms, pkg.estimatedDiscount].join(" ")),
       });
     }
+  }
+
+  for (const sop of sops) {
+    docs.push({
+      id: `sop:${sop.id}`,
+      type: "sop",
+      title: sop.title,
+      snippet: sop.summary,
+      nav: { kind: "sop", sopId: sop.id },
+      keywords: "",
+      searchTitle: normalizeSearchText(sop.title),
+      body: normalizeSearchText([sop.summary, ...sop.steps.flatMap((step) => [step.title, step.body])].join(" ")),
+    });
   }
 
   return docs;
@@ -206,5 +226,7 @@ export function resolveSearchPath(nav: SearchNav): string {
       return "/sales-process/scripts?tab=packages";
     case "competitor":
       return `/sales-process/battle-cards/${nav.competitorId}`;
+    case "sop":
+      return `/tools/amocrm/${nav.sopId}`;
   }
 }

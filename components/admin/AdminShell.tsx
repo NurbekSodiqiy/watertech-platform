@@ -12,6 +12,8 @@ import {
   MessagesSquare,
   Newspaper,
   Package,
+  Phone,
+  ScrollText,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -51,11 +53,15 @@ export function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const tChangelog = useTranslations("pages.admin.changelog");
-  // The one entry whose label comes from messages (the rest predate next-intl
+  const tContacts = useTranslations("pages.admin.contacts");
+  const tSops = useTranslations("pages.admin.sops");
+  // The entries whose label comes from messages (the rest predate next-intl
   // in the admin shell and stay as they are).
   const navEntries: AdminNavEntry[] = [
     ...ADMIN_NAV,
     { path: "/admin/changelog", label: tChangelog("nav"), icon: Newspaper },
+    { path: "/admin/contacts", label: tContacts("nav"), icon: Phone },
+    { path: "/admin/sops", label: tSops("nav"), icon: ScrollText },
   ];
 
   async function handleSignOut() {

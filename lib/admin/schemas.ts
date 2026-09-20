@@ -1,6 +1,9 @@
 import { z } from "zod";
 import {
   changelogSchema,
+  contactSchema,
+  sopSchema,
+  sopStepSchema,
   sitePathSchema,
   faqSchema,
   objectionSchema,
@@ -103,6 +106,24 @@ export const changelogWriteSchema = changelogSchema.extend({
   status: statusSchema,
   version: versionField,
 });
+export const contactWriteSchema = contactSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  version: versionField,
+});
+/** An SOP saves with at least one step, and every step needs its instruction
+ * (the body is the optional note under it) — stricter than the read path's
+ * sopSchema, which only describes what may be stored. SopEditor binds to this
+ * schema directly (no *FormSchema): it has no transforms beyond trim, so the
+ * form's input and output types are the same. */
+const sopStepWriteSchema = sopStepSchema.extend({ title: z.string().trim().min(1, "Majburiy") });
+export const sopWriteSchema = sopSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  steps: z.array(sopStepWriteSchema).min(1, "Kamida bitta qadam kerak"),
+  stepsRu: z.array(sopStepWriteSchema).optional(),
+  version: versionField,
+});
 export const objectionWriteSchema = objectionSchema.extend({
   id: idSchema,
   status: statusSchema,
@@ -142,6 +163,7 @@ export const changelogFormSchema = changelogWriteSchema.extend({
   linkedPath: linkedPathFormField,
   version: versionFormField,
 });
+export const contactFormSchema = contactWriteSchema.extend({ version: versionFormField });
 export const objectionFormSchema = objectionWriteSchema.extend({
   keywords: csvArrayField,
   scriptIds: csvArrayField,
@@ -171,9 +193,11 @@ export const productFormSchema = productWriteSchema.extend({
 // must match.
 
 export type ScriptFormValues = z.infer<typeof scriptWriteSchema>;
+export type SopFormValues = z.infer<typeof sopWriteSchema>;
 
 export type FaqFormValues = z.output<typeof faqFormSchema>;
 export type ChangelogFormValues = z.output<typeof changelogFormSchema>;
+export type ContactFormValues = z.output<typeof contactFormSchema>;
 export type ObjectionFormValues = z.output<typeof objectionFormSchema>;
 export type CompetitorFormValues = z.output<typeof competitorFormSchema>;
 export type PackageGroupFormValues = z.output<typeof packageGroupFormSchema>;
@@ -182,6 +206,7 @@ export type ProductFormValues = z.output<typeof productFormSchema>;
 
 export type FaqFormInput = z.input<typeof faqFormSchema>;
 export type ChangelogFormInput = z.input<typeof changelogFormSchema>;
+export type ContactFormInput = z.input<typeof contactFormSchema>;
 export type ObjectionFormInput = z.input<typeof objectionFormSchema>;
 export type CompetitorFormInput = z.input<typeof competitorFormSchema>;
 export type PackageGroupFormInput = z.input<typeof packageGroupFormSchema>;
