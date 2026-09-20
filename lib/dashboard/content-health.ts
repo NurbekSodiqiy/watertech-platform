@@ -17,8 +17,13 @@ export type DashboardTableName =
   | "content_competitors"
   | "content_package_groups"
   | "content_packages"
-  | "content_products";
+  | "content_products"
+  | "content_changelog";
 
+// content_changelog is a dashboard table for its action links and the publish
+// gate, but deliberately absent from TABLES below: a changelog entry is a dated
+// record, not something that goes "stale" after 90 days, and its Russian twins
+// are optional per entry.
 export const DASHBOARD_TABLE_KIND: Record<DashboardTableName, ContentKind> = {
   content_scripts: "scripts",
   content_objections: "objections",
@@ -27,6 +32,7 @@ export const DASHBOARD_TABLE_KIND: Record<DashboardTableName, ContentKind> = {
   content_package_groups: "packages",
   content_packages: "packages",
   content_products: "products",
+  content_changelog: "changelog",
 };
 
 interface TableConfig {
@@ -162,5 +168,7 @@ export function adminEditHref(table: DashboardTableName, id: string): string {
       return `/admin/packages/${id}`;
     case "content_products":
       return `/admin/products/${id}`;
+    case "content_changelog":
+      return `/admin/changelog/${id}`;
   }
 }

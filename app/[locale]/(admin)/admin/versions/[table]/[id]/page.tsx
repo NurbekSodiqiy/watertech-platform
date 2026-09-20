@@ -12,6 +12,7 @@ const TABLE_INFO: Record<string, { label: string; backHref: string }> = {
   content_package_groups: { label: "Paket guruhi", backHref: "/admin/packages/groups" },
   content_products: { label: "Mahsulot", backHref: "/admin/products" },
   content_scripts: { label: "Skript", backHref: "/admin/scripts" },
+  content_changelog: { label: "O'zgarish", backHref: "/admin/changelog" },
 };
 
 export const metadata = { title: "Kontent boshqaruvi — Versiyalar" };

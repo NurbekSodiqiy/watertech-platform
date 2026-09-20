@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  changelogSchema,
+  sitePathSchema,
   faqSchema,
   objectionSchema,
   competitorSchema,
@@ -96,6 +98,11 @@ export const scriptWriteSchema = scriptSchema
   });
 
 export const faqWriteSchema = faqSchema.extend({ id: idSchema, status: statusSchema, version: versionField });
+export const changelogWriteSchema = changelogSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  version: versionField,
+});
 export const objectionWriteSchema = objectionSchema.extend({
   id: idSchema,
   status: statusSchema,
@@ -124,6 +131,17 @@ export const productWriteSchema = productSchema.extend({ id: idSchema, status: s
 // the write schemas above also expect). ===
 
 export const faqFormSchema = faqWriteSchema.extend({ version: versionFormField });
+/** The optional "Bog'langan sahifa" text input is "" when left blank —
+ * that means "no link", not an invalid path. */
+const linkedPathFormField = z
+  .string()
+  .optional()
+  .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()))
+  .pipe(sitePathSchema.optional());
+export const changelogFormSchema = changelogWriteSchema.extend({
+  linkedPath: linkedPathFormField,
+  version: versionFormField,
+});
 export const objectionFormSchema = objectionWriteSchema.extend({
   keywords: csvArrayField,
   scriptIds: csvArrayField,
@@ -155,6 +173,7 @@ export const productFormSchema = productWriteSchema.extend({
 export type ScriptFormValues = z.infer<typeof scriptWriteSchema>;
 
 export type FaqFormValues = z.output<typeof faqFormSchema>;
+export type ChangelogFormValues = z.output<typeof changelogFormSchema>;
 export type ObjectionFormValues = z.output<typeof objectionFormSchema>;
 export type CompetitorFormValues = z.output<typeof competitorFormSchema>;
 export type PackageGroupFormValues = z.output<typeof packageGroupFormSchema>;
@@ -162,6 +181,7 @@ export type PackageFormValues = z.output<typeof packageFormSchema>;
 export type ProductFormValues = z.output<typeof productFormSchema>;
 
 export type FaqFormInput = z.input<typeof faqFormSchema>;
+export type ChangelogFormInput = z.input<typeof changelogFormSchema>;
 export type ObjectionFormInput = z.input<typeof objectionFormSchema>;
 export type CompetitorFormInput = z.input<typeof competitorFormSchema>;
 export type PackageGroupFormInput = z.input<typeof packageGroupFormSchema>;

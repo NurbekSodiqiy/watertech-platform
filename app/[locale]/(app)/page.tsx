@@ -1,16 +1,29 @@
-import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations, getFormatter } from "next-intl/server";
 import { DailyTimeline, DailyDateLabel } from "@/components/DailyTimeline";
 import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { HomeGreeting } from "@/components/HomeGreeting";
+import { ChangelogStrip } from "@/components/home/ChangelogStrip";
 import { ContinueCard } from "@/components/home/ContinueCard";
 import { Favourites } from "@/components/home/Favourites";
 import { Recents } from "@/components/home/Recents";
-import { Link } from "@/i18n/routing";
+import { getChangelog } from "@/lib/content/loader";
+import { Link, type Locale } from "@/i18n/routing";
 import { Headphones, Package } from "lucide-react";
 
-export default async function HomePage({ params: { locale } }: { params: { locale: string } }) {
+export default async function HomePage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("pages.home.quickAccess");
+  const [t, format, changelog] = await Promise.all([
+    getTranslations("pages.home.quickAccess"),
+    getFormatter({ locale }),
+    getChangelog(locale),
+  ]);
+  // Titles and dates only: which entries are unread is per operator, decided
+  // in the island. Bodies stay off the home page's payload.
+  const changelogEntries = changelog.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    dateLabel: format.dateTime(new Date(`${entry.publishedOn}T00:00:00Z`), { dateStyle: "long", timeZone: "UTC" }),
+  }));
 
   const quickAccess = [
     {
@@ -36,6 +49,10 @@ export default async function HomePage({ params: { locale } }: { params: { local
 
       <WidgetBoundary>
         <ContinueCard />
+      </WidgetBoundary>
+
+      <WidgetBoundary>
+        <ChangelogStrip entries={changelogEntries} />
       </WidgetBoundary>
 
       <WidgetBoundary>

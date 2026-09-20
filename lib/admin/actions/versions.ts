@@ -14,6 +14,7 @@ const RESTORABLE_TABLES = {
   content_package_groups: "packages",
   content_packages: "packages",
   content_products: "products",
+  content_changelog: "changelog",
 } satisfies Record<string, ContentKind>;
 
 type RestorableTable = keyof typeof RESTORABLE_TABLES;

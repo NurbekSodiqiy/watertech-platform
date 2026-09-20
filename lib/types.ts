@@ -14,8 +14,9 @@ export interface NavNode {
 }
 
 /** Count badges shown next to sidebar nav rows, keyed by NavNode["path"].
- * Computed server-side (app/(app)/layout.tsx) from real content/mock data
- * and threaded down AppShell -> Sidebar -> SidebarNav -> NavItem. */
+ * The layout (app/(app)/layout.tsx) computes the ones that are the same for
+ * everyone from real content; AppShell adds the per-operator /changelog one on
+ * the client. Threaded down AppShell -> Sidebar -> SidebarNav -> NavItem. */
 export type NavBadges = Record<string, { count: number; tone: "ok" | "warning" }>;
 
 export interface PageMeta {

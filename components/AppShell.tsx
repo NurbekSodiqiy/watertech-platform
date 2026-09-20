@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
@@ -17,6 +17,8 @@ import type { CopilotPrefill } from "@/components/copilot/CopilotPanel";
 import type { NavBadges } from "@/lib/types";
 import { scheduleIdle } from "@/lib/idle";
 import { durations, easings } from "@/lib/motion/tokens";
+import { useChangelogRead } from "@/hooks/useChangelogRead";
+import { unreadIds } from "@/lib/user-state/changelog";
 
 const CommandPalette = dynamic(() => import("./CommandPalette").then((m) => m.CommandPalette), {
   ssr: false,
@@ -40,6 +42,8 @@ const CHORD_ROUTES: Record<string, string> = {
   KeyO: "/sales-process/objections",
 };
 const CHORD_WINDOW_MS = 1000;
+// A stable default: a fresh [] per render would defeat the navBadges memo.
+const NO_CHANGELOG_IDS: string[] = [];
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -47,7 +51,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 }
 
-export function AppShell({ children, navBadges }: { children: React.ReactNode; navBadges?: NavBadges }) {
+export function AppShell({
+  children,
+  navBadges: serverBadges,
+  changelogIds = NO_CHANGELOG_IDS,
+}: {
+  children: React.ReactNode;
+  navBadges?: NavBadges;
+  /** Ids of every published changelog entry; the unread count is these minus
+   * the operator's `changelog.read`, worked out here because it is per user. */
+  changelogIds?: string[];
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [paletteEverOpened, setPaletteEverOpened] = useState(false);
@@ -63,6 +77,17 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   const chordStartedAt = useRef(0);
   const reduce = useReducedMotion();
   const t = useTranslations("chrome.appShell");
+  const { read: changelogRead, status: changelogStatus } = useChangelogRead();
+
+  // Memoised: the nav rows are memo'd on this object, and AppShell re-renders
+  // for unrelated state (palette, copilot, drawer). No badge until the stored
+  // read marks have loaded — before that every entry would count as unread —
+  // and none at zero.
+  const navBadges = useMemo<NavBadges | undefined>(() => {
+    if (changelogStatus === "loading") return serverBadges;
+    const unread = unreadIds(changelogIds, changelogRead).length;
+    return unread > 0 ? { ...serverBadges, "/changelog": { count: unread, tone: "warning" } } : serverBadges;
+  }, [serverBadges, changelogIds, changelogRead, changelogStatus]);
 
   useEffect(() => {
     setMobileOpen(false);

@@ -10,10 +10,12 @@ import {
   LayoutDashboard,
   LogOut,
   MessagesSquare,
+  Newspaper,
   Package,
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { signOutAndRedirect } from "@/lib/auth/sign-out";
@@ -48,6 +50,13 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const tChangelog = useTranslations("pages.admin.changelog");
+  // The one entry whose label comes from messages (the rest predate next-intl
+  // in the admin shell and stay as they are).
+  const navEntries: AdminNavEntry[] = [
+    ...ADMIN_NAV,
+    { path: "/admin/changelog", label: tChangelog("nav"), icon: Newspaper },
+  ];
 
   async function handleSignOut() {
     await signOutAndRedirect(router);
@@ -83,7 +92,7 @@ export function AdminShell({
       <div className="flex min-w-0 flex-1">
         <aside className="hidden w-60 shrink-0 border-r border-border bg-surface px-3 py-4 md:block">
           <nav className="space-y-1">
-            {ADMIN_NAV.map((entry) => {
+            {navEntries.map((entry) => {
               const isActive = entry.path === "/admin" ? pathname === "/admin" : pathname.startsWith(entry.path);
               const Icon = entry.icon;
               return (

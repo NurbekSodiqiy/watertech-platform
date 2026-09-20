@@ -163,6 +163,11 @@
       "reason": "Hali nashr qilingan savol-javob yo'q",
       "cta": "Qidiruvni ochish"
     },
+    "changelogNone": {
+      "title": "Yangiliklar shu yerda paydo bo'ladi",
+      "reason": "Kontent yoki jarayonlarda muhim o'zgarish bo'lganda, u shu yerda e'lon qilinadi.",
+      "cta": "Bosh sahifaga"
+    },
     "battleCardsNone": {
       "title": "Raqobat kartalari — har bir raqobatchi bo'yicha qisqacha ma'lumot",
       "reason": "Hali nashr qilingan raqobatchi yo'q",
@@ -226,7 +231,8 @@
         "competitor": "raqobatchi",
         "package": "paket",
         "packageGroup": "guruh",
-        "product": "mahsulot"
+        "product": "mahsulot",
+        "changelog": "o'zgarish yozuvi"
       }
     },
     "versionsNone": {
@@ -377,6 +383,48 @@
       "recents": {
         "empty": "Hali hech narsa ochilmagan.",
         "loadFailed": "So'nggi ochilganlar nomlarini yuklab bo'lmadi. Sahifani yangilang."
+      },
+      "changelog": {
+        "heading": "Yangiliklar",
+        "all": "Barchasi",
+        "unread": "O'qilmagan"
+      }
+    },
+    "changelog": {
+      "unread": "O'qilmagan",
+      "markRead": "Tanishdim",
+      "approvedBy": "Tasdiqlagan: {name}",
+      "openPage": "Sahifani ochish"
+    },
+    "admin": {
+      "changelog": {
+        "nav": "O'zgarishlar",
+        "title": "O'zgarishlar tarixi",
+        "description": "Operatorlarga ko'rsatiladigan yangiliklar. Har bir yozuvni nechta operator o'qiganini ko'rasiz.",
+        "columns": {
+          "title": "Sarlavha",
+          "publishedOn": "Sana",
+          "approvedBy": "Tasdiqlagan",
+          "reads": "O'qigan operatorlar"
+        },
+        "readBy": "{read} / {total}",
+        "newTitle": "Yangi yozuv",
+        "editTitle": "Yozuvni tahrirlash",
+        "versions": "Versiyalar tarixi",
+        "fields": {
+          "id": "ID (slug)",
+          "idPlaceholder": "masalan: 2026-09-chegirmalar",
+          "publishedOn": "Sana",
+          "publishedOnPlaceholder": "YYYY-MM-DD",
+          "title": "Sarlavha",
+          "body": "Matn",
+          "linkedPath": "Bog'langan sahifa (ixtiyoriy)",
+          "linkedPathPlaceholder": "/sales-process/battle-cards",
+          "approvedBy": "Tasdiqlagan",
+          "status": "Holat",
+          "statusDraft": "Qoralama",
+          "statusPublished": "Nashr etilgan"
+        }
       }
     },
     "company": {

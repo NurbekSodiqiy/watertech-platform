@@ -10,6 +10,8 @@ import {
   rowToProduct,
 } from "@/lib/content/db";
 import { competitorSchema, productSchema } from "@/lib/content/schemas";
+import { changelogReadKey } from "@/lib/user-state/keys";
+import { aggregateChangelogReads, type ChangelogReadCounts } from "@/lib/user-state/changelog";
 import type { ContentBundle } from "@/lib/content/loader";
 import { statusSchema } from "@/lib/admin/schemas";
 import type { StatusValue } from "@/lib/admin/actions/status";
@@ -21,6 +23,7 @@ import type {
   PackageGroupRow,
   PackageRow,
   ProductRow,
+  ChangelogRow,
 } from "@/lib/content/db";
 import type { Competitor } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
@@ -41,6 +44,7 @@ type WithStatus<T extends { status: string }> = Omit<T, "status"> & { status: St
 export type AdminScriptRow = WithStatus<ScriptRow>;
 export type AdminObjectionRow = WithStatus<ObjectionRow>;
 export type AdminFaqRow = WithStatus<FaqRow>;
+export type AdminChangelogRow = WithStatus<ChangelogRow>;
 export type AdminCompetitorRow = Omit<WithStatus<CompetitorRow>, "threat_level"> & {
   threat_level: Competitor["threatLevel"];
 };
@@ -117,6 +121,50 @@ export async function getFaqRow(id: string): Promise<AdminFaqRow | null> {
   return data && withStatus(data);
 }
 
+// Newest first, like the operator page — drafts included.
+export async function listChangelogRows(): Promise<AdminChangelogRow[]> {
+  const { data, error } = await createClient()
+    .from("content_changelog")
+    .select("*")
+    .order("published_on", { ascending: false })
+    .order("sort_order");
+  if (error) throw new Error(`content_changelog: ${error.message}`);
+  return data.map(withStatus);
+}
+
+export async function getChangelogRow(id: string): Promise<AdminChangelogRow | null> {
+  const { data, error } = await createClient().from("content_changelog").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`content_changelog: ${error.message}`);
+  return data && withStatus(data);
+}
+
+/** "Read by n / total operators" for the admin changelog list. Manager-only
+ * read, same as lib/dashboard/quality.ts's onboarding table: the
+ * "user_state_manager_select_all" policy (0009) is what lets a manager's own
+ * session see every operator's `changelog.read` row, and "allowed_users_manager_select_all"
+ * (0005) the allow-list. Returns null when the counts cannot be read (for
+ * example 0009 is not applied yet) — the list is still worth showing without
+ * them, so this logs instead of throwing. */
+export async function getChangelogReadCounts(): Promise<ChangelogReadCounts | null> {
+  const supabase = createClient();
+  const [operatorsRes, statesRes] = await Promise.all([
+    supabase.from("allowed_users").select("email").eq("role", "operator"),
+    supabase.from("user_state").select("user_email, value").eq("key", changelogReadKey.key),
+  ]);
+  if (operatorsRes.error || statesRes.error) {
+    console.error("[admin] changelog read counts:", operatorsRes.error?.message ?? statesRes.error?.message);
+    return null;
+  }
+  return aggregateChangelogReads(
+    operatorsRes.data.map((row) => row.email),
+    statesRes.data,
+    (value) => {
+      const parsed = changelogReadKey.schema.safeParse(value);
+      return parsed.success ? parsed.data : null;
+    }
+  );
+}
+
 export async function listCompetitorRows(): Promise<AdminCompetitorRow[]> {
   const { data, error } = await createClient().from("content_competitors").select("*").order("sort_order");
   if (error) throw new Error(`content_competitors: ${error.message}`);
@@ -178,6 +226,11 @@ export type CountableTable =
   | "content_packages"
   | "content_products";
 
+/** Tables the admin overview counts. A superset of CountableTable: the
+ * changelog has an overview card but takes no part in the publish gate's
+ * cross-reference sets (AdminContentBundle.publishedIds). */
+export type OverviewTable = CountableTable | "content_changelog";
+
 export interface StatusCounts {
   total: number;
   draft: number;
@@ -185,7 +238,7 @@ export interface StatusCounts {
 
 /** Row counts for the admin overview — two `head: true` count queries, so no
  * row bodies (scripts carry large stages JSONB) ever leave the database. */
-export async function countRowsByStatus(table: CountableTable): Promise<StatusCounts> {
+export async function countRowsByStatus(table: OverviewTable): Promise<StatusCounts> {
   const supabase = createClient();
   const [totalRes, draftRes] = await Promise.all([
     supabase.from(table).select("id", { count: "exact", head: true }),

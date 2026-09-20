@@ -1,6 +1,7 @@
 import Fuse from "fuse.js";
 import type { z } from "zod";
 import {
+  changelogSchema,
   competitorSchema,
   faqSchema,
   objectionSchema,
@@ -59,6 +60,8 @@ export function targetTitle(target: GateTarget): string {
       return target.row.name;
     case "content_products":
       return target.row.name_ru;
+    case "content_changelog":
+      return target.row.title;
   }
 }
 
@@ -158,6 +161,10 @@ export function textFields(target: GateTarget): TextField[] {
       ]);
     case "content_products":
       return stringColumns(target.row, ["name_ru", "name_uz"]);
+    // linked_path is scanned as prose on purpose: internalLinksResolve then
+    // reports a path into /sales-process, /products or /faq that does not exist.
+    case "content_changelog":
+      return stringColumns(target.row, ["title", "body", "linked_path", "approved_by", "title_ru", "body_ru"]);
   }
 }
 
@@ -305,6 +312,21 @@ export const schemaValid: GateCheck = (target) => {
         })
       );
     }
+    case "content_changelog": {
+      const { row } = target;
+      return schemaIssues(
+        changelogSchema.safeParse({
+          id: row.id,
+          publishedOn: row.published_on,
+          title: row.title,
+          body: row.body,
+          linkedPath: row.linked_path ?? undefined,
+          approvedBy: row.approved_by,
+          titleRu: row.title_ru ?? undefined,
+          bodyRu: row.body_ru ?? undefined,
+        })
+      );
+    }
   }
 };
 
@@ -341,6 +363,12 @@ export const requiredNotBlank: GateCheck = (target) => {
       return blankRequired(target.row, [["name", "Nomi"]]);
     case "content_products":
       return blankRequired(target.row, [["name_ru", "Nomi (rus tilida)"]]);
+    case "content_changelog":
+      return blankRequired(target.row, [
+        ["title", "Sarlavha"],
+        ["body", "Matn"],
+        ["approved_by", "Tasdiqlagan"],
+      ]);
   }
 };
 
@@ -551,6 +579,8 @@ export function missingRuFields(target: GateTarget): string[] {
     }
     case "content_faqs":
       return blankColumns(target.row, ["question_ru", "answer_ru"]);
+    case "content_changelog":
+      return blankColumns(target.row, ["title_ru", "body_ru"]);
     case "content_package_groups":
       return blankColumns(target.row, ["title_ru", "subtitle_ru"]);
     case "content_packages":

@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { countRowsByStatus } from "@/lib/admin/queries";
 
@@ -8,13 +8,15 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
   unstable_setRequestLocale(locale);
 
   // Counts only (head: true) — never full rows; scripts carry large JSONB.
-  const [scripts, objections, faqs, competitors, packages, products] = await Promise.all([
+  const t = await getTranslations("pages.admin.changelog");
+  const [scripts, objections, faqs, competitors, packages, products, changelog] = await Promise.all([
     countRowsByStatus("content_scripts"),
     countRowsByStatus("content_objections"),
     countRowsByStatus("content_faqs"),
     countRowsByStatus("content_competitors"),
     countRowsByStatus("content_packages"),
     countRowsByStatus("content_products"),
+    countRowsByStatus("content_changelog"),
   ]);
 
   const sections = [
@@ -24,6 +26,7 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
     { label: "Raqobatchilar", href: "/admin/competitors", counts: competitors },
     { label: "Paketlar", href: "/admin/packages", counts: packages },
     { label: "Mahsulotlar", href: "/admin/products", counts: products },
+    { label: t("nav"), href: "/admin/changelog", counts: changelog },
   ];
 
   return (

@@ -104,6 +104,22 @@ export interface Faq {
   answerRu?: string;
 }
 
+export interface ChangelogEntry {
+  id: string;
+  /** Calendar date the change went live, "YYYY-MM-DD" (a date, not a moment —
+   * it is shown as written, never shifted by time zone). */
+  publishedOn: string;
+  title: string;
+  body: string;
+  /** In-app path the entry is about (always starts with a single "/"). */
+  linkedPath?: string;
+  approvedBy: string;
+  /** Optional Russian translations — see Script.nameRu for the resolution
+   * contract. */
+  titleRu?: string;
+  bodyRu?: string;
+}
+
 export interface Package {
   id: string;
   name: string;

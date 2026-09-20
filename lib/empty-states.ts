@@ -17,6 +17,7 @@ import {
   Languages,
   ThumbsUp,
   BellOff,
+  Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const EMPTY_STATES = {
   scriptNotFound: { key: "scriptNotFound", icon: FileQuestion, ctaKind: "link" },
   objectionsNone: { key: "objectionsNone", icon: ShieldAlert, ctaKind: "open-search" },
   faqNone: { key: "faqNone", icon: HelpCircle, ctaKind: "open-search" },
+  changelogNone: { key: "changelogNone", icon: Newspaper, ctaKind: "home" },
   battleCardsNone: { key: "battleCardsNone", icon: Swords, ctaKind: "open-search" },
   productsNoMatch: { key: "productsNoMatch", icon: PackageSearch, ctaKind: "clear-filters" },
   comparisonsNone: { key: "comparisonsNone", icon: GitCompare, ctaKind: "link" },

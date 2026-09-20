@@ -116,9 +116,9 @@ export const scriptsPositionKey: UserStateKeyDef<ScriptsPosition> = {
 
 // --- pins / recents / changelog.read -----------------------------------------
 // pins and recents are read and written by the home page, the command palette
-// and PinButton (hooks/usePins.ts, hooks/useRecordRecent.ts); changelog.read is
-// still schema-only. None of them has a legacy localStorage counterpart to
-// import.
+// and PinButton (hooks/usePins.ts, hooks/useRecordRecent.ts); changelog.read by
+// the changelog page, the home strip and the nav badge (hooks/useChangelogRead.ts).
+// None of them has a legacy localStorage counterpart to import.
 
 /** The five kinds of content an operator can pin or reopen. */
 export const PIN_KINDS = ["script", "objection", "faq", "product", "battleCard"] as const;
@@ -148,8 +148,11 @@ export type RecentsState = z.infer<typeof recentsSchema>;
 
 export const recentsKey: UserStateKeyDef<RecentsState> = { key: "recents", schema: recentsSchema, defaultValue: [] };
 
+/** Most entry ids kept in `changelog.read` — see lib/user-state/changelog.ts. */
+export const CHANGELOG_READ_MAX = 200;
+
 /** Ids of changelog entries the operator has already seen. */
-const changelogReadSchema = z.array(z.string().min(1).max(100)).max(200);
+const changelogReadSchema = z.array(z.string().min(1).max(100)).max(CHANGELOG_READ_MAX);
 export type ChangelogReadState = z.infer<typeof changelogReadSchema>;
 
 export const changelogReadKey: UserStateKeyDef<ChangelogReadState> = {

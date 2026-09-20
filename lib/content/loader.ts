@@ -8,8 +8,9 @@ import {
   rowToCompetitor,
   rowToPackageGroup,
   rowToProduct,
+  rowToChangelog,
 } from "@/lib/content/db";
-import type { Script, Objection, Faq, Competitor, PackageGroup, Package } from "@/lib/content/types";
+import type { Script, Objection, Faq, Competitor, PackageGroup, Package, ChangelogEntry } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import type { Locale } from "@/i18n/routing";
 import { safeContent } from "@/lib/content/safe";
@@ -87,6 +88,16 @@ function localizeFaq(faq: Faq, locale: Locale): Faq {
     answer: loc(faq.answer, faq.answerRu, locale),
     questionRu: undefined,
     answerRu: undefined,
+  };
+}
+
+function localizeChangelog(entry: ChangelogEntry, locale: Locale): ChangelogEntry {
+  return {
+    ...entry,
+    title: loc(entry.title, entry.titleRu, locale),
+    body: loc(entry.body, entry.bodyRu, locale),
+    titleRu: undefined,
+    bodyRu: undefined,
   };
 }
 
@@ -255,6 +266,28 @@ const getProductsCached = unstable_cache(
 );
 export function getProducts(locale: Locale = "uz"): Promise<Product[]> {
   return safeContent("products", () => getProductsCached(locale), []);
+}
+
+// Newest first — the order operators read a changelog in. sort_order only
+// breaks ties between entries published on the same day. Not part of
+// ContentBundle: the changelog is not searchable content and no cross-content
+// check reads it.
+const getChangelogCached = unstable_cache(
+  async (locale: Locale): Promise<ChangelogEntry[]> => {
+    const { data, error } = await createAdminClient()
+      .from("content_changelog")
+      .select("*")
+      .eq("status", "published")
+      .order("published_on", { ascending: false })
+      .order("sort_order");
+    if (error) throw new Error(`content_changelog: ${error.message}`);
+    return data.map((row) => localizeChangelog(rowToChangelog(row), locale));
+  },
+  ["content:changelog"],
+  { tags: ["content", "content:changelog"], revalidate: 3600 }
+);
+export function getChangelog(locale: Locale = "uz"): Promise<ChangelogEntry[]> {
+  return safeContent("changelog", () => getChangelogCached(locale), []);
 }
 
 // Each getter above already degrades on its own; the outer safeContent only

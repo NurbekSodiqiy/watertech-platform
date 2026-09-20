@@ -163,6 +163,11 @@
       "reason": "Пока нет ни одного опубликованного вопроса",
       "cta": "Открыть поиск"
     },
+    "changelogNone": {
+      "title": "Новости появятся здесь",
+      "reason": "Когда в контенте или процессах произойдёт важное изменение, оно будет опубликовано здесь.",
+      "cta": "На главную"
+    },
     "battleCardsNone": {
       "title": "Карточки конкурентов — кратко по каждому конкуренту",
       "reason": "Пока нет ни одного опубликованного конкурента",
@@ -226,7 +231,8 @@
         "competitor": "конкурент",
         "package": "пакет",
         "packageGroup": "группа",
-        "product": "продукт"
+        "product": "продукт",
+        "changelog": "запись об изменении"
       }
     },
     "versionsNone": {
@@ -377,6 +383,48 @@
       "recents": {
         "empty": "Пока ничего не открывали.",
         "loadFailed": "Не удалось загрузить названия недавних. Обновите страницу."
+      },
+      "changelog": {
+        "heading": "Новости",
+        "all": "Все",
+        "unread": "Не прочитано"
+      }
+    },
+    "changelog": {
+      "unread": "Не прочитано",
+      "markRead": "Ознакомился",
+      "approvedBy": "Утвердил: {name}",
+      "openPage": "Открыть страницу"
+    },
+    "admin": {
+      "changelog": {
+        "nav": "Изменения",
+        "title": "История изменений",
+        "description": "Новости, которые видят операторы. Для каждой записи видно, сколько операторов её прочитали.",
+        "columns": {
+          "title": "Заголовок",
+          "publishedOn": "Дата",
+          "approvedBy": "Утвердил",
+          "reads": "Прочитали операторы"
+        },
+        "readBy": "{read} / {total}",
+        "newTitle": "Новая запись",
+        "editTitle": "Редактирование записи",
+        "versions": "История версий",
+        "fields": {
+          "id": "ID (slug)",
+          "idPlaceholder": "например: 2026-09-skidki",
+          "publishedOn": "Дата",
+          "publishedOnPlaceholder": "ГГГГ-ММ-ДД",
+          "title": "Заголовок",
+          "body": "Текст",
+          "linkedPath": "Связанная страница (необязательно)",
+          "linkedPathPlaceholder": "/sales-process/battle-cards",
+          "approvedBy": "Утвердил",
+          "status": "Статус",
+          "statusDraft": "Черновик",
+          "statusPublished": "Опубликовано"
+        }
       }
     },
     "company": {

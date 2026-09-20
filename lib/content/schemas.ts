@@ -80,6 +80,34 @@ export const faqSchema = z.object({
   answerRu: z.string().optional(),
 });
 
+/** "YYYY-MM-DD" that is also a real calendar day ("2026-02-30" is rejected). */
+export const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Sana YYYY-MM-DD ko'rinishida bo'lishi kerak")
+  .refine(
+    (value) => {
+      const date = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+    },
+    { message: "Bunday sana mavjud emas" }
+  );
+
+/** A path on this site: one leading "/", never "//host" (protocol-relative). */
+export const sitePathSchema = z
+  .string()
+  .regex(/^\/(?!\/)\S*$/, "Yo'l bitta «/» bilan boshlanishi va bo'sh joysiz bo'lishi kerak (masalan: /faq)");
+
+export const changelogSchema = z.object({
+  id: z.string(),
+  publishedOn: isoDateSchema,
+  title: z.string(),
+  body: z.string(),
+  linkedPath: sitePathSchema.optional(),
+  approvedBy: z.string(),
+  titleRu: z.string().optional(),
+  bodyRu: z.string().optional(),
+});
+
 export const packageSchema = z.object({
   id: z.string(),
   name: z.string(),

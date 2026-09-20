@@ -1,7 +1,16 @@
-import type { Script, Stage, Objection, Faq, Competitor, Package, PackageGroup } from "@/lib/content/types";
+import type {
+  Script,
+  Stage,
+  Objection,
+  Faq,
+  Competitor,
+  Package,
+  PackageGroup,
+  ChangelogEntry,
+} from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import { z } from "zod";
-import { stagesSchema, competitorSchema, productSchema } from "@/lib/content/schemas";
+import { stagesSchema, competitorSchema, productSchema, sitePathSchema } from "@/lib/content/schemas";
 import type { Json } from "@/lib/supabase/database.types";
 import type { Tables } from "@/lib/supabase/typed";
 
@@ -12,6 +21,7 @@ export type CompetitorRow = Tables<"content_competitors">;
 export type PackageGroupRow = Tables<"content_package_groups">;
 export type PackageRow = Tables<"content_packages">;
 export type ProductRow = Tables<"content_products">;
+export type ChangelogRow = Tables<"content_changelog">;
 
 // Generated row types widen CHECK-constrained text columns (threat_level,
 // line, category, material) to plain string. The constraints make an invalid
@@ -98,6 +108,22 @@ export function rowToFaq(row: FaqRow): Faq {
     answer: row.answer,
     questionRu: row.question_ru ?? undefined,
     answerRu: row.answer_ru ?? undefined,
+  };
+}
+
+export function rowToChangelog(row: ChangelogRow): ChangelogEntry {
+  return {
+    id: row.id,
+    publishedOn: row.published_on,
+    title: row.title,
+    body: row.body,
+    // The CHECK constraint keeps a bad path out; if one ever gets in anyway it
+    // is dropped here rather than rendered as a link off this site.
+    linkedPath:
+      row.linked_path === null ? undefined : narrowColumn(sitePathSchema.optional(), row.linked_path, undefined, "linked_path", row.id),
+    approvedBy: row.approved_by,
+    titleRu: row.title_ru ?? undefined,
+    bodyRu: row.body_ru ?? undefined,
   };
 }
 
@@ -215,6 +241,19 @@ export function faqToRow(faq: Faq) {
     answer: faq.answer,
     question_ru: ru(faq.questionRu),
     answer_ru: ru(faq.answerRu),
+  };
+}
+
+export function changelogToRow(entry: ChangelogEntry) {
+  return {
+    id: entry.id,
+    published_on: entry.publishedOn,
+    title: entry.title,
+    body: entry.body,
+    linked_path: entry.linkedPath ?? null,
+    approved_by: entry.approvedBy,
+    title_ru: ru(entry.titleRu),
+    body_ru: ru(entry.bodyRu),
   };
 }
 

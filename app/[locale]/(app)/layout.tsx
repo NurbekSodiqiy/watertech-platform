@@ -2,19 +2,9 @@ import { unstable_setRequestLocale } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { OfflineBanner } from "@/components/providers/OfflineBanner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
-import { getFaqs } from "@/lib/content/loader";
-import { changelogEntries } from "@/lib/mock-data/changelog";
+import { getChangelog, getFaqs } from "@/lib/content/loader";
 import type { NavBadges } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
-
-// changelogEntries.readCount is an "a / b" string — an entry is unread while
-// a < b, matching the badge semantics NAV_BADGES used to hardcode.
-function countUnreadChangelog(): number {
-  return changelogEntries.filter((entry) => {
-    const [read, total] = entry.readCount.split("/").map((n) => parseInt(n.trim(), 10));
-    return read < total;
-  }).length;
-}
 
 export default async function AppGroupLayout({
   children,
@@ -24,18 +14,24 @@ export default async function AppGroupLayout({
   params: { locale: Locale };
 }) {
   unstable_setRequestLocale(locale);
-  const faqs = await getFaqs(locale);
+  const [faqs, changelog] = await Promise.all([getFaqs(locale), getChangelog(locale)]);
   const navBadges: NavBadges = {
     "/faq": { count: faqs.length, tone: "ok" },
-    "/changelog": { count: countUnreadChangelog(), tone: "warning" },
   };
+  // The /changelog badge is per operator (entries minus the ones they have
+  // read), which a layout that must stay static — no cookies()/headers(), see
+  // CLAUDE.md section 3 — cannot know. It only passes the published ids; AppShell
+  // derives the count on the client from `changelog.read`.
+  const changelogIds = changelog.map((entry) => entry.id);
 
   return (
     <SessionProvider>
       {/* Above the shell rather than inside it: the banner is a statement
           about the whole app, and it renders nothing at all while online. */}
       <OfflineBanner />
-      <AppShell navBadges={navBadges}>{children}</AppShell>
+      <AppShell navBadges={navBadges} changelogIds={changelogIds}>
+        {children}
+      </AppShell>
     </SessionProvider>
   );
 }

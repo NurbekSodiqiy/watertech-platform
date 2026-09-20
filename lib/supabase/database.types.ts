@@ -1,6 +1,7 @@
 // Regenerate with npm run gen:types; hand-written from migrations 0001–0007 on 2026-09-17,
 // rate_limits / rate_limit_hit added by hand from 0008 on 2026-09-18, user_state by hand
-// from 0009 on 2026-09-19 (Supabase CLI unavailable locally: SUPABASE_PROJECT_ID unset).
+// from 0009 on 2026-09-19, content_changelog by hand from 0010 on 2026-09-20
+// (Supabase CLI unavailable locally: SUPABASE_PROJECT_ID unset).
 //
 // allowed_users and telemetry_events are NOT created by any migration in
 // supabase/migrations (they predate the migrations folder). Their columns are
@@ -122,6 +123,57 @@ export type Database = {
           question?: string | null
           status?: string
           ts?: string
+        }
+        Relationships: []
+      }
+      content_changelog: {
+        Row: {
+          approved_by: string
+          body: string
+          body_ru: string | null
+          created_at: string
+          id: string
+          linked_path: string | null
+          published_on: string
+          sort_order: number
+          status: string
+          title: string
+          title_ru: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          approved_by: string
+          body: string
+          body_ru?: string | null
+          created_at?: string
+          id: string
+          linked_path?: string | null
+          published_on: string
+          sort_order?: number
+          status?: string
+          title: string
+          title_ru?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          approved_by?: string
+          body?: string
+          body_ru?: string | null
+          created_at?: string
+          id?: string
+          linked_path?: string | null
+          published_on?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          title_ru?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
         }
         Relationships: []
       }
