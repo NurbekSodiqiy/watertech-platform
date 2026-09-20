@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { usePathname } from "@/i18n/routing";
+import { usePathname, useRouter } from "@/i18n/routing";
 import { TopBar } from "./TopBar";
 import { Sidebar, SidebarNav } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
@@ -30,6 +30,23 @@ const ShortcutsHelp = dynamic(() => import("@/components/layout/ShortcutsHelp").
   ssr: false,
 });
 
+/** "g" then one of these keys, within CHORD_WINDOW_MS. Matched on `code`, not
+ * `key`, so it works the same on a Russian keyboard layout. */
+const CHORD_ROUTES: Record<string, string> = {
+  KeyH: "/",
+  KeyS: "/sales-process/scripts",
+  KeyP: "/products",
+  KeyF: "/faq",
+  KeyO: "/sales-process/objections",
+};
+const CHORD_WINDOW_MS = 1000;
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+}
+
 export function AppShell({ children, navBadges }: { children: React.ReactNode; navBadges?: NavBadges }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -40,6 +57,10 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
   const [copilotEverOpened, setCopilotEverOpened] = useState(false);
   const [copilotPrefill, setCopilotPrefill] = useState<CopilotPrefill | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  // When "g" was pressed (event.timeStamp), or 0 — a ref so a re-render
+  // between the two keys does not drop the chord.
+  const chordStartedAt = useRef(0);
   const reduce = useReducedMotion();
   const t = useTranslations("chrome.appShell");
 
@@ -59,6 +80,26 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
         setCopilotOpen((open) => !open);
         return;
       }
+      // "g" then a letter jumps to a section. Not while typing, not while a
+      // dialog (palette, help, call mode, copilot) is open, and any other key
+      // in between — bar a lone modifier — ends the chord.
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && !MODIFIER_KEYS.has(e.key)) {
+        const startedAt = chordStartedAt.current;
+        chordStartedAt.current = 0;
+        const blocked = isTypingTarget(e.target) || document.querySelector('[role="dialog"], [aria-modal="true"]') !== null;
+        if (!blocked) {
+          const destination = CHORD_ROUTES[e.code];
+          if (startedAt && destination && e.timeStamp - startedAt <= CHORD_WINDOW_MS) {
+            e.preventDefault();
+            router.push(destination);
+            return;
+          }
+          if (e.code === "KeyG" && !e.repeat) {
+            chordStartedAt.current = e.timeStamp;
+            return;
+          }
+        }
+      }
       // "?" is a printable character, so it only opens help when the operator
       // isn't typing it into something (the client-name field, the palette's
       // own input, an admin form).
@@ -73,7 +114,7 @@ export function AppShell({ children, navBadges }: { children: React.ReactNode; n
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (commandOpen) setPaletteEverOpened(true);

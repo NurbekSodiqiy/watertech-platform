@@ -68,9 +68,16 @@ describe("schema fallbacks", () => {
 
   it("caps the keys that grow: pins, recents, changelog.read", () => {
     const byKey = new Map(USER_STATE_KEY_DEFS.map((def) => [def.key, def]));
-    expect(byKey.get("pins")?.schema.safeParse(Array.from({ length: 51 }, (_, i) => `/p${i}`)).success).toBe(false);
-    expect(byKey.get("recents")?.schema.safeParse([{ path: "/faq", at: "2026-09-19T08:00:00.000Z" }]).success).toBe(true);
-    expect(byKey.get("recents")?.schema.safeParse([{ path: "/faq" }]).success).toBe(false);
+    const ref = (i: number) => ({ kind: "faq", id: `faq-${i}` });
+    expect(byKey.get("pins")?.schema.safeParse(Array.from({ length: 24 }, (_, i) => ref(i))).success).toBe(true);
+    expect(byKey.get("pins")?.schema.safeParse(Array.from({ length: 25 }, (_, i) => ref(i))).success).toBe(false);
+    expect(byKey.get("pins")?.schema.safeParse([{ kind: "page", id: "x" }]).success).toBe(false);
+    expect(byKey.get("pins")?.schema.safeParse(["/faq"]).success).toBe(false); // the pre-PinRef stub shape
+    expect(byKey.get("recents")?.schema.safeParse([{ ...ref(1), at: 1_790_000_000_000 }]).success).toBe(true);
+    expect(byKey.get("recents")?.schema.safeParse([ref(1)]).success).toBe(false);
+    expect(
+      byKey.get("recents")?.schema.safeParse(Array.from({ length: 9 }, (_, i) => ({ ...ref(i), at: i }))).success
+    ).toBe(false);
     expect(byKey.get("changelog.read")?.schema.safeParse(["v1", "v2"]).success).toBe(true);
     expect(byKey.get("changelog.read")?.schema.safeParse([1, 2]).success).toBe(false);
   });

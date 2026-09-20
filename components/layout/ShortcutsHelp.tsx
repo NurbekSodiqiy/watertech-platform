@@ -7,8 +7,8 @@ const TITLE_ID = "shortcuts-help-title";
 
 // Keys are rendered verbatim (they're glyphs, not prose) while the
 // descriptions come from the message catalogue. The list mirrors the handlers
-// that actually exist: Ctrl+K and Ctrl+J in AppShell, the rest in ScriptsWorkspace and
-// CallModeOverlay.
+// that actually exist: Ctrl+K, Ctrl+J and the "g" chords in AppShell, the rest in
+// ScriptsWorkspace and CallModeOverlay.
 const SHORTCUTS: { keys: string[]; descriptionKey: string }[] = [
   { keys: ["Ctrl", "K"], descriptionKey: "search" },
   { keys: ["Ctrl", "J"], descriptionKey: "copilot" },
@@ -18,6 +18,11 @@ const SHORTCUTS: { keys: string[]; descriptionKey: string }[] = [
   { keys: ["F2"], descriptionKey: "callMode" },
   { keys: ["Esc"], descriptionKey: "close" },
   { keys: ["?"], descriptionKey: "help" },
+  { keys: ["G", "H"], descriptionKey: "goHome" },
+  { keys: ["G", "S"], descriptionKey: "goScripts" },
+  { keys: ["G", "P"], descriptionKey: "goProducts" },
+  { keys: ["G", "F"], descriptionKey: "goFaq" },
+  { keys: ["G", "O"], descriptionKey: "goObjections" },
 ];
 
 export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -44,7 +49,7 @@ export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () =>
         </button>
       </div>
 
-      <dl className="divide-y divide-border">
+      <dl className="max-h-[70vh] divide-y divide-border overflow-y-auto">
         {SHORTCUTS.map(({ keys, descriptionKey }) => (
           <div key={descriptionKey} className="flex items-center justify-between gap-4 px-5 py-2.5">
             <dt className="flex shrink-0 items-center gap-1">

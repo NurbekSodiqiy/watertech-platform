@@ -13,6 +13,8 @@ const copilotAskMetaSchema = z
   .object({ hits: z.number().int().min(0).max(50), chars: z.number().int().min(0).max(20_000) })
   .strict();
 
+const pinToggleMetaSchema = z.object({ pinned: z.boolean() }).strict();
+
 export const telemetryEventSchema = z.object({
   sessionId: z.string().uuid(),
   ts: z
@@ -40,6 +42,9 @@ export const telemetryEventSchema = z.object({
   // the question text (operator-visible on the dashboard) is rejected here.
   if (event.type === "copilot_ask" && !copilotAskMetaSchema.safeParse(event.meta).success) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["meta"], message: "copilot_ask meta must be { hits, chars }" });
+  }
+  if (event.type === "pin_toggle" && !pinToggleMetaSchema.safeParse(event.meta).success) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["meta"], message: "pin_toggle meta must be { pinned }" });
   }
 });
 

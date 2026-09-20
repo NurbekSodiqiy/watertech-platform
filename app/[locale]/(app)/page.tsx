@@ -1,27 +1,31 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { DailyTimeline, DailyDateLabel } from "@/components/DailyTimeline";
 import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { HomeGreeting } from "@/components/HomeGreeting";
+import { ContinueCard } from "@/components/home/ContinueCard";
+import { Favourites } from "@/components/home/Favourites";
+import { Recents } from "@/components/home/Recents";
 import { Link } from "@/i18n/routing";
 import { Headphones, Package } from "lucide-react";
 
-const quickAccess = [
-  {
-    icon: Headphones,
-    title: "Jonli skriptlar va Yordamchi",
-    description: "Sotuv skriptlari va e'tirozlar bo'limiga o'tish",
-    href: "/sales-process/scripts",
-  },
-  {
-    icon: Package,
-    title: "Mahsulotlar va narxlar",
-    description: "To'liq mahsulot katalogi va narxnoma",
-    href: "/products",
-  },
-];
-
-export default function HomePage({ params: { locale } }: { params: { locale: string } }) {
+export default async function HomePage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.home.quickAccess");
+
+  const quickAccess = [
+    {
+      icon: Headphones,
+      title: t("scripts.title"),
+      description: t("scripts.description"),
+      href: "/sales-process/scripts",
+    },
+    {
+      icon: Package,
+      title: t("products.title"),
+      description: t("products.description"),
+      href: "/products",
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
@@ -30,9 +34,21 @@ export default function HomePage({ params: { locale } }: { params: { locale: str
         <DailyDateLabel />
       </div>
 
+      <WidgetBoundary>
+        <ContinueCard />
+      </WidgetBoundary>
+
+      <WidgetBoundary>
+        <Favourites />
+      </WidgetBoundary>
+
+      <WidgetBoundary>
+        <Recents />
+      </WidgetBoundary>
+
       <div>
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-          Tezkor o&apos;tish
+          {t("heading")}
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           {quickAccess.map((item) => (

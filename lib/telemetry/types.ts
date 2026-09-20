@@ -19,6 +19,7 @@ export const TELEMETRY_EVENT_TYPES = [
   "idle_end",
   "web_vital",
   "copilot_ask",
+  "pin_toggle",
 ] as const;
 
 export type TelemetryEventType = (typeof TELEMETRY_EVENT_TYPES)[number];
@@ -35,6 +36,8 @@ export interface TelemetryEvent {
    * for `web_vital`: { name: "LCP"|"CLS"|"INP"|"FCP"|"TTFB", value: number, rating: "good"|"needs-improvement"|"poor" }
    * for `copilot_ask`: { hits: number, chars: number } — counts only, never the question text
    * (telemetry is visible on the dashboard; questions live in copilot_logs).
+   * for `pin_toggle`: { pinned: boolean } — the state after the toggle; entityType is the pin kind
+   * ("script"|"objection"|"faq"|"product"|"battleCard"), entityId the content id.
    * for `checklist_toggle`: entityId is the onboarding item's stable id (lib/content/onboarding.ts) —
    * before the "onboarding_checklist_v2" migration (components/OnboardingChecklist.tsx) it was the array index. */
   meta?: Record<string, unknown>;

@@ -22,6 +22,7 @@ import { EMPTY_STATES } from "@/lib/empty-states";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { useTrack } from "@/hooks/useTrack";
 import { useUserState } from "@/hooks/useUserState";
+import { useRecordRecent } from "@/hooks/useRecordRecent";
 import { scriptsPositionKey } from "@/lib/user-state/keys";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
@@ -141,6 +142,19 @@ function ScriptsPageContentBody() {
   useEffect(() => {
     if (selectedObjection) track("objection_view", { entityType: "objection", entityId: selectedObjection.id });
   }, [selectedObjection, track]);
+  // Recents (home page, palette): the objection when one is showing, otherwise
+  // the script — but only once the URL names it. A bare visit falls back to
+  // scripts[0] without the operator having chosen anything. One target, not
+  // two: two recordings in one commit would each start from the same stale list.
+  useRecordRecent(
+    activeTab !== "sales_scripts"
+      ? null
+      : selectedObjection
+        ? { kind: "objection", id: selectedObjection.id }
+        : scriptParam === activeSalesScript.id
+          ? { kind: "script", id: activeSalesScript.id }
+          : null
+  );
   // Skips the mount-time run — callModeOn starts false, and that isn't a
   // real "left Call Mode" event, just the initial value.
   const isFirstCallModeRender = useRef(true);

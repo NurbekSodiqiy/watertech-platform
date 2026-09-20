@@ -31,7 +31,7 @@ export interface SearchDoc {
   body: string;
 }
 
-function findStageFor(scripts: ContentBundle["scripts"], objectionId: string): { scriptId: string; stageId: string } | null {
+export function findStageFor(scripts: ContentBundle["scripts"], objectionId: string): { scriptId: string; stageId: string } | null {
   for (const script of scripts) {
     const stage = script.stages.find((s) => s.objectionIds.includes(objectionId));
     if (stage) return { scriptId: script.id, stageId: stage.id };

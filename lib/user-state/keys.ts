@@ -115,23 +115,35 @@ export const scriptsPositionKey: UserStateKeyDef<ScriptsPosition> = {
 };
 
 // --- pins / recents / changelog.read -----------------------------------------
-// Defined here only — the UI that reads and writes them lands in later tasks.
-// They exist now so the key space, the schemas and the size caps are decided
-// in one place rather than reinvented per feature. None of them has a legacy
-// localStorage counterpart to import.
+// pins and recents are read and written by the home page, the command palette
+// and PinButton (hooks/usePins.ts, hooks/useRecordRecent.ts); changelog.read is
+// still schema-only. None of them has a legacy localStorage counterpart to
+// import.
 
-/** Pinned pages, in the order the operator arranged them. Paths are stored
- * without the locale prefix, like telemetry's (see lib/i18n/strip-locale.ts). */
-const pinsSchema = z.array(z.string().min(1).max(200)).max(50);
+/** The five kinds of content an operator can pin or reopen. */
+export const PIN_KINDS = ["script", "objection", "faq", "product", "battleCard"] as const;
+export type PinKind = (typeof PIN_KINDS)[number];
+
+/** A reference to one piece of content by its stable id (the same ids
+ * telemetry uses) — never by title or URL, both of which change with the
+ * locale. Resolved back to a title and a link at render time
+ * (lib/search/refs.ts). */
+const pinRefSchema = z.object({ kind: z.enum(PIN_KINDS), id: z.string().min(1).max(100) });
+export type PinRef = z.infer<typeof pinRefSchema>;
+
+export const MAX_PINS = 24;
+export const MAX_RECENTS = 8;
+
+/** Pinned content, newest first. */
+const pinsSchema = z.array(pinRefSchema).max(MAX_PINS);
 export type PinsState = z.infer<typeof pinsSchema>;
 
 export const pinsKey: UserStateKeyDef<PinsState> = { key: "pins", schema: pinsSchema, defaultValue: [] };
 
-/** Recently visited pages, newest first, capped so the row stays far below
- * the table's 16 KiB value limit. */
-const recentsSchema = z
-  .array(z.object({ path: z.string().min(1).max(200), at: z.string().min(1).max(40) }))
-  .max(30);
+/** Recently opened content, newest first, one entry per item; `at` is epoch
+ * milliseconds. Capped so the row stays far below the table's 16 KiB value
+ * limit. */
+const recentsSchema = z.array(pinRefSchema.extend({ at: z.number().int().nonnegative() })).max(MAX_RECENTS);
 export type RecentsState = z.infer<typeof recentsSchema>;
 
 export const recentsKey: UserStateKeyDef<RecentsState> = { key: "recents", schema: recentsSchema, defaultValue: [] };

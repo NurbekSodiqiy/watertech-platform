@@ -44,3 +44,16 @@ describe("copilot_ask meta", () => {
     expect(telemetryEventSchema.safeParse(ask).success).toBe(false);
   });
 });
+
+describe("pin_toggle meta", () => {
+  const toggle = { ...validEvent, type: "pin_toggle" as const, entityType: "faq", entityId: "faq-1" };
+
+  it("accepts the state after the toggle", () => {
+    expect(telemetryEventSchema.safeParse({ ...toggle, meta: { pinned: true } }).success).toBe(true);
+  });
+
+  it("rejects extra fields or a missing meta", () => {
+    expect(telemetryEventSchema.safeParse({ ...toggle, meta: { pinned: true, title: "x" } }).success).toBe(false);
+    expect(telemetryEventSchema.safeParse(toggle).success).toBe(false);
+  });
+});

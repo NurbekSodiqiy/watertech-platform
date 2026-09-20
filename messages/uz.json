@@ -121,7 +121,12 @@
       "callMode": "Qo'ng'iroq rejimi",
       "close": "Yopish",
       "help": "Yordam",
-      "copilot": "Copilot"
+      "copilot": "Copilot",
+      "goHome": "Bosh sahifa (G, so'ng H)",
+      "goScripts": "Skriptlar (G, so'ng S)",
+      "goProducts": "Mahsulotlar (G, so'ng P)",
+      "goFaq": "Savol-javob (G, so'ng F)",
+      "goObjections": "E'tirozlar (G, so'ng O)"
     }
   },
   "theme": {
@@ -285,7 +290,18 @@
     "copy": "Nusxalash",
     "copied": "Nusxalandi",
     "copyAll": "Barchasini nusxalash",
-    "comingSoon": "Tez orada"
+    "comingSoon": "Tez orada",
+    "pin": "Sevimlilarga qo'shish",
+    "unpin": "Sevimlilardan olib tashlash",
+    "favourites": "Sevimlilar",
+    "recents": "So'nggi ochilganlar",
+    "kinds": {
+      "script": "Skript",
+      "objection": "E'tiroz",
+      "faq": "FAQ",
+      "product": "Mahsulot",
+      "battleCard": "Raqobatchi kartasi"
+    }
   },
   "toast": {
     "saved": "Saqlandi",
@@ -336,6 +352,33 @@
     }
   },
   "pages": {
+    "home": {
+      "quickAccess": {
+        "heading": "Tezkor o'tish",
+        "scripts": {
+          "title": "Jonli skriptlar va Yordamchi",
+          "description": "Sotuv skriptlari va e'tirozlar bo'limiga o'tish"
+        },
+        "products": {
+          "title": "Mahsulotlar va narxlar",
+          "description": "To'liq mahsulot katalogi va narxnoma"
+        }
+      },
+      "continue": {
+        "heading": "Davom eting",
+        "cta": "Davom etish",
+        "noStage": "Bosqich tanlanmagan"
+      },
+      "favourites": {
+        "emptyTitle": "Hali sevimlilar yo'q",
+        "emptyReason": "Skript, e'tiroz, savol, mahsulot yoki raqobatchi kartasidagi pin tugmasini bosing — kerakli narsa shu yerda doim qo'l ostida bo'ladi.",
+        "loadFailed": "Sevimlilar nomlarini yuklab bo'lmadi. Sahifani yangilang."
+      },
+      "recents": {
+        "empty": "Hali hech narsa ochilmagan.",
+        "loadFailed": "So'nggi ochilganlar nomlarini yuklab bo'lmadi. Sahifani yangilang."
+      }
+    },
     "company": {
       "about": {
         "title": "Kompaniya haqida",

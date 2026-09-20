@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { m, useReducedMotion } from "framer-motion";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/content/products";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/EmptyState";
+import { PinButton } from "@/components/ui/PinButton";
+import { useRecordRecent } from "@/hooks/useRecordRecent";
 import { EMPTY_STATES } from "@/lib/empty-states";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
@@ -37,6 +40,17 @@ const CATEGORIES = [
   { id: "aksessuar", label: "Aksessuarlar" }
 ];
 
+/** Opens the product named by `?product=<id>` (a pinned or recent product,
+ * from the home page or the palette). Its own Suspense leaf so only this
+ * renders on the client — the catalog itself stays in the prerendered HTML. */
+function ProductParamWatcher({ onProduct }: { onProduct: (id: string) => void }) {
+  const id = useSearchParams().get("product");
+  useEffect(() => {
+    if (id) onProduct(id);
+  }, [id, onProduct]);
+  return null;
+}
+
 export function ProductsCatalog({ products }: { products: Product[] }) {
   const t = useTranslations("emptyState.productsNoMatch");
   const [activeLine, setActiveLine] = useState<"ppr" | "kanalizatsiya">("ppr");
@@ -52,13 +66,35 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Kattalashtirilgan rasm ko'rinishi (lightbox)
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ id: string; src: string; alt: string } | null>(null);
+  useRecordRecent(lightbox ? { kind: "product", id: lightbox.id } : null);
 
   // <Dialog> keeps the panel mounted while it fades out, so the last opened
   // image is held here — otherwise the card would blank out mid-animation.
-  const lastOpened = useRef<{ src: string; alt: string } | null>(null);
+  const lastOpened = useRef<{ id: string; src: string; alt: string } | null>(null);
   if (lightbox) lastOpened.current = lightbox;
   const shownImage = lightbox ?? lastOpened.current;
+
+  const openProduct = useCallback(
+    (id: string) => {
+      const product = products.find((p) => p.id === id);
+      if (!product) return;
+      setActiveLine(product.line);
+      setLightbox({ id: product.id, src: `/products/${product.filename}`, alt: product.name_ru });
+    },
+    [products]
+  );
+
+  // Drops `?product=` again so choosing the same product a second time (from
+  // the palette, say) is a change the watcher can see.
+  function closeLightbox() {
+    setLightbox(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("product")) {
+      url.searchParams.delete("product");
+      window.history.replaceState(null, "", url);
+    }
+  }
 
   const filteredProducts = products.filter((product) => {
     // 1. Line filtri
@@ -81,6 +117,10 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <ProductParamWatcher onProduct={openProduct} />
+      </Suspense>
+
       {/* Liniya Tablari */}
       <div className="flex border-b border-border">
         <button
@@ -160,14 +200,14 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
           {filteredProducts.map((product, idx) => (
             <div
               key={`${product.filename}-${idx}`}
-              className="flex flex-col rounded-2xl border border-border bg-surface overflow-hidden shadow-sm"
+              className="relative flex flex-col rounded-2xl border border-border bg-surface overflow-hidden shadow-sm"
             >
               {/* Rasm qismi */}
               <button
                 type="button"
                 onClick={() =>
                   !imgErrors[product.filename] &&
-                  setLightbox({ src: `/products/${product.filename}`, alt: product.name_ru })
+                  setLightbox({ id: product.id, src: `/products/${product.filename}`, alt: product.name_ru })
                 }
                 disabled={imgErrors[product.filename]}
                 className="group relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border cursor-zoom-in disabled:cursor-default"
@@ -203,6 +243,10 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
                 )}
               </button>
 
+              <span className="absolute left-3 top-3 rounded-lg border border-border bg-surface/90">
+                <PinButton kind="product" id={product.id} />
+              </span>
+
               {/* Ma'lumot qismi */}
               <div className="p-4 flex flex-col flex-1 gap-2">
                 <h3 className="text-[15px] font-semibold text-primary-dark leading-snug">
@@ -218,7 +262,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
           tuzog'i <Dialog> ichida. */}
       <Dialog
         open={lightbox !== null}
-        onClose={() => setLightbox(null)}
+        onClose={closeLightbox}
         labelledBy={LIGHTBOX_TITLE_ID}
         containerClassName="z-50 flex items-center justify-center p-6"
         panelClassName="flex h-[520px] w-[640px] max-h-[85vh] max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-soft"
@@ -231,7 +275,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
               </h3>
               <button
                 type="button"
-                onClick={() => setLightbox(null)}
+                onClick={closeLightbox}
                 className="shrink-0 rounded-lg p-1 text-text-secondary hover:bg-primary/10"
                 aria-label="Yopish"
               >

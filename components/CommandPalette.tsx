@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
@@ -8,6 +8,10 @@ import { usePathname, useRouter } from "@/i18n/routing";
 import { siteTree } from "@/lib/site-config";
 import type { NavNode } from "@/lib/types";
 import { useTrack } from "@/hooks/useTrack";
+import { usePins } from "@/hooks/usePins";
+import { useResolvedRefs } from "@/hooks/useResolvedRefs";
+import { useUserState } from "@/hooks/useUserState";
+import { recentsKey } from "@/lib/user-state/keys";
 import { createSearcher, resolveSearchPath, type Searcher, type SearchDoc, type SearchResultType } from "@/lib/search";
 import { normalizeSearchText } from "@/lib/search/normalize";
 import { Dialog } from "@/components/ui/Dialog";
@@ -24,6 +28,8 @@ interface SearchItem {
 }
 
 interface ResolvedItem {
+  /** Set on the empty-query rows only: which group heading they sit under. */
+  group?: "favourites" | "recents";
   category: string;
   title: string;
   path: string;
@@ -70,6 +76,7 @@ export function CommandPalette({
   const t = useTranslations("nav");
   const tChrome = useTranslations("chrome");
   const tEmpty = useTranslations("emptyState.searchNoResults");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
 
   // Page-title matches (above) point straight at a URL already, so they're
@@ -83,6 +90,38 @@ export function CommandPalette({
     competitor: tChrome("commandPalette.categories.competitor"),
     package: tChrome("commandPalette.categories.package"),
   };
+
+  // Empty query: the operator's own pins and recents. They resolve through
+  // the shared content-refs lookup (fetched only once the palette is open) and
+  // unknown ids are pruned from the stored lists, same as on the home page.
+  const { pins, setPins, status: pinsStatus } = usePins();
+  const [recents, setRecents, recentsStatus] = useUserState(
+    recentsKey.key,
+    recentsKey.schema,
+    recentsKey.defaultValue,
+    recentsKey
+  );
+  const favourites = useResolvedRefs(pins, setPins, open && pinsStatus !== "loading");
+  const recent = useResolvedRefs(recents, setRecents, open && recentsStatus !== "loading");
+  const idleItems = useMemo<ResolvedItem[]>(
+    () => [
+      ...favourites.items.map(({ ref, content }) => ({
+        group: "favourites" as const,
+        category: tCommon(`kinds.${ref.kind}`),
+        title: content.title,
+        path: content.href,
+      })),
+      ...recent.items.map(({ ref, content }) => ({
+        group: "recents" as const,
+        category: tCommon(`kinds.${ref.kind}`),
+        title: content.title,
+        path: content.href,
+      })),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the array's identity keys the highlight (see RowNav); tCommon is not stable across renders
+    [favourites.items, recent.items]
+  );
+  const idlePending = favourites.pending || recent.pending;
 
   // Fetched once, on first open, and cached for the rest of the session —
   // search-index docs don't change while an operator is using the app.
@@ -150,27 +189,30 @@ export function CommandPalette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, searcherRef.current]);
 
-  const navCurrent = nav.results === results;
+  // The rows the highlight and the arrow keys move over: search results, or
+  // (empty query) the favourites and recents.
+  const list = results ?? idleItems;
+  const navCurrent = nav.results === list;
   const activeIndex = navCurrent ? nav.index : 0;
   const highlightAnimated = navCurrent && nav.animated;
 
   useEffect(() => {
     listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, results]);
+  }, [activeIndex, list]);
 
   function moveHighlight(index: number) {
-    setNav({ index, animated: true, results });
+    setNav({ index, animated: true, results: list });
   }
 
   function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!results || results.length === 0 || event.nativeEvent.isComposing) return;
+    if (list.length === 0 || event.nativeEvent.isComposing) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       const step = event.key === "ArrowDown" ? 1 : -1;
-      moveHighlight((activeIndex + step + results.length) % results.length);
+      moveHighlight((activeIndex + step + list.length) % list.length);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      go(results[activeIndex].path);
+      go(list[activeIndex].path);
     }
   }
 
@@ -194,6 +236,35 @@ export function CommandPalette({
     } else {
       router.push(path);
     }
+  }
+
+  function renderRow(item: ResolvedItem, index: number) {
+    const isActive = index === activeIndex;
+    return (
+      <button
+        // A pinned item is usually also a recent one, so the path alone is not unique across groups.
+        key={`${item.group ?? "result"}:${item.path}`}
+        onClick={() => go(item.path)}
+        onMouseMove={() => {
+          if (!isActive) moveHighlight(index);
+        }}
+        data-active={isActive ? "true" : undefined}
+        className="relative flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left"
+      >
+        {isActive && (
+          <m.span
+            layoutId="command-palette-active-row"
+            className="absolute inset-0 rounded-xl bg-primary/5"
+            transition={reduce || !highlightAnimated ? noTransition : springs.snappy}
+            aria-hidden
+          />
+        )}
+        <span className="relative text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+          {item.category}
+        </span>
+        <span className="relative text-[14px] font-semibold text-primary-dark">{item.title}</span>
+      </button>
+    );
   }
 
   return (
@@ -249,38 +320,29 @@ export function CommandPalette({
                     action={{ label: tEmpty("cta"), onClick: () => onAskCopilot(query.trim()) }}
                   />
                 )}
-                {results.map((item, index) => {
-                  const isActive = index === activeIndex;
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => go(item.path)}
-                      onMouseMove={() => {
-                        if (!isActive) moveHighlight(index);
-                      }}
-                      data-active={isActive ? "true" : undefined}
-                      className="relative flex w-full flex-col items-start rounded-xl px-2.5 py-2 text-left"
-                    >
-                      {isActive && (
-                        <m.span
-                          layoutId="command-palette-active-row"
-                          className="absolute inset-0 rounded-xl bg-primary/5"
-                          transition={reduce || !highlightAnimated ? noTransition : springs.snappy}
-                          aria-hidden
-                        />
-                      )}
-                      <span className="relative text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-                        {item.category}
-                      </span>
-                      <span className="relative text-[14px] font-semibold text-primary-dark">{item.title}</span>
-                    </button>
-                  );
-                })}
+                {results.map((item, index) => renderRow(item, index))}
               </div>
             </AnimatePresence>
           </>
+        ) : idleItems.length > 0 ? (
+          <AnimatePresence initial={false}>
+            <div key="rows" className="space-y-0.5">
+              {idleItems.map((item, index) => (
+                <Fragment key={`${item.group}:${item.path}`}>
+                  {item.group !== idleItems[index - 1]?.group && (
+                    <p className="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+                      {item.group === "favourites" ? tCommon("favourites") : tCommon("recents")}
+                    </p>
+                  )}
+                  {renderRow(item, index)}
+                </Fragment>
+              ))}
+            </div>
+          </AnimatePresence>
         ) : (
-          <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.startTyping")}</p>
+          <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">
+            {idlePending ? tChrome("commandPalette.loading") : tChrome("commandPalette.startTyping")}
+          </p>
         )}
       </div>
     </Dialog>

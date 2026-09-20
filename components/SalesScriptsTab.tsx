@@ -14,6 +14,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { collectOperatorText } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
 import { Pressable } from "@/components/motion/Pressable";
+import { PinButton } from "@/components/ui/PinButton";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
 const salesScriptIcons: Record<string, LucideIcon> = {
@@ -113,6 +114,7 @@ export function SalesScriptsTab({
                   {selectedObjection?.label || selectedScriptStage?.label}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2">
+                  {selectedObjection && <PinButton kind="objection" id={selectedObjection.id} />}
                   {currentTurns && currentTurns.some((turn) => turn.speaker === "operator") && (
                     <CopyButton
                       value={collectOperatorText(currentTurns, clientName)}
@@ -139,10 +141,10 @@ export function SalesScriptsTab({
       {/* RIGHT PANEL (The "Remote Control") */}
       <div className="col-span-12 md:col-span-4 bg-surface border border-primary-light/50 rounded-2xl p-4 space-y-2 shadow-soft sticky top-[88px] self-start max-h-[calc(100vh-88px-24px)] overflow-y-auto flex flex-col">
         <div className="flex flex-col space-y-4">
-          <div className="relative pb-2 border-b border-border z-20">
+          <div className="relative flex items-center gap-2 pb-2 border-b border-border z-20">
             <button
               onClick={() => setIsScriptDropdownOpen(!isScriptDropdownOpen)}
-              className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg border border-border bg-surface text-primary-dark font-medium transition-colors hover:bg-surface-alt shadow-sm"
+              className="min-w-0 flex-1 flex items-center justify-between gap-2 px-4 py-3 rounded-lg border border-border bg-surface text-primary-dark font-medium transition-colors hover:bg-surface-alt shadow-sm"
             >
               <span className="flex items-center gap-2 text-[14.5px] min-w-0">
                 {(() => {
@@ -153,6 +155,7 @@ export function SalesScriptsTab({
               </span>
               <ChevronDown className={`w-5 h-5 shrink-0 text-text-secondary transition-transform ${isScriptDropdownOpen ? "rotate-180" : ""}`} />
             </button>
+            <PinButton kind="script" id={activeSalesScript.id} />
 
             {isScriptDropdownOpen && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-lg shadow-lg overflow-hidden z-30 animate-fade-slide-down">
