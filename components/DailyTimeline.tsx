@@ -9,11 +9,12 @@ import { useUserState } from "@/hooks/useUserState";
 import { dailyKeyForDay, dateKey } from "@/lib/user-state/keys";
 import { dailySchedule } from "@/lib/content/daily-schedule";
 
-const UZ_WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
-const UZ_MONTHS_FULL = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-];
+// Indexed by Date#getDay() / Date#getMonth(); the words live in messages.
+const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+const MONTH_KEYS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+] as const;
 
 // Computed client-side (like the timeline's own currentMinutes below) so the
 // date always reflects the viewer's own clock/timezone instead of whatever
@@ -21,16 +22,23 @@ const UZ_MONTHS_FULL = [
 // needs to force per-request dynamic rendering just for this label.
 export function DailyDateLabel() {
   const now = useNow();
+  const t = useTranslations("dailyTimeline");
 
   if (!now) {
     return (
       <span className="text-[14px] text-text-secondary">
-        <span className="invisible" aria-hidden="true">13-Sentabr, Yakshanba</span>
+        <span className="invisible" aria-hidden="true">
+          {t("dateLabel", { day: "13", month: t("months.september"), weekday: t("weekdays.sunday") })}
+        </span>
       </span>
     );
   }
 
-  const dateLabel = `${now.getDate()}-${UZ_MONTHS_FULL[now.getMonth()]}, ${UZ_WEEKDAYS[now.getDay()]}`;
+  const dateLabel = t("dateLabel", {
+    day: String(now.getDate()),
+    month: t(`months.${MONTH_KEYS[now.getMonth()]}`),
+    weekday: t(`weekdays.${WEEKDAY_KEYS[now.getDay()]}`),
+  });
   return <span className="text-[14px] text-text-secondary">{dateLabel}</span>;
 }
 
@@ -163,7 +171,7 @@ export function DailyTimeline() {
                           : "font-medium text-text-primary"
                       }`}
                     >
-                      {item.task}
+                      {t(`tasks.${item.id}`)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

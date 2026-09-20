@@ -273,7 +273,9 @@
     "signInFailed": "Google orqali kirishni boshlab bo'lmadi. Qayta urinib ko'ring."
   },
   "docPage": {
-    "placeholder": "[Kontent shu yerga qo'yiladi — bu bo'lim tarkibiy joy egallovchi. “{title}” uchun haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]"
+    "placeholder": "[Kontent shu yerga qo'yiladi — bu bo'lim tarkibiy joy egallovchi. “{title}” uchun haqiqiy matn, skrinshot, havola yoki media bilan almashtiring.]",
+    "videoPlaceholder": "[Video uchun joy egallovchi — bu yerga haqiqiy yozuvni joylashtiring.]",
+    "checklistItem": "[Joy egallovchi nazorat bandi {n}]"
   },
   "feedback": {
     "question": "Bu sahifa foydali bo'ldimi?",
@@ -287,7 +289,40 @@
     "callsAriaLabel": "Qo'ng'iroqlar soni",
     "current": "Hozir",
     "markDone": "Bajarildi deb belgilash",
-    "markUndone": "Bajarilmagan deb belgilash"
+    "markUndone": "Bajarilmagan deb belgilash",
+    "dateLabel": "{day}-{month}, {weekday}",
+    "weekdays": {
+      "sunday": "Yakshanba",
+      "monday": "Dushanba",
+      "tuesday": "Seshanba",
+      "wednesday": "Chorshanba",
+      "thursday": "Payshanba",
+      "friday": "Juma",
+      "saturday": "Shanba"
+    },
+    "months": {
+      "january": "Yanvar",
+      "february": "Fevral",
+      "march": "Mart",
+      "april": "Aprel",
+      "may": "May",
+      "june": "Iyun",
+      "july": "Iyul",
+      "august": "Avgust",
+      "september": "Sentabr",
+      "october": "Oktabr",
+      "november": "Noyabr",
+      "december": "Dekabr"
+    },
+    "tasks": {
+      "1": "Joriy kun uchun ishlarni rejalashtirish, yangiliklarni tekshirish",
+      "2": "Yangi tushgan lidlarga qo'ng'iroq qilish va ularga vazifalarni belgilash",
+      "3": "CRM'da qo'yilgan topshiriqlarni bajarish (qayta aloqa, telegramdan ma'lumotlar yuborish)",
+      "4": "Tushlik",
+      "5": "Yangi tushgan lidlarga qo'ng'iroq qilish va ularga vazifalarni belgilash",
+      "6": "Telefon orqali sotuv bo'yicha qayta aloqa qilish va sotuv etaplari asosida ishlash",
+      "7": "CRM'da mijozlarga vazifalar belgilanganligini tekshirish va kunlik hisobot tayyorlash"
+    }
   },
   "callMode": {
     "closeButton": "Call Mode'ni yopish (F2 / Esc)",
@@ -309,6 +344,14 @@
     "unpin": "Sevimlilardan olib tashlash",
     "favourites": "Sevimlilar",
     "recents": "So'nggi ochilganlar",
+    "close": "Yopish",
+    "restricted": "Cheklangan",
+    "table": {
+      "filterPlaceholder": "Qatorlarni filtrlash…",
+      "filterAll": "{label}: Barchasi",
+      "inStock": "Mavjud",
+      "outOfStock": "Mavjud emas"
+    },
     "kinds": {
       "script": "Skript",
       "objection": "E'tiroz",
@@ -367,6 +410,8 @@
   },
   "pages": {
     "home": {
+      "greeting": "Salom, {name}",
+      "greetingAnonymous": "Salom!",
       "quickAccess": {
         "heading": "Tezkor o'tish",
         "scripts": {
@@ -605,6 +650,278 @@
           "topic": "Mavzu",
           "phone": "Telefon",
           "messenger": "Messenjer"
+        }
+      }
+    },
+    "products": {
+      "catalog": {
+        "title": "Mahsulotlar katalogi",
+        "description": "To'liq mahsulot bazasi. PPR va Kanalizatsiya liniyalari bo'yicha turkum, nom va o'lchamlar.",
+        "lines": {
+          "ppr": "PPR liniyasi",
+          "kanalizatsiya": "Kanalizatsiya liniyasi"
+        },
+        "categories": {
+          "all": "Barchasi",
+          "truba": "Trubalar",
+          "fiting": "Fitinglar",
+          "kran": "Kranlar",
+          "aksessuar": "Aksessuarlar"
+        },
+        "searchPlaceholder": "Mahsulot nomi bo'yicha qidiruv...",
+        "zoomLabel": "{name} rasmini kattalashtirish",
+        "imageMissing": "Rasm topilmadi",
+        "brass": "Latun"
+      },
+      "roadmap": {
+        "soonTitle": "Tez orada",
+        "soonBody": "Bu bo'lim ustida ish olib borilmoqda. Kompaniyaning mahsulotlar va ishlab chiqarish bo'yicha kelajakdagi rejalari shu yerga yuklanadi."
+      },
+      "technicalDocs": {
+        "title": "Texnik hujjatlar va sertifikatlar",
+        "description": "WaterTech mahsulotlarining davlat GOST standartlari talablariga to'liq mosligini tasdiqlovchi rasmiy muvofiqlik sertifikatlari.",
+        "registry": {
+          "title": "Davlat reestrida ro'yxatdan o'tgan",
+          "body": "Barcha sertifikatlar QR kod orqali davlat muvofiqlik tizimida tekshirilishi mumkin."
+        },
+        "standards": {
+          "heading": "Amaldagi davlat standartlari (GOST) talablari",
+          "items": {
+            "gost32415": "Bosimli issiq va sovuq suv ta'minoti hamda isitish tizimlari uchun termoplast quvurlar va fitinglar.",
+            "gost32414": "Binolar ichki oqova (kanalizatsiya) tizimlari uchun polipropilen quvurlar (3-qatlamli PREMIUM).",
+            "gost32412": "Ichki kanalizatsiya tizimlari fitinglari, 90° va 45° otvodlar, troyniklar va perexodniklar.",
+            "gost34292": "Suv ta'minoti va isitish liniyalari uchun sharli hamda barashekli kranlar.",
+            "gost18599": "Polietilen va issiqqa chidamli pol isitish (PE-RT) quvurlari."
+          },
+          "manufacturer": {
+            "label": "Ishlab chiqaruvchi",
+            "value": "<strong>WATER-TECH MCHJ</strong> (O'zbekiston, Namangan shahri). Seriyali ishlab chiqarish."
+          }
+        },
+        "certificates": {
+          "openAll": "Barcha hujjatlarni ochish ({count} ta bet)",
+          "zoom": "Kattalashtirib ko'rish",
+          "pageCount": "{count} ta bet",
+          "qr": "QR: {number}",
+          "validUntil": "Amal qilish muddati: <strong>{date}</strong>",
+          "read": "O'qish",
+          "openImage": "Rasmni ochish",
+          "firstPage": "1-bet (To'liq)",
+          "fullSize": "To'liq o'lcham",
+          "lightbox": {
+            "openFullSize": "To'liq o'lchamda ochish",
+            "downloadTitle": "Rasmni yuklab olish",
+            "download": "Yuklab olish",
+            "prev": "Oldingi bet",
+            "next": "Keyingi bet",
+            "pageAlt": "{title} - {page}-bet",
+            "organ": "Organ: <strong>{name}</strong>"
+          }
+        }
+      }
+    },
+    "standards": {
+      "kpiSystem": {
+        "description": "Oylik maoshingiz qanday hisoblanishini va qaysi ko'rsatkichlarga bog'liqligini shu yerdan bilib oling.",
+        "salary": {
+          "heading": "Sizning oylik maoshingiz tuzilishi",
+          "intro": "Sizning daromadingiz 3 qismdan iborat:",
+          "formula": "Jami oylik = Oklad (Fiksa) + KPI (% savdodan) + Yo'l xarajatlari",
+          "parts": {
+            "fixed": {
+              "label": "Oklad (Fix)",
+              "value": "60% — 3 000 000 so'm",
+              "note": "kafolatlangan qism"
+            },
+            "kpi": {
+              "label": "KPI",
+              "value": "40% — 2 000 000 so'm",
+              "note": "quyidagi ko'rsatkichlar bajarilishiga bog'liq"
+            },
+            "bonus": {
+              "label": "Sotuvdan bonus",
+              "value": "qo'shimcha daromad"
+            }
+          },
+          "outro": "Quyidagi jadval orqali oylik maoshingiz qanday hisoblanishini batafsil ko'rishingiz mumkin."
+        },
+        "kpi": {
+          "heading": "KPI ko'rsatkichlari"
+        },
+        "columns": {
+          "indicator": "Ko'rsatkich",
+          "monthlyPlan": "Oylik reja",
+          "dailyMeaning": "Kunlik ma'nosi",
+          "weight": "Og'irlik",
+          "allocatedAmount": "Ajratilgan summa",
+          "note": "Izoh"
+        },
+        "rows": {
+          "callsCount": {
+            "indicator": "Qo'ng'iroqlar soni",
+            "monthlyPlan": "1 350",
+            "dailyMeaning": "~50 ta/kun",
+            "weight": "15%",
+            "allocatedAmount": "300 000 so'm",
+            "note": "Bu shunchaki \"normativ\". Agar 1350 tadan kam bo'lsa, summa proporsional kamayadi. Operator kun bo'yi band bo'lishi uchun yetarli."
+          },
+          "callsDuration": {
+            "indicator": "Qo'ng'iroqlar vaqti",
+            "monthlyPlan": "3 120 daqiqa",
+            "dailyMeaning": "~2 soat/kun",
+            "weight": "15%",
+            "allocatedAmount": "300 000 so'm",
+            "note": "Oylik umumiy suhbat davomiyligi shu ko'rsatkichga kiradi."
+          },
+          "sqlLeads": {
+            "indicator": "Tasdiqlangan Lidlar (SQL)",
+            "monthlyPlan": "25",
+            "dailyMeaning": "kamida 1 ta \"issiq\" mijoz/kun",
+            "weight": "70%",
+            "allocatedAmount": "1 400 000 so'm",
+            "note": "ENG MUHIM ko'rsatkich. Lid SQL hisoblanadi, qachonki Sotuv Menejeri mijoz bilan gaplashib, uning potensiali borligini tasdiqlab, CRM'da bosqichini o'zgartirsa."
+          }
+        },
+        "bonus": {
+          "heading": "Bonus: Tushumdan ulush",
+          "rows": {
+            "revenueShare": {
+              "indicator": "Tushumdan ulush (bonus)",
+              "monthlyPlan": "500 000 000 so'm (umumiy savdo hajmi rejasi)",
+              "note": "Operator orqali o'tgan lidlarning yakuniy sotuv hajmidan 0.01% bonus sifatida to'lanadi."
+            }
+          }
+        },
+        "footnote": "Har bir ko'rsatkichning bajarilish foizi CRM/dashboard orqali kuzatiladi. Yuqori bajarilish (taxminan 90%+) — \"Yaxshi\" holat sifatida, past bajarilish esa e'tibor talab qiladigan holat sifatida belgilanadi."
+      },
+      "motivationBonus": {
+        "description": "Reja bajarilish darajasiga qarab koeffitsient qanday belgilanishini shu yerdan bilib oling.",
+        "intro": {
+          "heading": "📌 KPI: Bizning \"O'yin qoidalarimiz\"",
+          "paragraph1": "Sotuv bo'limida ishlash — bu sportga o'xshaydi. Natija qancha yuqori bo'lsa, mukofot ham shuncha katta bo'ladi. Bizda maosh <strong>fiks (kafolatlangan qism)</strong> va <strong>KPI, Bonus</strong>dan iborat.",
+          "paragraph2": "Sizning daromadingiz quyidagi 4 ta chegara (porog) asosida hisoblanadi. Buni <strong>Svetofor tizimi</strong> deb tushunishingiz mumkin:"
+        },
+        "table": {
+          "heading": "Reja bajarilish darajasi va koeffitsient"
+        },
+        "columns": {
+          "planLevel": "Reja bajarilish darajasi",
+          "coefficient": "Koeffitsient",
+          "zone": "Zona",
+          "note": "Izoh"
+        },
+        "rows": {
+          "zoneRed0": {
+            "planLevel": "60% dan kam bajarilsa",
+            "zone": "🔴 Qizil",
+            "note": "Bu kompaniya uchun zararli ko'rsatkich. Agar xodim ketma-ket 2 oy \"Qizil zona\"da bo'lsa, uning kompaniyadagi faoliyati qayta ko'rib chiqiladi."
+          },
+          "zoneRed1": {
+            "planLevel": "60–79,99% oralig'ida bajarilsa",
+            "zone": "🔴 Qizil"
+          },
+          "zoneMid": {
+            "planLevel": "80–99,99% oralig'ida bajarilsa",
+            "zone": "🟡 O'rta"
+          },
+          "zoneExcellent": {
+            "planLevel": "100–119,9% oralig'ida bajarilsa",
+            "zone": "🟢 A'lo"
+          },
+          "zoneChampion": {
+            "planLevel": "120% va undan yuqori bajarilsa",
+            "zone": "🏆 Champion"
+          }
+        }
+      },
+      "communicationStandards": {
+        "rules": {
+          "professionalCalls": {
+            "title": "Mijozlarga professional muloqot qo'ng'irog'ini amalga oshirish",
+            "notes": {
+              "1": "Har bir mijoz bilan iliq, e'tiborli va aniq muloqot qilish zarur. Mijoz o'zini qadrli his qilishi kerak."
+            }
+          },
+          "crmRealTime": {
+            "title": "CRM tizimida real vaqt rejimida ishlash",
+            "notes": {
+              "1": "Har bir lid ustida ish boshlaganda va tugatganda CRM'da statusni yangilash kerak."
+            }
+          },
+          "newLeadCallbacks": {
+            "title": "Yangi leadlarga agar javob bermasa, 5 kun davomida har kuni lidga 2 marta qo'ng'iroq qilish",
+            "notes": {
+              "1": "Mijoz sovib ketmasligi uchun 1 kun ichida 2 marotaba aloqa qilish kerak.",
+              "2": "Lid kiritilgach: 1-qo'ng'iroq 10:00–12:00 da, 2-qo'ng'iroq 15:00–17:00 amalga oshiriladi."
+            }
+          },
+          "dailyCallMinimum": {
+            "title": "Kunlik minimal 40 ta qo'ng'iroq bajarish",
+            "notes": {
+              "1": "Kunlik muloqot hajmi kamida 40 ta bo'lishi zarur, shunda ko'proq sotuv imkoniyati yaratiladi."
+            }
+          },
+          "livelyScripts": {
+            "title": "Skriptlar asosida, lekin jonli muloqotda ishlash",
+            "notes": {
+              "1": "Mijozni sun'iy gaplar bilan zeriktirmaslik, ssenariyni jonlantirib gapirish."
+            }
+          },
+          "complaintsByPhone": {
+            "title": "Mijoz shikoyatlarini imkon qadar telefon orqali ijobiy hal qilish",
+            "notes": {
+              "1": "Mijoz bilan bahslashmasdan, muammoni eshitib, ijobiy yo'l bilan yechim taklif qilish."
+            }
+          },
+          "salesFunnel": {
+            "title": "Sotuv voronkasiga qat'iy amal qilish",
+            "notes": {
+              "1": "Har bir muloqot bosqichma-bosqich: Munosabat o'rnatish, ehtiyoj aniqlash, taklif berish, yakunlash."
+            }
+          },
+          "respondWithinTenMinutes": {
+            "title": "Birinchi bo'lib — yangi lidlarga 10 daqiqa ichida javob berish",
+            "notes": {
+              "1": "Yangi qiziqish bildirgan lidlar sovumasdan, darhol ishlov berish kerak."
+            }
+          },
+          "callListening": {
+            "title": "Har haftalik \"Call Listening\" tahlillari",
+            "notes": {
+              "1": "Haftada bir marta suhbatlarni tinglab, xatolarni aniqlash va to'g'rilash."
+            }
+          },
+          "updateKnowledge": {
+            "title": "Mahsulot va sotuv bo'yicha bilimlarni yangilab borish",
+            "notes": {
+              "1": "Yangiliklardan xabardor bo'lish va ularni mijozlarga yetkazish."
+            }
+          },
+          "externalSources": {
+            "title": "Tashqi bilim manbalaridan foydalanish",
+            "notes": {
+              "1": "Internetda savdo texnikalari, muloqot uslublari bo'yicha bilimlarni oshirish."
+            }
+          },
+          "escalateFeedback": {
+            "title": "Fikr va takliflarni boshqaruvga yetkazish",
+            "notes": {
+              "1": "Mijozlardan kelgan foydali takliflarni rahbariyatga yetkazish."
+            }
+          },
+          "ongoingContact": {
+            "title": "Mijozlar bilan doimiy aloqani saqlash",
+            "notes": {
+              "1": "Mijozlar bilan muntazam yangilanishlar bilan bog'lanish.",
+              "2": "Namuna xabar (aynan shu ko'rinishda, bo'shliqlar bilan saqlansin — bu operator to'ldiradigan shablon): \"____ aka, noyabr oyida bizda _______ mahsulotimizga chegirmalar mavjud. Sizni qiziqtiradimi?\" — Telegramlariga yangi xabar va takliflarni yuborib turish."
+            }
+          },
+          "discipline": {
+            "title": "Tizimlilik va intizomni saqlash",
+            "notes": {
+              "1": "Vaqtni to'g'ri taqsimlash, barcha rejalashtirilgan qo'ng'iroqlarni o'z vaqtida amalga oshirish."
+            }
+          }
         }
       }
     }

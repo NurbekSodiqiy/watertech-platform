@@ -1,11 +1,17 @@
+import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { EmptyState } from "@/components/EmptyState";
 import { findNode } from "@/lib/site-config";
 
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "nav" });
+  return { title: t("products.comparisons.title") };
+}
+
 export default async function ComparisonsPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("emptyState.comparisonsNone");
+  const [tNav, t] = await Promise.all([getTranslations("nav"), getTranslations("emptyState.comparisonsNone")]);
 
   const path = "/products/comparisons";
   const node = findNode(path);
@@ -13,8 +19,8 @@ export default async function ComparisonsPage({ params: { locale } }: { params: 
   return (
     <DocPageTemplate
       path={path}
-      title={node?.title || "Taqqoslash"}
-      description={node?.description}
+      title={tNav("products.comparisons.title")}
+      description={node?.description ? tNav(node.description) : undefined}
       locked={node?.locked}
     >
       <EmptyState

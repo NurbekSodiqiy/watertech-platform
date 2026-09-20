@@ -68,6 +68,7 @@ export function DatabaseTemplate<T extends { id: string }>({
 }) {
   const router = useRouter();
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
+  const tTable = useTranslations("common.table");
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
@@ -108,7 +109,7 @@ export function DatabaseTemplate<T extends { id: string }>({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Qatorlarni filtrlash…"
+            placeholder={tTable("filterPlaceholder")}
             className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
         </div>
@@ -121,7 +122,7 @@ export function DatabaseTemplate<T extends { id: string }>({
             }
             className="rounded-lg border border-border bg-surface-alt px-2.5 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
           >
-            <option value="">{f.label}: Barchasi</option>
+            <option value="">{tTable("filterAll", { label: f.label })}</option>
             {f.options.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
@@ -202,7 +203,7 @@ export function DatabaseTemplate<T extends { id: string }>({
                         </div>
                       ) : col.type === "stock" ? (
                         <span className={row[col.key] ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
-                          {row[col.key] ? "Mavjud" : "Mavjud emas"}
+                          {row[col.key] ? tTable("inStock") : tTable("outOfStock")}
                         </span>
                       ) : col.type === "link" ? (
                         row[col.key] ? (

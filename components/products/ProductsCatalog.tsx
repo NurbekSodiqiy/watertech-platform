@@ -31,14 +31,8 @@ function ActiveMark({ layoutId, className }: { layoutId: string; className: stri
   );
 }
 
-// Turlari va ularning yorliqlari
-const CATEGORIES = [
-  { id: "all", label: "Barchasi" },
-  { id: "truba", label: "Trubalar" },
-  { id: "fiting", label: "Fitinglar" },
-  { id: "kran", label: "Kranlar" },
-  { id: "aksessuar", label: "Aksessuarlar" }
-];
+// Category ids; the chip labels are messages under pages.products.catalog.categories.
+const CATEGORY_IDS = ["all", "truba", "fiting", "kran", "aksessuar"] as const;
 
 /** Opens the product named by `?product=<id>` (a pinned or recent product,
  * from the home page or the palette). Its own Suspense leaf so only this
@@ -53,6 +47,8 @@ function ProductParamWatcher({ onProduct }: { onProduct: (id: string) => void })
 
 export function ProductsCatalog({ products }: { products: Product[] }) {
   const t = useTranslations("emptyState.productsNoMatch");
+  const tCatalog = useTranslations("pages.products.catalog");
+  const tCommon = useTranslations("common");
   const [activeLine, setActiveLine] = useState<"ppr" | "kanalizatsiya">("ppr");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -132,7 +128,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
           {activeLine === "ppr" && (
             <ActiveMark layoutId="products-line-tab" className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-primary" />
           )}
-          PPR liniyasi
+          {tCatalog("lines.ppr")}
         </button>
         <button
           onClick={() => setActiveLine("kanalizatsiya")}
@@ -143,7 +139,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
           {activeLine === "kanalizatsiya" && (
             <ActiveMark layoutId="products-line-tab" className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-primary" />
           )}
-          Kanalizatsiya liniyasi
+          {tCatalog("lines.kanalizatsiya")}
         </button>
       </div>
 
@@ -156,7 +152,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
           <input
             type="text"
             className="w-full bg-surface border border-border text-primary-dark text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5"
-            placeholder="Mahsulot nomi bo'yicha qidiruv..."
+            placeholder={tCatalog("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -164,23 +160,23 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
 
         {/* Kategoriya Chiplari */}
         <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((cat) => (
+          {CATEGORY_IDS.map((id) => (
             <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
+              key={id}
+              onClick={() => setActiveCategory(id)}
               className={`relative px-3 py-1.5 text-[13px] font-medium rounded-full border transition-none ${
-                activeCategory === cat.id
+                activeCategory === id
                   ? "border-transparent text-primary-dark"
                   : "bg-surface border-border text-text-secondary hover:bg-surface-alt hover:text-primary-dark"
               }`}
             >
-              {activeCategory === cat.id && (
+              {activeCategory === id && (
                 <ActiveMark
                   layoutId="products-category-chip"
                   className="absolute -inset-px rounded-full border border-primary bg-primary-light/20"
                 />
               )}
-              <span className="relative">{cat.label}</span>
+              <span className="relative">{tCatalog(`categories.${id}`)}</span>
             </button>
           ))}
         </div>
@@ -211,12 +207,12 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
                 }
                 disabled={imgErrors[product.filename]}
                 className="group relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border cursor-zoom-in disabled:cursor-default"
-                aria-label={`${product.name_ru} rasmini kattalashtirish`}
+                aria-label={tCatalog("zoomLabel", { name: product.name_ru })}
               >
                 {imgErrors[product.filename] ? (
                   <div className="flex flex-col items-center justify-center text-text-secondary gap-2">
                     <ImageOff className="w-8 h-8 opacity-50" />
-                    <span className="text-xs">Rasm topilmadi</span>
+                    <span className="text-xs">{tCatalog("imageMissing")}</span>
                   </div>
                 ) : (
                   <>
@@ -238,7 +234,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
                 {/* Latun belgisi */}
                 {product.material === "latun" && (
                   <div className="absolute top-3 right-3 bg-accent/10 border border-accent/20 text-accent text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                    Latun
+                    {tCatalog("brass")}
                   </div>
                 )}
               </button>
@@ -277,7 +273,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
                 type="button"
                 onClick={closeLightbox}
                 className="shrink-0 rounded-lg p-1 text-text-secondary hover:bg-primary/10"
-                aria-label="Yopish"
+                aria-label={tCommon("close")}
               >
                 <X size={18} aria-hidden="true" />
               </button>

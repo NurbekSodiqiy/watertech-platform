@@ -1,4 +1,5 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Flag, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
@@ -13,60 +14,48 @@ interface MotivationRow {
   note: string;
 }
 
-const motivationRows: MotivationRow[] = [
-  {
-    id: "zone-red-0",
-    planLevel: "60% dan kam bajarilsa",
-    coefficient: "0",
-    zone: "🔴 Qizil",
-    note: "Bu kompaniya uchun zararli ko'rsatkich. Agar xodim ketma-ket 2 oy \"Qizil zona\"da bo'lsa, uning kompaniyadagi faoliyati qayta ko'rib chiqiladi.",
-  },
-  {
-    id: "zone-red-1",
-    planLevel: "60–79,99% oralig'ida bajarilsa",
-    coefficient: "0,5",
-    zone: "🔴 Qizil",
-    note: "—",
-  },
-  {
-    id: "zone-mid",
-    planLevel: "80–99,99% oralig'ida bajarilsa",
-    coefficient: "0,75",
-    zone: "🟡 O'rta",
-    note: "—",
-  },
-  {
-    id: "zone-excellent",
-    planLevel: "100–119,9% oralig'ida bajarilsa",
-    coefficient: "1",
-    zone: "🟢 A'lo",
-    note: "—",
-  },
-  {
-    id: "zone-champion",
-    planLevel: "120% va undan yuqori bajarilsa",
-    coefficient: "1,2",
-    zone: "🏆 Champion",
-    note: "—",
-  },
-];
+// Coefficients are business numbers, identical in every locale, so they stay in
+// code; only the wording lives in messages under rows.<id>. Rows without a
+// note show the same dash the table always had.
+const NO_NOTE = "—";
+const ROWS = [
+  { id: "zoneRed0", coefficient: "0", hasNote: true },
+  { id: "zoneRed1", coefficient: "0,5", hasNote: false },
+  { id: "zoneMid", coefficient: "0,75", hasNote: false },
+  { id: "zoneExcellent", coefficient: "1", hasNote: false },
+  { id: "zoneChampion", coefficient: "1,2", hasNote: false },
+] as const;
 
-const motivationColumns: DbColumn<MotivationRow>[] = [
-  { key: "planLevel", label: "Reja bajarilish darajasi" },
-  { key: "coefficient", label: "Koeffitsient" },
-  { key: "zone", label: "Zona" },
-  { key: "note", label: "Izoh", type: "longtext" },
-];
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "nav" });
+  return { title: t("standards.motivationBonus.title") };
+}
 
-export default function MotivationBonusPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function MotivationBonusPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const [tNav, t] = await Promise.all([getTranslations("nav"), getTranslations("pages.standards.motivationBonus")]);
+
+  const motivationRows: MotivationRow[] = ROWS.map(({ id, coefficient, hasNote }) => ({
+    id,
+    planLevel: t(`rows.${id}.planLevel`),
+    coefficient,
+    zone: t(`rows.${id}.zone`),
+    note: hasNote ? t(`rows.${id}.note`) : NO_NOTE,
+  }));
+
+  const motivationColumns: DbColumn<MotivationRow>[] = [
+    { key: "planLevel", label: t("columns.planLevel") },
+    { key: "coefficient", label: t("columns.coefficient") },
+    { key: "zone", label: t("columns.zone") },
+    { key: "note", label: t("columns.note"), type: "longtext" },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader
         path="/standards/motivation-bonus"
-        title="Motivatsiya va bonus"
-        description="Reja bajarilish darajasiga qarab koeffitsient qanday belgilanishini shu yerdan bilib oling."
+        title={tNav("standards.motivationBonus.title")}
+        description={t("description")}
       />
 
       {/* Kirish bloki (Callout) — sales-funnel/repeat-sales-funnel
@@ -76,17 +65,16 @@ export default function MotivationBonusPage({ params: { locale } }: { params: { 
           <Flag size={28} />
         </div>
         <div className="space-y-3">
-          <h2 className="text-[16px] font-bold text-primary-dark">
-            📌 KPI: Bizning &quot;O&apos;yin qoidalarimiz&quot;
-          </h2>
+          <h2 className="text-[16px] font-bold text-primary-dark">{t("intro.heading")}</h2>
           <p className="text-[15px] leading-relaxed text-text-secondary">
-            Sotuv bo&apos;limida ishlash — bu sportga o&apos;xshaydi. Natija qancha yuqori bo&apos;lsa, mukofot ham
-            shuncha katta bo&apos;ladi. Bizda maosh <strong className="text-primary-dark font-bold">fiks (kafolatlangan qism)</strong> va{" "}
-            <strong className="text-primary-dark font-bold">KPI, Bonus</strong>dan iborat.
+            {t.rich("intro.paragraph1", {
+              strong: (chunks) => <strong className="text-primary-dark font-bold">{chunks}</strong>,
+            })}
           </p>
           <p className="text-[15px] leading-relaxed text-text-secondary">
-            Sizning daromadingiz quyidagi 4 ta chegara (porog) asosida hisoblanadi. Buni{" "}
-            <strong className="text-primary-dark font-medium">Svetofor tizimi</strong> deb tushunishingiz mumkin:
+            {t.rich("intro.paragraph2", {
+              strong: (chunks) => <strong className="text-primary-dark font-medium">{chunks}</strong>,
+            })}
           </p>
         </div>
       </div>
@@ -97,7 +85,7 @@ export default function MotivationBonusPage({ params: { locale } }: { params: { 
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <BarChart3 size={18} />
           </span>
-          <h3 className="text-[17px] font-bold text-primary-dark">Reja bajarilish darajasi va koeffitsient</h3>
+          <h3 className="text-[17px] font-bold text-primary-dark">{t("table.heading")}</h3>
         </div>
         <DatabaseTemplate columns={motivationColumns} rows={motivationRows} />
       </div>

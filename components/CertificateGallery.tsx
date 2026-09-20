@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { ExternalLink, X, ChevronRight, ChevronLeft, Download } from "lucide-react";
 import { useCertificateLightbox } from "@/components/CertificateLightboxContext";
 import { Dialog } from "@/components/ui/Dialog";
@@ -12,6 +13,8 @@ const TITLE_ID = "certificate-lightbox-title";
  * Escape, the backdrop click and the focus trap come from <Dialog>. */
 export function CertificateGallery() {
   const { selectedCert, currentImageIndex, close, nextImage, prevImage } = useCertificateLightbox();
+  const t = useTranslations("pages.products.technicalDocs.certificates");
+  const tCommon = useTranslations("common");
 
   if (!selectedCert) return null;
 
@@ -48,26 +51,26 @@ export function CertificateGallery() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-9 items-center gap-1.5 rounded-xl border border-border bg-surface-alt px-3 text-[12.5px] font-medium text-primary-dark hover:bg-primary/10 transition-colors"
-          title="To'liq o'lchamda ochish"
+          title={t("lightbox.openFullSize")}
         >
           <ExternalLink aria-hidden="true" size={15} />
-          <span className="hidden sm:inline">To&apos;liq o&apos;lcham</span>
+          <span className="hidden sm:inline">{t("fullSize")}</span>
         </a>
 
         <a
           href={selectedCert.images[currentImageIndex]}
           download
           className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-[12.5px] font-medium text-surface hover:bg-primary-hover shadow-softer transition-colors"
-          title="Rasmni yuklab olish"
+          title={t("lightbox.downloadTitle")}
         >
           <Download aria-hidden="true" size={15} />
-          <span className="hidden sm:inline">Yuklab olish</span>
+          <span className="hidden sm:inline">{t("lightbox.download")}</span>
         </a>
 
         <button
           onClick={close}
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface-alt text-text-secondary hover:bg-primary/10 hover:text-primary-dark transition-colors ml-1"
-          aria-label="Yopish"
+          aria-label={tCommon("close")}
         >
           <X aria-hidden="true" size={18} />
         </button>
@@ -81,7 +84,7 @@ export function CertificateGallery() {
         <button
           onClick={prevImage}
           disabled={currentImageIndex === 0}
-          aria-label="Oldingi bet"
+          aria-label={t("lightbox.prev")}
           className="absolute left-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-surface/90 text-primary-dark shadow-soft backdrop-blur disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface hover:text-primary hover:scale-105 transition-all"
         >
           <ChevronLeft aria-hidden="true" size={28} />
@@ -92,7 +95,7 @@ export function CertificateGallery() {
         <Image
           key={currentImageIndex}
           src={selectedCert.images[currentImageIndex]}
-          alt={`${selectedCert.title} - ${currentImageIndex + 1}-bet`}
+          alt={t("lightbox.pageAlt", { title: selectedCert.title, page: currentImageIndex + 1 })}
           fill
           sizes="(min-width: 1024px) 60vw, 90vw"
           className="rounded-lg border border-border shadow-soft object-contain"
@@ -103,7 +106,7 @@ export function CertificateGallery() {
         <button
           onClick={nextImage}
           disabled={currentImageIndex === selectedCert.images.length - 1}
-          aria-label="Keyingi bet"
+          aria-label={t("lightbox.next")}
           className="absolute right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-surface/90 text-primary-dark shadow-soft backdrop-blur disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface hover:text-primary hover:scale-105 transition-all"
         >
           <ChevronRight aria-hidden="true" size={28} />
@@ -113,8 +116,18 @@ export function CertificateGallery() {
 
     {/* Modal tag qismi */}
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface px-5 py-3 text-[12.5px] text-text-secondary">
-      <span>Organ: <strong className="text-primary-dark">{selectedCert.orgName}</strong></span>
-      <span>Amal qilish muddati: <strong className="text-status-ok">{selectedCert.validUntil}</strong></span>
+      <span>
+        {t.rich("lightbox.organ", {
+          name: selectedCert.orgName,
+          strong: (chunks) => <strong className="text-primary-dark">{chunks}</strong>,
+        })}
+      </span>
+      <span>
+        {t.rich("validUntil", {
+          date: selectedCert.validUntil,
+          strong: (chunks) => <strong className="text-status-ok">{chunks}</strong>,
+        })}
+      </span>
     </div>
     </Dialog>
   );
