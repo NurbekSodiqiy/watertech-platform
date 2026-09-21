@@ -15,6 +15,7 @@ import { WidgetFallback } from "@/components/ui/WidgetFallback";
 import { CopilotButton } from "@/components/copilot/CopilotButton";
 import type { CopilotPrefill } from "@/components/copilot/CopilotPanel";
 import type { NavBadges } from "@/lib/types";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { scheduleIdle } from "@/lib/idle";
 import { durations, easings } from "@/lib/motion/tokens";
 import { useChangelogRead } from "@/hooks/useChangelogRead";
@@ -45,6 +46,10 @@ const CHORD_WINDOW_MS = 1000;
 // A stable default: a fresh [] per render would defeat the navBadges memo.
 const NO_CHANGELOG_IDS: string[] = [];
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
+// Skip-link target and the mobile drawer's accessible name. Fixed strings
+// (not useId) because the skip link's href has to match the <main> id.
+const MAIN_ID = "main-content";
+const MOBILE_NAV_TITLE_ID = "mobile-nav-title";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -75,9 +80,13 @@ export function AppShell({
   // When "g" was pressed (event.timeStamp), or 0 — a ref so a re-render
   // between the two keys does not drop the chord.
   const chordStartedAt = useRef(0);
+  // The mobile drawer is a modal: it covers the page behind a backdrop, so
+  // keyboard focus has to stay inside it and come back to the menu button.
+  const mobileNavRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const t = useTranslations("chrome.appShell");
   const { read: changelogRead, status: changelogStatus } = useChangelogRead();
+  useFocusTrap(mobileNavRef, mobileOpen);
 
   // Memoised: the nav rows are memo'd on this object, and AppShell re-renders
   // for unrelated state (palette, copilot, drawer). No badge until the stored
@@ -125,6 +134,9 @@ export function AppShell({
           }
         }
       }
+      // Only the drawer: <Dialog> owns Escape for every other overlay. No
+      // preventDefault — closing it is the only thing Escape does here.
+      if (e.key === "Escape") setMobileOpen(false);
       // "?" is a printable character, so it only opens help when the operator
       // isn't typing it into something (the client-name field, the palette's
       // own input, an admin form).
@@ -170,6 +182,16 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* First thing in the tab order: ~35 nav links sit between the top of the
+          page and the content on every route (WCAG 2.4.1). A plain anchor, not
+          the next-intl Link — this is a same-page fragment, not navigation. */}
+      <a
+        href={`#${MAIN_ID}`}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:border focus:border-border focus:bg-surface focus:px-4 focus:py-2 focus:text-[13px] focus:font-medium focus:text-primary-dark focus:shadow-soft"
+      >
+        {t("skipToContent")}
+      </a>
+
       <Sidebar navBadges={navBadges} />
 
       <AnimatePresence>
@@ -184,6 +206,10 @@ export function AppShell({
               transition={{ duration: reduce ? 0 : durations.instant }}
             />
             <m.div
+              ref={mobileNavRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={MOBILE_NAV_TITLE_ID}
               className="relative flex h-full w-72 max-w-[85vw] flex-col bg-surface shadow-soft"
               initial={reduce ? undefined : { x: "-100%" }}
               animate={{ x: 0 }}
@@ -191,7 +217,9 @@ export function AppShell({
               transition={{ duration: reduce ? 0 : durations.fast, ease: easings.standard }}
             >
               <div className="flex items-center justify-between border-b border-border px-3 py-3">
-                <span className="text-sm font-semibold text-primary-dark">{t("mobileNavTitle")}</span>
+                <span id={MOBILE_NAV_TITLE_ID} className="text-sm font-semibold text-primary-dark">
+                  {t("mobileNavTitle")}
+                </span>
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="rounded-lg p-1 text-text-secondary hover:bg-primary/10"
@@ -211,7 +239,9 @@ export function AppShell({
           onMenuClick={() => setMobileOpen(true)}
           onOpenSearch={() => setCommandOpen(true)}
         />
-        <main className="min-w-0 flex-1">
+        {/* tabIndex -1 so the skip link can actually move focus here, not
+            just the scroll position. */}
+        <main id={MAIN_ID} tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

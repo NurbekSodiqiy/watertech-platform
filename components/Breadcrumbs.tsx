@@ -13,11 +13,18 @@ import { getBreadcrumbs } from "@/lib/site-config";
 export function Breadcrumbs({ path }: { path: string }) {
   const crumbs = getBreadcrumbs(path);
   const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   return (
-    <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-text-secondary">
-      <Link href="/" className="flex shrink-0 items-center gap-1 hover:text-primary-dark">
-        <Home size={13} />
+    <nav
+      aria-label={tCommon("breadcrumbs")}
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-text-secondary"
+    >
+      {/* Icon-only, so the name has to come from aria-label — without it axe
+          reports a serious `link-name` violation and a screen reader announces
+          the crumb trail as starting with an unnamed link. */}
+      <Link href="/" aria-label={t("home")} className="flex shrink-0 items-center gap-1 hover:text-primary-dark">
+        <Home size={13} aria-hidden="true" />
       </Link>
       {crumbs.map((c, i) => (
         <span key={c.path} className="flex min-w-0 items-center gap-1.5">

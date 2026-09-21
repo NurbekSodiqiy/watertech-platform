@@ -35,6 +35,7 @@
     "zod": "^3.23"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@next/bundle-analyzer": "^14.2.35",
     "@playwright/test": "^1.63.0",
     "@types/node": "^20.14.15",

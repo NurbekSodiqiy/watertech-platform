@@ -50,7 +50,7 @@ export function ThemeToggle() {
       <Pressable
         onClick={() => setTheme(false)}
         aria-pressed={!isDark}
-        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium ${
+        className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium sm:px-2.5 ${
           !isDark ? "bg-surface text-primary-dark shadow-softer" : "text-text-secondary hover:text-primary-dark"
         }`}
       >
@@ -60,7 +60,7 @@ export function ThemeToggle() {
       <Pressable
         onClick={() => setTheme(true)}
         aria-pressed={isDark}
-        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium ${
+        className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium sm:px-2.5 ${
           isDark ? "bg-surface text-primary-dark shadow-softer" : "text-text-secondary hover:text-primary-dark"
         }`}
       >

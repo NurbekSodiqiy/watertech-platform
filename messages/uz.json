@@ -78,13 +78,16 @@
   "chrome": {
     "appShell": {
       "mobileNavTitle": "Navigatsiya",
-      "closeMobileNav": "Navigatsiyani yopish"
+      "closeMobileNav": "Navigatsiyani yopish",
+      "skipToContent": "Asosiy mazmunga o'tish"
     },
     "sidebar": {
       "collapse": "Yon panelni yig'ish",
       "expand": "Yon panelni yoyish",
       "collapseChild": "Yig'ish",
       "expandChild": "Yoyish",
+      "navLabel": "Asosiy navigatsiya",
+      "mobileNavLabel": "Mobil navigatsiya",
       "footer": "WaterTech Bilimlar Bazasi · Ishlanma versiya"
     },
     "topBar": {
@@ -131,6 +134,11 @@
     },
     "miniCalculator": {
       "label": "Kalkulyator"
+    },
+    "localeSwitcher": {
+      "label": "Interfeys tili",
+      "uz": "O'zbekcha",
+      "ru": "Ruscha"
     },
     "logo": "WaterTech logo"
   },
@@ -414,7 +422,8 @@
       "battleCard": "Raqobatchi kartasi"
     },
     "edit": "Tahrirlash",
-    "offline": "Internet yo'q"
+    "offline": "Internet yo'q",
+    "breadcrumbs": "Sahifa yo'li"
   },
   "toast": {
     "saved": "Saqlandi",

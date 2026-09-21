@@ -150,6 +150,7 @@ const NavItem = memo(function NavItem({
           {hasChildren && (
             <button
               onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
               aria-label={open ? tSidebar("collapseChild") : tSidebar("expandChild")}
               className="shrink-0 rounded-lg p-1.5 text-text-secondary hover:bg-primary/10 hover:text-primary-dark"
             >
@@ -295,10 +296,13 @@ export function SidebarNav({
   const groups = chunk(siteTree, NAV_GROUP_SIZES);
   const t = useTranslations("nav");
   const tSidebar = useTranslations("chrome.sidebar");
+  // The desktop rail stays in the DOM while the mobile drawer is open, so the
+  // two <nav> landmarks are named apart rather than both reading "navigation".
+  const navLabel = tSidebar(scope === "mobile" ? "mobileNavLabel" : "navLabel");
 
   if (collapsed) {
     return (
-      <nav className="flex-1 overflow-y-visible px-2.5 py-4">
+      <nav aria-label={navLabel} className="flex-1 overflow-y-visible px-2.5 py-4">
         <div className="group relative mb-5 flex justify-center">
           {isHome && (
             <m.div
@@ -323,7 +327,7 @@ export function SidebarNav({
   }
 
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4">
+    <nav aria-label={navLabel} className="flex-1 overflow-y-auto px-3 py-4">
       <div className="relative mb-6">
         {isHome && <ActivePill scope={scope} />}
         <Link

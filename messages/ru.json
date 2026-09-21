@@ -78,13 +78,16 @@
   "chrome": {
     "appShell": {
       "mobileNavTitle": "Навигация",
-      "closeMobileNav": "Закрыть навигацию"
+      "closeMobileNav": "Закрыть навигацию",
+      "skipToContent": "Перейти к основному содержимому"
     },
     "sidebar": {
       "collapse": "Свернуть боковую панель",
       "expand": "Развернуть боковую панель",
       "collapseChild": "Свернуть",
       "expandChild": "Развернуть",
+      "navLabel": "Основная навигация",
+      "mobileNavLabel": "Мобильная навигация",
       "footer": "База знаний WaterTech · Тестовая версия"
     },
     "topBar": {
@@ -131,6 +134,11 @@
     },
     "miniCalculator": {
       "label": "Калькулятор"
+    },
+    "localeSwitcher": {
+      "label": "Язык интерфейса",
+      "uz": "Узбекский",
+      "ru": "Русский"
     },
     "logo": "Логотип WaterTech"
   },
@@ -414,7 +422,8 @@
       "battleCard": "Карточка конкурента"
     },
     "edit": "Редактировать",
-    "offline": "Нет интернета"
+    "offline": "Нет интернета",
+    "breadcrumbs": "Путь по страницам"
   },
   "toast": {
     "saved": "Сохранено",

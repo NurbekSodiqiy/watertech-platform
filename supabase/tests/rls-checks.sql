@@ -11,7 +11,9 @@
 --   Failed: an error whose message starts with "RLS FAIL:".
 --
 -- Policies under test: 0002 (content_* + content_versions), 0006 (copilot_logs),
--- 0007 (admin_notifications, content_gate_reports), 0009 (user_state).
+-- 0007 (admin_notifications, content_gate_reports), 0008 (rate_limits),
+-- 0009 (user_state), 0010 (content_changelog), 0011 (content_contacts),
+-- 0012 (content_sops).
 -- telemetry_events has no migration in this repo (it predates
 -- supabase/migrations), so its checks test whatever policy the project
 -- actually has.
@@ -35,6 +37,24 @@ insert into public.content_packages (id, group_id, name, order_volume, payment_t
   ('rls-test-draft', 'rls-test-draft', 'RLS test', '-', '-', '-', '-', '-', 'draft');
 insert into public.content_products (id, filename, name_ru, line, category, status) values
   ('rls-test-draft', 'rls-test-draft.jpg', 'RLS test', 'ppr', 'truba', 'draft');
+-- 0010 / 0011 / 0012 carry the same published-only read policy as the 0002
+-- tables, so each gets a draft row (must stay invisible to an operator) and a
+-- published one (the positive control that proves GRANT and policy both work).
+insert into public.content_changelog (id, published_on, title, body, approved_by, status) values
+  ('rls-test-draft', current_date, 'RLS test', '-', 'rls-manager@test', 'draft'),
+  ('rls-test-published', current_date, 'RLS test', '-', 'rls-manager@test', 'published');
+insert into public.content_contacts (id, name, role, topic, phone, messenger, status) values
+  ('rls-test-draft', 'RLS test', '-', '-', '+998 90 123 45 67', '@rlstestuser', 'draft'),
+  ('rls-test-published', 'RLS test', '-', '-', '+998 90 123 45 67', '@rlstestuser', 'published');
+insert into public.content_sops (id, title, summary, steps, status) values
+  ('rls-test-draft', 'RLS test', '-', '[]', 'draft'),
+  ('rls-test-published', 'RLS test', '-', '[]', 'published');
+
+-- rate_limits (0008) has RLS on, no policies at all and no table grants: only
+-- service_role reaches it, and only through rate_limit_hit(). A row is seeded
+-- so the zeroes asserted below are "hidden", not "table happens to be empty".
+insert into public.rate_limits (key, window_start, hits, expires_at) values
+  ('rls-test:copilot:1m', now(), 1, now() + interval '1 minute');
 -- Version snapshots can hold draft content too.
 insert into public.content_versions (table_name, row_id, snapshot, actor) values
   ('content_faqs', 'rls-test-draft', '{"status":"draft"}', 'rls-manager@test');
@@ -77,6 +97,24 @@ begin
     raise exception 'RLS FAIL: operator cannot read a PUBLISHED script (setup or published-read policy broken)';
   end if;
 
+  -- Same positive control for the three tables added after 0002.
+  for c in
+    select * from (values
+      ('content_changelog', 'public.content_changelog'),
+      ('content_contacts',  'public.content_contacts'),
+      ('content_sops',      'public.content_sops')
+    ) as t(label, relation)
+  loop
+    begin
+      execute format('select count(*) from %s where id = ''rls-test-published''', c.relation) into n;
+    exception when insufficient_privilege then
+      raise exception 'RLS FAIL: operator gets "permission denied" on % — missing GRANT to authenticated?', c.relation;
+    end;
+    if n <> 1 then
+      raise exception 'RLS FAIL: operator cannot read a PUBLISHED % row (% visible)', c.label, n;
+    end if;
+  end loop;
+
   for c in
     select * from (values
       ('draft content_scripts row',        'public.content_scripts',        $f$id = 'rls-test-draft'$f$),
@@ -86,6 +124,9 @@ begin
       ('draft content_package_groups row', 'public.content_package_groups', $f$id = 'rls-test-draft'$f$),
       ('draft content_packages row',       'public.content_packages',       $f$id = 'rls-test-draft'$f$),
       ('draft content_products row',       'public.content_products',       $f$id = 'rls-test-draft'$f$),
+      ('draft content_changelog row',      'public.content_changelog',      $f$id = 'rls-test-draft'$f$),
+      ('draft content_contacts row',       'public.content_contacts',       $f$id = 'rls-test-draft'$f$),
+      ('draft content_sops row',           'public.content_sops',           $f$id = 'rls-test-draft'$f$),
       ('content_versions snapshot',        'public.content_versions',       $f$row_id = 'rls-test-draft'$f$),
       ('copilot_logs',                     'public.copilot_logs',           $f$true$f$),
       ('admin_notifications',              'public.admin_notifications',    $f$true$f$),
@@ -159,6 +200,26 @@ begin
   end;
 end $$;
 
+-- rate_limits (0008): not readable, not writable, and rate_limit_hit() not
+-- callable by operator — the counter behind /api/copilot's paid calls must be
+-- reachable only by the server's service-role client.
+do $$
+declare
+  n bigint;
+begin
+  begin
+    select count(*) into n from public.rate_limits;
+    raise exception 'RLS FAIL: operator can select rate_limits (% rows visible)', n;
+  exception when insufficient_privilege then null; -- no grant, as intended
+  end;
+
+  begin
+    perform public.rate_limit_hit('rls-test:operator', 1, 60);
+    raise exception 'RLS FAIL: operator can execute rate_limit_hit()';
+  exception when insufficient_privilege then null; -- execute revoked, as intended
+  end;
+end $$;
+
 -- === As a manager ==============================================================
 
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","email":"rls-manager@test","app_metadata":{"role":"manager"}}';
@@ -182,6 +243,9 @@ begin
       ('draft content_package_groups row', 'public.content_package_groups', $f$id = 'rls-test-draft'$f$),
       ('draft content_packages row',       'public.content_packages',       $f$id = 'rls-test-draft'$f$),
       ('draft content_products row',       'public.content_products',       $f$id = 'rls-test-draft'$f$),
+      ('draft content_changelog row',      'public.content_changelog',      $f$id = 'rls-test-draft'$f$),
+      ('draft content_contacts row',       'public.content_contacts',       $f$id = 'rls-test-draft'$f$),
+      ('draft content_sops row',           'public.content_sops',           $f$id = 'rls-test-draft'$f$),
       ('content_versions snapshot',        'public.content_versions',       $f$row_id = 'rls-test-draft'$f$),
       ('copilot_logs',                     'public.copilot_logs',           $f$email = 'rls-other-op@test'$f$),
       ('admin_notifications',              'public.admin_notifications',    $f$row_id = 'rls-test-draft'$f$),
@@ -225,6 +289,26 @@ begin
     raise exception 'RLS FAIL: manager can insert a user_state row for an operator';
   exception
     when insufficient_privilege then null; -- no manager insert policy, as intended
+  end;
+end $$;
+
+-- rate_limits (0008): not readable, not writable, and rate_limit_hit() not
+-- callable by manager — the counter behind /api/copilot's paid calls must be
+-- reachable only by the server's service-role client.
+do $$
+declare
+  n bigint;
+begin
+  begin
+    select count(*) into n from public.rate_limits;
+    raise exception 'RLS FAIL: manager can select rate_limits (% rows visible)', n;
+  exception when insufficient_privilege then null; -- no grant, as intended
+  end;
+
+  begin
+    perform public.rate_limit_hit('rls-test:manager', 1, 60);
+    raise exception 'RLS FAIL: manager can execute rate_limit_hit()';
+  exception when insufficient_privilege then null; -- execute revoked, as intended
   end;
 end $$;
 
