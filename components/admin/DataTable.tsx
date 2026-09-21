@@ -4,12 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { Link } from "@/i18n/routing";
 import { ArrowUpDown, Pencil, Search, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import type { EmptyStateKey } from "@/lib/empty-states";
-import { formatRelativeUz } from "@/lib/admin/format";
+import { formatRelative } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
@@ -71,6 +71,11 @@ export function DataTable<T extends AdminRow>({
   const { toast } = useToast();
   const t = useTranslations("toast");
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
+  const tTable = useTranslations("admin.table");
+  const tCommon = useTranslations("common");
+  const tFilter = useTranslations("common.table");
+  const tRel = useTranslations("admin.relativeTime");
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -162,7 +167,7 @@ export function DataTable<T extends AdminRow>({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Qatorlarni filtrlash…"
+            placeholder={tFilter("filterPlaceholder")}
             className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
         </div>
@@ -170,7 +175,7 @@ export function DataTable<T extends AdminRow>({
           href={`${editBase}/new`}
           className="shrink-0 rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover"
         >
-          + Qo&apos;shish
+          {tTable("add")}
         </Link>
       </div>
 
@@ -205,10 +210,10 @@ export function DataTable<T extends AdminRow>({
                     )}
                   </th>
                 ))}
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Holat</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Yangilangan</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Kim tomonidan</th>
-                <th className="w-32 px-4 py-2.5 font-semibold text-primary-dark">Amallar</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tTable("status")}</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tTable("updated")}</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tTable("updatedBy")}</th>
+                <th className="w-32 px-4 py-2.5 font-semibold text-primary-dark">{tTable("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -233,18 +238,18 @@ export function DataTable<T extends AdminRow>({
                           : "bg-status-warning/15 text-status-warning"
                       }`}
                     >
-                      {row.status === "published" ? "Nashr etilgan" : "Qoralama"}
+                      {row.status === "published" ? tTable("published") : tTable("draft")}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-text-secondary">
-                    {mounted ? formatRelativeUz(row.updated_at) : "—"}
+                    {mounted ? formatRelative(row.updated_at, tRel, locale) : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-text-secondary">{row.updated_by ?? "—"}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={`${editBase}/${row.id}`}
-                        aria-label="Tahrirlash"
+                        aria-label={tCommon("edit")}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
                       >
                         <Pencil size={13} />
@@ -255,12 +260,12 @@ export function DataTable<T extends AdminRow>({
                         disabled={pending && pendingId === row.id}
                         className="rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent disabled:opacity-50"
                       >
-                        {row.status === "published" ? "Qoralama" : "Nashr"}
+                        {row.status === "published" ? tTable("makeDraft") : tTable("publish")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmId(row.id)}
-                        aria-label="O'chirish"
+                        aria-label={tTable("delete")}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-status-outdated/10 hover:text-status-outdated"
                       >
                         <Trash2 size={13} />
@@ -276,8 +281,8 @@ export function DataTable<T extends AdminRow>({
 
       <ConfirmDialog
         open={confirmId !== null}
-        title="Yozuvni o'chirish"
-        description="Bu amalni ortga qaytarib bo'lmaydi. Yozuv butunlay o'chiriladi."
+        title={tTable("deleteTitle")}
+        description={tTable("deleteDescription")}
         pending={pending && pendingId === confirmId}
         onConfirm={handleDelete}
         onCancel={() => setConfirmId(null)}

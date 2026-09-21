@@ -1,27 +1,27 @@
 "use client";
 
 import { m, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
 import { Activity, FileStack, Star, type LucideIcon } from "lucide-react";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
 interface DashboardTab {
   path: string;
-  label: string;
+  labelKey: "activity" | "content" | "quality";
   icon: LucideIcon;
 }
 
 const TABS: DashboardTab[] = [
-  { path: "/dashboard", label: "Faollik", icon: Activity },
-  { path: "/dashboard/content", label: "Kontent", icon: FileStack },
-  { path: "/dashboard/quality", label: "Sifat", icon: Star },
+  { path: "/dashboard", labelKey: "activity", icon: Activity },
+  { path: "/dashboard/content", labelKey: "content", icon: FileStack },
+  { path: "/dashboard/quality", labelKey: "quality", icon: Star },
 ];
 
-/** Client component (not translated via next-intl, same as AdminShell's own
- * nav — the manager area's chrome is hardcoded Uzbek throughout) so it can
- * read the current pathname for active-tab highlighting; layout.tsx has no
- * searchParams to derive that from itself. */
+/** Client component so it can read the current pathname for active-tab
+ * highlighting; layout.tsx has no searchParams to derive that from itself. */
 export function DashboardTabs() {
+  const t = useTranslations("dashboard.tabs");
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
@@ -47,7 +47,7 @@ export function DashboardTabs() {
               />
             )}
             <Icon size={14} />
-            {tab.label}
+            {t(tab.labelKey)}
           </Link>
         );
       })}

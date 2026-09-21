@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { countRowsByStatus } from "@/lib/admin/queries";
 
-export const metadata = { title: "Kontent boshqaruvi — Umumiy" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "pages.admin.overview" });
+  return { title: t("title") };
+}
 
 export default async function AdminOverviewPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
@@ -11,6 +15,7 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
   const t = await getTranslations("pages.admin.changelog");
   const tContacts = await getTranslations("pages.admin.contacts");
   const tSops = await getTranslations("pages.admin.sops");
+  const tAdmin = await getTranslations("pages.admin");
   const [scripts, objections, faqs, competitors, packages, products, changelog, contacts, sops] = await Promise.all([
     countRowsByStatus("content_scripts"),
     countRowsByStatus("content_objections"),
@@ -24,12 +29,12 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
   ]);
 
   const sections = [
-    { label: "Skriptlar", href: "/admin/scripts", counts: scripts },
-    { label: "E'tirozlar", href: "/admin/objections", counts: objections },
-    { label: "FAQ", href: "/admin/faq", counts: faqs },
-    { label: "Raqobatchilar", href: "/admin/competitors", counts: competitors },
-    { label: "Paketlar", href: "/admin/packages", counts: packages },
-    { label: "Mahsulotlar", href: "/admin/products", counts: products },
+    { label: tAdmin("scripts.nav"), href: "/admin/scripts", counts: scripts },
+    { label: tAdmin("objections.nav"), href: "/admin/objections", counts: objections },
+    { label: tAdmin("faq.nav"), href: "/admin/faq", counts: faqs },
+    { label: tAdmin("competitors.nav"), href: "/admin/competitors", counts: competitors },
+    { label: tAdmin("packages.nav"), href: "/admin/packages", counts: packages },
+    { label: tAdmin("products.nav"), href: "/admin/products", counts: products },
     { label: t("nav"), href: "/admin/changelog", counts: changelog },
     { label: tContacts("nav"), href: "/admin/contacts", counts: contacts },
     { label: tSops("nav"), href: "/admin/sops", counts: sops },
@@ -38,9 +43,9 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="text-[24px] font-bold text-primary-dark">Umumiy</h1>
+        <h1 className="text-[24px] font-bold text-primary-dark">{tAdmin("overview.title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">
-          Har bir bo&apos;lim bo&apos;yicha yozuvlar soni va qoralamalar holati.
+          {tAdmin("overview.description")}
         </p>
       </div>
 
@@ -53,10 +58,10 @@ export default async function AdminOverviewPage({ params: { locale } }: { params
           >
             <p className="text-[14px] font-semibold text-primary-dark">{section.label}</p>
             <div className="flex items-center gap-4 text-[13px] text-text-secondary">
-              <span>{section.counts.total} ta yozuv</span>
+              <span>{tAdmin("overview.entries", { count: section.counts.total })}</span>
               {section.counts.draft > 0 && (
                 <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-[11px] font-semibold text-status-warning">
-                  {section.counts.draft} qoralama
+                  {tAdmin("overview.drafts", { count: section.counts.draft })}
                 </span>
               )}
             </div>

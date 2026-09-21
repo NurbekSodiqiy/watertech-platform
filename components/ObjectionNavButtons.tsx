@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Script, Stage } from "@/lib/content/types";
 
 /** Shown wherever an objection's response is displayed via a Stage's
@@ -16,6 +17,7 @@ export function ObjectionNavButtons({
   currentStage: Stage;
   onSelectStage: (stage: Stage) => void;
 }) {
+  const t = useTranslations("scripts");
   const closingStage = script.stages[script.stages.length - 1];
   const showForward = closingStage.id !== currentStage.id;
 
@@ -26,14 +28,14 @@ export function ObjectionNavButtons({
         className="flex items-center gap-1 text-[13px] font-medium text-primary hover:text-primary-hover"
       >
         <ChevronLeft size={14} />
-        {currentStage.label}ga qaytish
+        {t("backToStage", { label: currentStage.label })}
       </button>
       {showForward && (
         <button
           onClick={() => onSelectStage(closingStage)}
           className="flex items-center gap-1 text-[13px] font-medium text-primary hover:text-primary-hover"
         >
-          Yakunga o&apos;tish
+          {t("jumpToClosing")}
           <ChevronRight size={14} />
         </button>
       )}

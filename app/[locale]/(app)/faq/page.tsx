@@ -10,15 +10,19 @@ import type { Locale } from "@/i18n/routing";
 /** Seed id of the "Savdoni qo'llab-quvvatlash" contact (lib/content/contacts.ts). */
 const SUPPORT_CONTACT_ID = "sales-support";
 
-const columns: DbColumn<Faq>[] = [
-  { key: "category", label: "Bo'lim", sortable: true },
-  { key: "question", label: "Savol", sortable: true },
-  { key: "answer", label: "Javob" },
-];
-
 export default async function FaqPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("emptyState.faqNone");
+  const [t, tNav, tPage] = await Promise.all([
+    getTranslations("emptyState.faqNone"),
+    getTranslations("nav"),
+    getTranslations("pages.faq"),
+  ]);
+
+  const columns: DbColumn<Faq>[] = [
+    { key: "category", label: tPage("columns.category"), sortable: true },
+    { key: "question", label: tPage("columns.question"), sortable: true },
+    { key: "answer", label: tPage("columns.answer") },
+  ];
 
   const [faqs, contacts] = await Promise.all([getFaqs(locale), getContacts(locale)]);
   const categories = Array.from(new Set(faqs.map((f) => f.category)));
@@ -35,13 +39,13 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
     <ContentFade className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <PageHeader
         path="/faq"
-        title="Savol-javob"
-        description="Butun bilimlar bazasi bo'yicha ko'p beriladigan savollar."
+        title={tNav("faq.title")}
+        description={tPage("description")}
       />
       <DatabaseTemplate
         columns={columns}
         rows={faqs}
-        filters={[{ key: "category", label: "Bo'lim", options: categories }]}
+        filters={[{ key: "category", label: tPage("filterCategory"), options: categories }]}
         emptyState={{
           stateKey: "faqNone",
           title: t("title"),
@@ -53,8 +57,8 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
       {supportContact && telegramHandle && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-surface p-5">
           <div>
-            <h2 className="text-[15px] font-semibold text-primary-dark">Javobingizni topa olmadingizmi?</h2>
-            <p className="mt-0.5 text-[13px] text-text-secondary">Bizga yozing — {supportContact.role} javob beradi.</p>
+            <h2 className="text-[15px] font-semibold text-primary-dark">{tPage("supportHeading")}</h2>
+            <p className="mt-0.5 text-[13px] text-text-secondary">{tPage("supportBody", { role: supportContact.role })}</p>
           </div>
           <a
             href={`https://t.me/${telegramHandle}`}
@@ -63,7 +67,7 @@ export default async function FaqPage({ params: { locale } }: { params: { locale
             className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface shadow-softer hover:bg-primary-dark"
           >
             <MessageCircle size={15} />
-            Bizga yozing
+            {tPage("supportCta")}
           </a>
         </div>
       )}

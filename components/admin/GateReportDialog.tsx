@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Dialog } from "@/components/ui/Dialog";
 import { GateReport } from "@/components/admin/GateReport";
@@ -20,6 +21,7 @@ export function GateReportDialog({
   editHref?: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.gate");
   const router = useRouter();
   const titleId = useId();
   const descriptionId = useId();
@@ -47,10 +49,10 @@ export function GateReportDialog({
           </span>
           <div className="min-w-0 flex-1">
             <p id={titleId} className="text-[14px] font-semibold text-primary-dark">
-              Nashr qorovuli to&apos;xtatdi
+              {t("title")}
             </p>
             <p id={descriptionId} className="mt-1 text-[13px] text-text-secondary">
-              Quyidagi xatolar tuzatilmaguncha yozuv nashr etilmaydi. Ogohlantirishlar nashrga to&apos;sqinlik qilmaydi.
+              {t("description")}
             </p>
           </div>
         </div>
@@ -63,14 +65,14 @@ export function GateReportDialog({
             onClick={onClose}
             className="rounded-lg border border-border px-3.5 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
-            Yopish
+            {t("close")}
           </button>
           <button
             type="button"
             onClick={goToEditor}
             className="rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover"
           >
-            Tahrirlashga o&apos;tish
+            {t("goToEditor")}
           </button>
         </div>
       </Dialog>

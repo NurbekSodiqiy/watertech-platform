@@ -84,6 +84,7 @@ function ScriptsPageContent() {
  * above can bail before any of this runs — activeSalesScript below assumes
  * scripts[0] exists. */
 function ScriptsPageContentBody() {
+  const tS = useTranslations("scripts");
   const { scripts, objections } = useScriptsContent();
   const searchParams = useSearchParams();
   const scriptParam = searchParams.get("script");
@@ -344,11 +345,11 @@ function ScriptsPageContentBody() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       <div>
-        <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">Jonli skriptlar va Yordamchi</h1>
+        <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">{tS("title")}</h1>
         <div className="mt-3 flex items-start gap-3 rounded-xl border border-border border-l-[3px] border-l-primary bg-primary-light/10 px-4 py-3">
           <Compass size={18} className="mt-0.5 shrink-0 text-accent" />
           <p className="text-sm leading-relaxed text-text-secondary">
-            Maqsadimiz naxt savdoga ko&apos;proq urg&apos;u berish, eng so&apos;ngi chora nasiya bo&apos;lishi kerak. Mijoz naxt berishga puli yo&apos;q emas, aynan bizga berishga puli yo&apos;q deb qabul qilishimiz kerak.
+            {tS("intro")}
           </p>
         </div>
       </div>
@@ -362,7 +363,7 @@ function ScriptsPageContentBody() {
             }`}
           >
             {activeTab === "sales_scripts" && <TabPill />}
-            <span className="relative">Sotuv skriptlari</span>
+            <span className="relative">{tS("tabs.sales")}</span>
           </button>
           <button
             onClick={() => handleTabClick("packages")}
@@ -371,7 +372,7 @@ function ScriptsPageContentBody() {
             }`}
           >
             {activeTab === "packages" && <TabPill />}
-            <span className="relative">Hamkorlik paketlari</span>
+            <span className="relative">{tS("tabs.packages")}</span>
           </button>
           <button
             onClick={() => handleTabClick("competitors")}
@@ -380,7 +381,7 @@ function ScriptsPageContentBody() {
             }`}
           >
             {activeTab === "competitors" && <TabPill />}
-            <span className="relative">Raqobatchilar</span>
+            <span className="relative">{tS("tabs.competitors")}</span>
           </button>
           <button
             onClick={() => handleTabClick("faq")}
@@ -389,7 +390,7 @@ function ScriptsPageContentBody() {
             }`}
           >
             {activeTab === "faq" && <TabPill />}
-            <span className="relative">FAQ savollar</span>
+            <span className="relative">{tS("tabs.faq")}</span>
           </button>
         </div>
 

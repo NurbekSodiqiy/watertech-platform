@@ -15,6 +15,7 @@ import { useTrack } from "@/hooks/useTrack";
 export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
   const { competitors } = useScriptsContent();
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
+  const tS = useTranslations("scripts");
   const [selectedCompetitor, setSelectedCompetitor] = useState<Competitor | null>(null);
   const [competitorQuery, setCompetitorQuery] = useState("");
   const track = useTrack();
@@ -41,7 +42,7 @@ export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLD
         {!selectedCompetitor ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-center text-text-secondary text-lg">
-              O&apos;ng paneldan kerakli raqobatchini tanlang...
+              {tS("selectCompetitor")}
             </p>
           </div>
         ) : (
@@ -56,7 +57,7 @@ export function CompetitorsTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLD
             <input
               value={competitorQuery}
               onChange={(e) => setCompetitorQuery(e.target.value)}
-              placeholder="Raqobatchi nomi bo'yicha qidirish…"
+              placeholder={tS("searchCompetitor")}
               className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
             />
           </div>

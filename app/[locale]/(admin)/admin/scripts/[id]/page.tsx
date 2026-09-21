@@ -1,4 +1,5 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { History } from "lucide-react";
@@ -15,7 +16,10 @@ import { ScriptEditor } from "@/components/admin/ScriptEditor";
 import type { ContentBundle } from "@/lib/content/loader";
 import type { Script } from "@/lib/content/types";
 
-export const metadata = { title: "Kontent boshqaruvi — Skript tahrirlash" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "pages.admin.scripts" });
+  return { title: t("editTitle") };
+}
 
 export default async function AdminScriptEditPage({
   params,
@@ -24,6 +28,10 @@ export default async function AdminScriptEditPage({
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
+  const [t, tShared] = await Promise.all([
+    getTranslations("pages.admin.scripts"),
+    getTranslations("pages.admin.shared"),
+  ]);
 
   const isNew = params.id === "new";
 
@@ -57,14 +65,14 @@ export default async function AdminScriptEditPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? "Yangi skript" : "Skriptni tahrirlash"}</h1>
+        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? t("newTitle") : t("editTitle")}</h1>
         {!isNew && row && (
           <Link
             href={`/admin/versions/content_scripts/${row.id}`}
             className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline"
           >
             <History size={13} />
-            Versiyalar tarixi
+            {tShared("versions")}
           </Link>
         )}
       </div>

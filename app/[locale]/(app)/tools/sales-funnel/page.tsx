@@ -1,74 +1,34 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { findNode } from "@/lib/site-config";
 import { Info, Zap, CheckCircle2 } from "lucide-react";
 
-export default function SalesFunnelPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function SalesFunnelPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.tools.salesFunnel");
 
   const path = "/tools/sales-funnel";
   const node = findNode(path);
 
+  // Wording lives in messages under stages.<id>; only the order, the numbering
+  // and which optional callouts a stage has stay here.
   const STAGES = [
-    {
-      num: "01",
-      title: "Yangi Lead",
-      desc: "Voronkaning eng boshlang'ich qismi. \"Неразобранное\"dan qabul qilingan, o'tkazib yuborilgan (пропущенный) qo'ng'iroqlar va ijtimoiy tarmoqlardan kelgan murojaatlar tushadi.",
-      req: "Aloqa o'rnatilgach, albatta keyingi tegishli statusga o'tkazilishi shart."
-    },
-    {
-      num: "02",
-      title: "Javob bermadi",
-      desc: "Qo'ng'iroqqa javob bermagan leadlar yo'naltiriladi.",
-      trigger: "Tizim avtomatik tarzda 4 soatdan keyin \"Qayta aloqaga chiqing\" nomli vazifa (задача) qo'yadi."
-    },
-    {
-      num: "03",
-      title: "Ma'lumot berildi",
-      desc: "Mahsulot haqida ma'lumot va taklif berilgan leadlar uchun. Mijoz ko'rib chiqqunga qadar ushbu statusda turadi."
-    },
-    {
-      num: "04",
-      title: "O'ylab ko'radi",
-      desc: "Taklif bilan tanishib, qaror qabul qilish uchun vaqt so'ragan mijozlar."
-    },
-    {
-      num: "05",
-      title: "Namuna yuborish",
-      desc: "Sinov uchun mahsulot namunasi (obrazets) tayyorlanishi va jo'natilishi kerak bo'lgan bitimlar."
-    },
-    {
-      num: "06",
-      title: "Namuna yuborildi",
-      desc: "Namuna yuborilgandan so'ng mijoz fikrini bilish uchun ushbu bosqichga o'tkaziladi."
-    },
-    {
-      num: "07",
-      title: "Uchrashuv belgilandi",
-      desc: "Aniq uchrashuv vaqti tayinlanganda o'tkaziladi.",
-      trigger: "Leadni mas'ul xodimga yo'naltiradi."
-    },
-    {
-      num: "08",
-      title: "Uchrashuv o'tkazildi",
-      desc: "Uchrashuv yakunlangach o'tkaziladi va bitimga uchrashuv natijasi majburiy kiritiladi."
-    },
-    {
-      num: "09",
-      title: "Muzokara jarayonida",
-      desc: "Narx, to'lov shartlari yoki yetkazib berish muddatlari bo'yicha yakuniy savdolashuv bosqichi."
-    },
-    {
-      num: "10",
-      title: "Kelishuvga erishilgan",
-      desc: "Kelishuvga erishilgan, buyurtma olinib shartnoma qilingan, lekin mahsulot hali to'liq yetib bormagan bitimlar."
-    }
-  ];
+    { id: "newLead", num: "01", hasReq: true, hasTrigger: false },
+    { id: "noAnswer", num: "02", hasReq: false, hasTrigger: true },
+    { id: "infoGiven", num: "03", hasReq: false, hasTrigger: false },
+    { id: "thinking", num: "04", hasReq: false, hasTrigger: false },
+    { id: "sampleToSend", num: "05", hasReq: false, hasTrigger: false },
+    { id: "sampleSent", num: "06", hasReq: false, hasTrigger: false },
+    { id: "meetingSet", num: "07", hasReq: false, hasTrigger: true },
+    { id: "meetingDone", num: "08", hasReq: false, hasTrigger: false },
+    { id: "negotiation", num: "09", hasReq: false, hasTrigger: false },
+    { id: "agreed", num: "10", hasReq: false, hasTrigger: false },
+  ] as const;
 
   return (
     <DocPageTemplate
       path={path}
-      title="amoCRM Sotuv voronkasi va bosqichlar reglamenti"
+      title={t("title")}
       description={node?.description}
     >
       <div className="space-y-8">
@@ -80,7 +40,10 @@ export default function SalesFunnelPage({ params: { locale } }: { params: { loca
           </div>
           <div>
             <p className="text-[15px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Sotuv voronkasi</strong> — bu sotuv jarayonlarini tushunish, optimallashtirish va nazorat qilish uchun muhim instrument. U potensial leadning dastlabki xabardorligidan to muvaffaqiyatli xarid amaliyotiga qadar bo&apos;lgan yo&apos;lining vizual va tahliliy ifodasidir. Voronkadagi har bir bo&apos;lak <strong className="text-primary-dark font-medium">status</strong> deb ataladi.
+              {t.rich("intro", {
+                term: (chunks) => <strong className="text-primary-dark font-bold">{chunks}</strong>,
+                status: (chunks) => <strong className="text-primary-dark font-medium">{chunks}</strong>,
+              })}
             </p>
           </div>
         </div>
@@ -88,7 +51,7 @@ export default function SalesFunnelPage({ params: { locale } }: { params: { loca
         {/* Voronka bosqichlari */}
         <div className="space-y-6">
           <h3 className="text-[18px] font-bold text-primary-dark border-b border-border pb-3">
-            Voronka bosqichlari (Statuslar)
+            {t("stagesHeading")}
           </h3>
           
           <div className="flex flex-col gap-5 relative">
@@ -106,26 +69,26 @@ export default function SalesFunnelPage({ params: { locale } }: { params: { loca
                 {/* Content Card */}
                 <div className="flex-1 rounded-2xl border border-border bg-surface p-5 shadow-soft transition-all hover:border-primary/30 hover:shadow-elevated">
                   <h4 className="text-[17px] font-bold text-primary-dark mb-2">
-                    {stage.title}
+                    {t(`stages.${stage.id}.title`)}
                   </h4>
                   <p className="text-[14.5px] leading-relaxed text-text-secondary">
-                    {stage.desc}
+                    {t(`stages.${stage.id}.desc`)}
                   </p>
                   
-                  {stage.req && (
+                  {stage.hasReq && (
                     <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-alt p-3.5 border border-border/50">
                       <CheckCircle2 size={18} className="text-primary mt-0.5 shrink-0" />
                       <p className="text-[13.5px] font-medium text-text-secondary">
-                        <span className="text-primary-dark font-bold">Talab:</span> {stage.req}
+                        <span className="text-primary-dark font-bold">{t("requirementLabel")}</span> {t(`stages.${stage.id}.req`)}
                       </p>
                     </div>
                   )}
 
-                  {stage.trigger && (
+                  {stage.hasTrigger && (
                     <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-primary/10 p-3.5 border border-primary/20">
                       <Zap size={18} className="text-primary mt-0.5 shrink-0" />
                       <p className="text-[13.5px] font-medium text-text-secondary">
-                        <span className="text-primary-dark font-bold">Avtomatik trigger:</span> {stage.trigger}
+                        <span className="text-primary-dark font-bold">{t("triggerLabel")}</span> {t(`stages.${stage.id}.trigger`)}
                       </p>
                     </div>
                   )}

@@ -1,38 +1,42 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getObjectionRow } from "@/lib/admin/queries";
 import { objectionFormSchema, type ObjectionFormInput } from "@/lib/admin/schemas";
 import { upsertObjection } from "@/lib/admin/actions/objections";
-import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
+import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
 
-export const metadata = { title: "Kontent boshqaruvi — E'tiroz tahrirlash" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "pages.admin.objections" });
+  return { title: t("editTitle") };
+}
 
-function buildFields(isNew: boolean): EntityFieldDef<ObjectionFormInput>[] {
+function buildFields(isNew: boolean, t: AdminTranslate, tShared: AdminTranslate): EntityFieldDef<ObjectionFormInput>[] {
   return [
-    { kind: "text", name: "id", label: "ID (slug)", placeholder: "masalan: obj-qimmat", readOnly: !isNew },
-    { kind: "text", name: "label", label: "Nomi" },
-    { kind: "csv", name: "keywords", label: "Kalit so'zlar", hint: "Vergul bilan ajrating: qimmat, narx, chegirma" },
-    { kind: "textarea", name: "clientSays", label: "Mijoz aytadi", rows: 2 },
-    { kind: "textarea", name: "realMeaning", label: "Aslida nima demoqchi", rows: 2 },
-    { kind: "textarea", name: "response", label: "Javob", rows: 4 },
-    { kind: "textarea", name: "followUp", label: "Qo'shimcha (ixtiyoriy)", rows: 2 },
-    { kind: "csv", name: "scriptIds", label: "Skript ID'lari", hint: "Vergul bilan ajrating" },
+    { kind: "text", name: "id", label: tShared("idLabel"), placeholder: t("fields.idPlaceholder"), readOnly: !isNew },
+    { kind: "text", name: "label", label: tShared("nameLabel") },
+    { kind: "csv", name: "keywords", label: t("fields.keywords"), hint: t("fields.keywordsHint") },
+    { kind: "textarea", name: "clientSays", label: t("fields.clientSays"), rows: 2 },
+    { kind: "textarea", name: "realMeaning", label: t("fields.realMeaning"), rows: 2 },
+    { kind: "textarea", name: "response", label: t("fields.response"), rows: 4 },
+    { kind: "textarea", name: "followUp", label: t("fields.followUp"), rows: 2 },
+    { kind: "csv", name: "scriptIds", label: t("fields.scriptIds"), hint: t("fields.scriptIdsHint") },
     {
       kind: "select",
       name: "status",
-      label: "Holat",
+      label: tShared("statusLabel"),
       options: [
-        { value: "draft", label: "Qoralama" },
-        { value: "published", label: "Nashr etilgan" },
+        { value: "draft", label: tShared("statusDraft") },
+        { value: "published", label: tShared("statusPublished") },
       ],
     },
-    { kind: "text", name: "labelRu", label: "Nomi", group: "ru" },
-    { kind: "textarea", name: "clientSaysRu", label: "Mijoz aytadi", rows: 2, group: "ru" },
-    { kind: "textarea", name: "realMeaningRu", label: "Aslida nima demoqchi", rows: 2, group: "ru" },
-    { kind: "textarea", name: "responseRu", label: "Javob", rows: 4, group: "ru" },
-    { kind: "textarea", name: "followUpRu", label: "Qo'shimcha (ixtiyoriy)", rows: 2, group: "ru" },
+    { kind: "text", name: "labelRu", label: tShared("nameLabel"), group: "ru" },
+    { kind: "textarea", name: "clientSaysRu", label: t("fields.clientSays"), rows: 2, group: "ru" },
+    { kind: "textarea", name: "realMeaningRu", label: t("fields.realMeaning"), rows: 2, group: "ru" },
+    { kind: "textarea", name: "responseRu", label: t("fields.response"), rows: 4, group: "ru" },
+    { kind: "textarea", name: "followUpRu", label: t("fields.followUp"), rows: 2, group: "ru" },
     { kind: "hidden", name: "version" },
   ];
 }
@@ -44,6 +48,10 @@ export default async function AdminObjectionEditPage({
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
+  const [t, tShared] = await Promise.all([
+    getTranslations("pages.admin.objections"),
+    getTranslations("pages.admin.shared"),
+  ]);
 
   const isNew = params.id === "new";
   const row = isNew ? null : await getObjectionRow(params.id);
@@ -87,21 +95,21 @@ export default async function AdminObjectionEditPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? "Yangi e'tiroz" : "E'tirozni tahrirlash"}</h1>
+        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? t("newTitle") : t("editTitle")}</h1>
         {!isNew && row && (
           <Link
             href={`/admin/versions/content_objections/${row.id}`}
             className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline"
           >
             <History size={13} />
-            Versiyalar tarixi
+            {tShared("versions")}
           </Link>
         )}
       </div>
       <EntityForm
         schema={objectionFormSchema}
         defaultValues={defaultValues}
-        fields={buildFields(isNew)}
+        fields={buildFields(isNew, t, tShared)}
         onSubmit={upsertObjection}
         backHref="/admin/objections"
       />

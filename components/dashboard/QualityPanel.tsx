@@ -10,7 +10,11 @@ import {
 } from "@/lib/dashboard/quality";
 
 async function NotHelpfulSection({ items }: { items: NotHelpfulGroup[] }) {
-  const t = await getTranslations("emptyState.dashboardNoFeedback");
+  const [t, tQ, tCommon] = await Promise.all([
+    getTranslations("emptyState.dashboardNoFeedback"),
+    getTranslations("dashboard.quality"),
+    getTranslations("common"),
+  ]);
   // site-config nodes carry a next-intl "nav" namespace key as `title`
   // (see Breadcrumbs.tsx for the same t(node.title) pattern), not literal
   // text — a path with no matching node (most doc pages aren't in siteTree
@@ -19,7 +23,7 @@ async function NotHelpfulSection({ items }: { items: NotHelpfulGroup[] }) {
 
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-soft">
-      <h2 className="text-[15px] font-bold text-primary-dark">&quot;Foydali emas&quot; deb belgilangan sahifalar</h2>
+      <h2 className="text-[15px] font-bold text-primary-dark">{tQ("notHelpful")}</h2>
       {items.length === 0 ? (
         <EmptyState variant="inline" stateKey="dashboardNoFeedback" title={t("title")} reason={t("reason")} />
       ) : (
@@ -43,7 +47,7 @@ async function NotHelpfulSection({ items }: { items: NotHelpfulGroup[] }) {
                       href={adminHref}
                       className="rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
                     >
-                      Tahrirlash
+                      {tCommon("edit")}
                     </Link>
                   )}
                 </div>
@@ -57,11 +61,11 @@ async function NotHelpfulSection({ items }: { items: NotHelpfulGroup[] }) {
 }
 
 async function ZeroResultSection({ items }: { items: ZeroResultQueryGroup[] }) {
-  const t = await getTranslations("emptyState.dashboardNoEvents");
+  const [t, tQ] = await Promise.all([getTranslations("emptyState.dashboardNoEvents"), getTranslations("dashboard.quality")]);
 
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-soft">
-      <h2 className="text-[15px] font-bold text-primary-dark">Nol-natijali qidiruvlar</h2>
+      <h2 className="text-[15px] font-bold text-primary-dark">{tQ("zeroHeading")}</h2>
       {items.length === 0 ? (
         <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
       ) : (
@@ -71,7 +75,7 @@ async function ZeroResultSection({ items }: { items: ZeroResultQueryGroup[] }) {
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-medium text-primary-dark">{item.query}</p>
                 <p className="text-[12px] text-text-secondary">
-                  Oxirgi marta: {new Date(item.lastSeenIso).toLocaleDateString("uz-UZ")}
+                  {tQ("lastSeen", { date: new Date(item.lastSeenIso).toLocaleDateString("uz-UZ") })}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -82,7 +86,7 @@ async function ZeroResultSection({ items }: { items: ZeroResultQueryGroup[] }) {
                   href={`/admin/faq/new?question=${encodeURIComponent(item.query)}`}
                   className="rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
                 >
-                  FAQ yaratish
+                  {tQ("createFaq")}
                 </Link>
               </div>
             </li>
@@ -94,11 +98,11 @@ async function ZeroResultSection({ items }: { items: ZeroResultQueryGroup[] }) {
 }
 
 async function MostViewedSection({ items }: { items: MostViewedItem[] }) {
-  const t = await getTranslations("emptyState.dashboardNoEvents");
+  const [t, tQ] = await Promise.all([getTranslations("emptyState.dashboardNoEvents"), getTranslations("dashboard.quality")]);
 
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-soft lg:col-span-2">
-      <h2 className="text-[15px] font-bold text-primary-dark">Eng ko&apos;p ko&apos;rilgan kontent</h2>
+      <h2 className="text-[15px] font-bold text-primary-dark">{tQ("mostViewed")}</h2>
       {items.length === 0 ? (
         <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
       ) : (

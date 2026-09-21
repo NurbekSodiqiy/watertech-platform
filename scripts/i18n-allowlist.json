@@ -1,0 +1,12 @@
+{
+  "entries": [
+    { "value": "WaterTech", "reason": "Brand name — the Sidebar wordmark; identical in every language." },
+    { "value": "WT", "reason": "Brand monogram drawn inside the logo SVG (components/Logo.tsx); not copy." },
+    { "value": "ESC", "reason": "Keyboard key name shown in <kbd> hints; keys are labelled the same in uz and ru." },
+    { "value": "Ctrl K", "reason": "Keyboard shortcut hint (TopBar search); key names are not translated." },
+    { "value": "(Ctrl+J)", "reason": "Keyboard shortcut hint appended to the Copilot button's translated label." },
+    { "value": "C", "reason": "Universal 'clear' key on the mini calculator keypad." },
+    { "value": "p50", "reason": "Statistical percentile label (Web Vitals table header); language-neutral." },
+    { "value": "p75", "reason": "Statistical percentile label (Web Vitals table header); language-neutral." }
+  ]
+}

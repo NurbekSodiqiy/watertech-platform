@@ -231,14 +231,14 @@ export function aggregateZeroResultSearches(rows: TelemetryRow[]): { query: stri
     .sort((a, b) => b.count - a.count);
 }
 
-export const PLANNED_HOURS: { startHour: number; endHour: number; task: string }[] = dailySchedule
+export const PLANNED_HOURS: { id: number; startHour: number; endHour: number }[] = dailySchedule
   .filter((item) => !item.isLunch)
   .map((item) => {
     const [endH, endM] = item.end.split(":").map(Number);
     return {
+      id: item.id,
       startHour: parseInt(item.start, 10),
       endHour: Math.ceil((endH * 60 + endM) / 60),
-      task: item.task,
     };
   });
 

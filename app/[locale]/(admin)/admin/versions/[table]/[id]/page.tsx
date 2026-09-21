@@ -1,23 +1,28 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
 import { listVersions } from "@/lib/admin/queries";
 import { VersionsList } from "@/components/admin/VersionsList";
 
-const TABLE_INFO: Record<string, { label: string; backHref: string }> = {
-  content_faqs: { label: "FAQ", backHref: "/admin/faq" },
-  content_objections: { label: "E'tiroz", backHref: "/admin/objections" },
-  content_competitors: { label: "Raqobatchi", backHref: "/admin/competitors" },
-  content_packages: { label: "Paket", backHref: "/admin/packages" },
-  content_package_groups: { label: "Paket guruhi", backHref: "/admin/packages/groups" },
-  content_products: { label: "Mahsulot", backHref: "/admin/products" },
-  content_scripts: { label: "Skript", backHref: "/admin/scripts" },
-  content_changelog: { label: "O'zgarish", backHref: "/admin/changelog" },
-  content_contacts: { label: "Kontakt", backHref: "/admin/contacts" },
-  content_sops: { label: "amoCRM reglamenti", backHref: "/admin/sops" },
+// The table's display name is the `admin.versions.tables.<table>` message.
+const TABLE_INFO: Record<string, { backHref: string }> = {
+  content_faqs: { backHref: "/admin/faq" },
+  content_objections: { backHref: "/admin/objections" },
+  content_competitors: { backHref: "/admin/competitors" },
+  content_packages: { backHref: "/admin/packages" },
+  content_package_groups: { backHref: "/admin/packages/groups" },
+  content_products: { backHref: "/admin/products" },
+  content_scripts: { backHref: "/admin/scripts" },
+  content_changelog: { backHref: "/admin/changelog" },
+  content_contacts: { backHref: "/admin/contacts" },
+  content_sops: { backHref: "/admin/sops" },
 };
 
-export const metadata = { title: "Kontent boshqaruvi — Versiyalar" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "admin.versions" });
+  return { title: t("metadata") };
+}
 
 export default async function AdminVersionsPage({
   params,
@@ -27,6 +32,7 @@ export default async function AdminVersionsPage({
   const { locale } = params;
   unstable_setRequestLocale(locale);
 
+  const t = await getTranslations("admin.versions");
   const info = TABLE_INFO[params.table];
   const versions = await listVersions(params.table, params.id);
 
@@ -38,10 +44,10 @@ export default async function AdminVersionsPage({
           className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary hover:text-primary-dark"
         >
           <ArrowLeft size={13} />
-          Ortga
+          {t("back")}
         </Link>
         <h1 className="mt-2 text-[24px] font-bold text-primary-dark">
-          Versiyalar tarixi — {info?.label ?? params.table} ({params.id})
+          {t("historyTitle", { table: info ? t(`tables.${params.table}`) : params.table, id: params.id })}
         </h1>
       </div>
       <VersionsList table={params.table} versions={versions} />

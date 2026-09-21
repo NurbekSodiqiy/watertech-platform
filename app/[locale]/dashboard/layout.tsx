@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { ManagerMonitoringHeader } from "@/components/ManagerMonitoringHeader";
 import { NotificationsBell } from "@/components/admin/NotificationsBell";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -10,7 +10,7 @@ import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
 // repeats it, matching middleware's isManagerArea belt-and-suspenders
 // pattern instead of a layout-level redirect (see app/[locale]/(admin)/admin/layout.tsx
 // for the alternative this app intentionally didn't reuse here).
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
   params: { locale },
 }: {
@@ -18,6 +18,7 @@ export default function DashboardLayout({
   params: { locale: string };
 }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("dashboard");
   return (
     <SessionProvider>
       <div className="flex min-h-screen flex-col bg-background">
@@ -26,8 +27,8 @@ export default function DashboardLayout({
           <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
             <PageHeader
               path="/dashboard"
-              title="Rahbariyat monitoring"
-              description="Operatorlar faolligi, kontent holati va sifat ko'rsatkichlari — bir joyda."
+              title={t("title")}
+              description={t("description")}
             />
             <DashboardTabs />
             {children}

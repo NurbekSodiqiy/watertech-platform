@@ -46,7 +46,10 @@ async function Section({
   emptyStateKey: EmptyStateKey;
   renderAction?: (row: ContentHealthRow) => React.ReactNode;
 }) {
-  const t = await getTranslations(`emptyState.${emptyStateKey}`);
+  const [t, tDash] = await Promise.all([
+    getTranslations(`emptyState.${emptyStateKey}`),
+    getTranslations("dashboard.content"),
+  ]);
 
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-soft">
@@ -55,7 +58,7 @@ async function Section({
           {heading} {total > 0 && <span className="text-text-secondary">({total})</span>}
         </h2>
         <Link href="/admin" className="text-[12.5px] font-medium text-accent hover:underline">
-          Barchasi →
+          {tDash("all")}
         </Link>
       </div>
       {rows.length === 0 ? (
@@ -68,18 +71,20 @@ async function Section({
 }
 
 export async function ContentHealthPanel({ health }: { health: ContentHealth }) {
+  const [t, tToast] = await Promise.all([getTranslations("dashboard.content"), getTranslations("toast")]);
+
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <Section
-        heading="Nashr kutayotgan qoralamalar"
+        heading={t("drafts")}
         rows={health.drafts}
         total={health.draftsTotal}
         emptyStateKey="dashboardNoDrafts"
         renderAction={(row) => (
           <QuickActionButton
-            label="Nashr qilish"
-            pendingLabel="Nashr qilinmoqda…"
-            successToast="Nashr etildi"
+            label={t("publish")}
+            pendingLabel={t("publishing")}
+            successToast={tToast("published")}
             action={publishFromDashboard}
             table={row.table}
             id={row.id}
@@ -89,15 +94,15 @@ export async function ContentHealthPanel({ health }: { health: ContentHealth }) 
         )}
       />
       <Section
-        heading="Eskirgan kontent (90+ kun)"
+        heading={t("stale")}
         rows={health.stale}
         total={health.staleTotal}
         emptyStateKey="dashboardNoStale"
         renderAction={(row) => (
           <QuickActionButton
-            label="Yangilangan deb belgilash"
-            pendingLabel="Belgilanmoqda…"
-            successToast="Saqlandi"
+            label={t("markFresh")}
+            pendingLabel={t("marking")}
+            successToast={tToast("saved")}
             action={touchContent}
             table={row.table}
             id={row.id}
@@ -107,7 +112,7 @@ export async function ContentHealthPanel({ health }: { health: ContentHealth }) 
         )}
       />
       <Section
-        heading="Ruscha tarjimasi yo'q"
+        heading={t("missingRu")}
         rows={health.missingRu}
         total={health.missingRuTotal}
         emptyStateKey="dashboardNoMissingRu"
@@ -116,7 +121,7 @@ export async function ContentHealthPanel({ health }: { health: ContentHealth }) 
             href={`${adminEditHref(row.table, row.id)}#ru`}
             className="shrink-0 rounded-lg border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
           >
-            Tarjima qilish
+            {t("translate")}
           </Link>
         )}
       />

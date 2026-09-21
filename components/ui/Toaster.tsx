@@ -6,6 +6,7 @@ import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
 import { subscribe, getSnapshot, getServerSnapshot, dismiss } from "./toast-store";
 import type { ToastItem, ToastKind } from "./toast-store";
 import { distances, durations, easings, tween } from "@/lib/motion/tokens";
+import { useTranslations } from "next-intl";
 import { Pressable } from "@/components/motion/Pressable";
 
 const ICONS: Record<ToastKind, typeof CheckCircle2> = {
@@ -24,6 +25,7 @@ const TONE_ICON_CLASSES: Record<ToastKind, string> = {
 };
 
 function ToastCard({ item }: { item: ToastItem }) {
+  const t = useTranslations("common");
   const reduce = useReducedMotion();
   const Icon = ICONS[item.kind];
 
@@ -57,7 +59,7 @@ function ToastCard({ item }: { item: ToastItem }) {
       <button
         type="button"
         onClick={() => dismiss(item.id)}
-        aria-label="Yopish"
+        aria-label={t("close")}
         className="shrink-0 rounded-md p-0.5 text-text-secondary transition-colors hover:bg-primary/10 hover:text-primary-dark"
       >
         <X size={13} />

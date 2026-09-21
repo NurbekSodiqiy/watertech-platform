@@ -37,6 +37,10 @@ export type EntityFieldDef<TIn extends FieldValues> = (
  * inputs bind to — comma-joined strings for array fields, etc.); `TOut` is
  * what zodResolver produces after parsing, which is what `onSubmit`
  * receives and matches the *Write schema the server action expects. */
+/** A next-intl translator narrowed to plain lookups — the entity pages hand it to
+ * their `buildFields` helpers. */
+export type AdminTranslate = (key: string) => string;
+
 export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   schema,
   defaultValues,
@@ -53,6 +57,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("toast");
+  const tForm = useTranslations("admin.form");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +229,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
       {success && (
         <div className="flex items-center gap-2 rounded-xl border border-status-ok/40 bg-status-ok/10 px-4 py-2.5 text-[13px] text-status-ok">
           <CheckCircle2 size={15} />
-          Saqlandi
+          {tForm("saved")}
         </div>
       )}
 
@@ -233,22 +238,22 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
       {ruFields.length > 0 && (
         <details ref={ruDetailsRef} className="rounded-xl border border-border bg-surface-alt/60 p-3.5">
           <summary className="cursor-pointer text-[13px] font-medium text-primary-dark">
-            Ruscha (ixtiyoriy)
+            {tForm("ruSection")}
           </summary>
           <div className="mt-3 space-y-4">{ruFields.map(renderField)}</div>
         </details>
       )}
 
       <div className="flex items-center gap-2 pt-2">
-        <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel="Saqlanmoqda…">
-          Saqlash
+        <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel={tForm("saving")}>
+          {tForm("save")}
         </SubmitButton>
         <button
           type="button"
           onClick={() => router.push(backHref)}
           className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
         >
-          Bekor qilish
+          {tForm("cancel")}
         </button>
       </div>
 

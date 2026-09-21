@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
@@ -14,6 +15,7 @@ import type { PageMeta } from "@/lib/types";
 import { durations, easings } from "@/lib/motion/tokens";
 
 function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; index: number; defaultOpen?: boolean }) {
+  const t = useTranslations("scripts");
   const [open, setOpen] = useState(defaultOpen);
   const reduce = useReducedMotion();
   const { objections } = useScriptsContent();
@@ -59,7 +61,7 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
                     href="/sales-process/objections"
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-surface hover:text-primary-dark"
                   >
-                    E&apos;tirozlar bo&apos;limiga qarang
+                    {t("seeObjections")}
                     <ArrowUpRight size={14} />
                   </Link>
                 </div>
@@ -75,12 +77,13 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
 }
 
 export function ScriptTemplate({ script, meta }: { script: Script; meta?: PageMeta }) {
+  const t = useTranslations("scripts.scriptTemplate");
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-6 py-8">
-      <PageHeader path={`/sales-process/scripts/${script.id}`} title={script.name} description="Qo'ng'iroq skripti" meta={meta} />
+      <PageHeader path={`/sales-process/scripts/${script.id}`} title={script.name} description={t("description")} meta={meta} />
 
       <div className="rounded-2xl border border-primary-light/40 bg-primary/5 p-5 shadow-soft">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Qisqacha</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">{t("summary")}</p>
         <p className="mt-1.5 max-w-prose text-[14px] font-bold leading-relaxed text-primary-dark">{script.cheatSheet}</p>
       </div>
 

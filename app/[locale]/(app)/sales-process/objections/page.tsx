@@ -14,17 +14,21 @@ interface ObjectionRow {
   sourceScripts: string;
 }
 
-const columns: DbColumn<ObjectionRow>[] = [
-  { key: "objection", label: "E'tiroz", sortable: true, type: "longtext" },
-  { key: "realMeaning", label: "Nima demoqchi", type: "longtext" },
-  { key: "response", label: "Javob", type: "longtext" },
-  { key: "followUp", label: "Qo'shimcha / keyingi qadam", type: "longtext" },
-  { key: "sourceScripts", label: "Qaysi skriptda" },
-];
-
 export default async function ObjectionsPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("emptyState.objectionsNone");
+  const [t, tNav, tPage] = await Promise.all([
+    getTranslations("emptyState.objectionsNone"),
+    getTranslations("nav"),
+    getTranslations("pages.salesProcess.objections"),
+  ]);
+
+  const columns: DbColumn<ObjectionRow>[] = [
+    { key: "objection", label: tPage("columns.objection"), sortable: true, type: "longtext" },
+    { key: "realMeaning", label: tPage("columns.realMeaning"), type: "longtext" },
+    { key: "response", label: tPage("columns.response"), type: "longtext" },
+    { key: "followUp", label: tPage("columns.followUp"), type: "longtext" },
+    { key: "sourceScripts", label: tPage("columns.sourceScripts") },
+  ];
 
   const [objections, scripts] = await Promise.all([getObjections(locale), getScripts(locale)]);
   const scriptNameById = new Map(scripts.map((s) => [s.id, s.name]));
@@ -41,16 +45,14 @@ export default async function ObjectionsPage({ params: { locale } }: { params: {
     <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/objections"
-        title="E'tirozlar"
-        description="To'liq e'tirozlar bilan ishlash bazasi — nima deyiladi, bu nimani anglatadi va qanday javob berish kerak."
+        title={tNav("salesProcess.objections.title")}
+        description={tPage("description")}
       />
 
       <div className="flex items-start gap-3 rounded-2xl border border-status-warning/40 bg-status-warning/10 p-4">
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-status-warning" />
         <p className="text-[13.5px] text-primary-dark">
-          <strong>Muhim:</strong> &quot;O&apos;ylab ko&apos;raman&quot; yoki &quot;Keyinroq telefon qilaman&quot; kabi maqsadsiz javoblar hech
-          qachon yakuniy javob sifatida qabul qilinmaydi — operator har doim aniqlashtiruvchi savol bilan davom
-          ettirishi kerak.
+          {tPage.rich("important", { strong: (chunks) => <strong>{chunks}</strong> })}
         </p>
       </div>
 

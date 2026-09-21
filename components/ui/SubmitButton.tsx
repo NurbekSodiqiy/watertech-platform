@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** Form submit button with built-in pending/offline states — used by
  * EntityForm and ScriptEditor. `min-w` keeps the button's width stable while
@@ -20,12 +21,13 @@ export function SubmitButton({
   children: React.ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("common");
   return (
     <button
       type="submit"
       disabled={pending || disabled || offlineBlocked}
       aria-busy={pending}
-      title={offlineBlocked ? "Internet yo'q" : undefined}
+      title={offlineBlocked ? t("offline") : undefined}
       className={`inline-flex min-w-[120px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover disabled:opacity-50 ${className}`}
     >
       {pending ? (

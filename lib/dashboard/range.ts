@@ -78,8 +78,8 @@ export function combinedQueryWindow(range: DashboardRange): RangeWindow {
 }
 
 export interface RangePreset {
-  key: string;
-  label: string;
+  /** Also the `dashboard.ranges.<key>` message key of the pill's label. */
+  key: "today" | "7d" | "30d" | "month";
   from: string;
   to: string;
 }
@@ -88,9 +88,9 @@ export function buildRangePresets(): RangePreset[] {
   const today = todayInTashkent();
   const monthStart = `${today.slice(0, 7)}-01`;
   return [
-    { key: "today", label: "Bugun", from: today, to: today },
-    { key: "7d", label: "7 kun", from: addDays(today, -6), to: today },
-    { key: "30d", label: "30 kun", from: addDays(today, -29), to: today },
-    { key: "month", label: "Oy boshidan", from: monthStart, to: today },
+    { key: "today", from: today, to: today },
+    { key: "7d", from: addDays(today, -6), to: today },
+    { key: "30d", from: addDays(today, -29), to: today },
+    { key: "month", from: monthStart, to: today },
   ];
 }

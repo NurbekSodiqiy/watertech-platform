@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "gen:types": "bash scripts/gen-types.sh",
     "test": "vitest run",
     "test:watch": "vitest",

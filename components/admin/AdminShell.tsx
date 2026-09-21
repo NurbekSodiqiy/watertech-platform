@@ -28,14 +28,15 @@ interface AdminNavEntry {
   icon: LucideIcon;
 }
 
-const ADMIN_NAV: AdminNavEntry[] = [
-  { path: "/admin", label: "Umumiy", icon: LayoutDashboard },
-  { path: "/admin/scripts", label: "Skriptlar", icon: MessagesSquare },
-  { path: "/admin/objections", label: "E'tirozlar", icon: AlertCircle },
-  { path: "/admin/faq", label: "FAQ", icon: HelpCircle },
-  { path: "/admin/competitors", label: "Raqobatchilar", icon: Users },
-  { path: "/admin/packages", label: "Paketlar", icon: Package },
-  { path: "/admin/products", label: "Mahsulotlar", icon: Boxes },
+/** `pages.admin.<key>.nav` is the label of each entry. */
+const ADMIN_NAV: { path: string; key: "overview" | "scripts" | "objections" | "faq" | "competitors" | "packages" | "products"; icon: LucideIcon }[] = [
+  { path: "/admin", key: "overview", icon: LayoutDashboard },
+  { path: "/admin/scripts", key: "scripts", icon: MessagesSquare },
+  { path: "/admin/objections", key: "objections", icon: AlertCircle },
+  { path: "/admin/faq", key: "faq", icon: HelpCircle },
+  { path: "/admin/competitors", key: "competitors", icon: Users },
+  { path: "/admin/packages", key: "packages", icon: Package },
+  { path: "/admin/products", key: "products", icon: Boxes },
 ];
 
 /** Manager-only admin shell — structurally its own thing (sticky header +
@@ -55,10 +56,10 @@ export function AdminShell({
   const tChangelog = useTranslations("pages.admin.changelog");
   const tContacts = useTranslations("pages.admin.contacts");
   const tSops = useTranslations("pages.admin.sops");
-  // The entries whose label comes from messages (the rest predate next-intl
-  // in the admin shell and stay as they are).
+  const tAdmin = useTranslations("pages.admin");
+  const tShell = useTranslations("admin.shell");
   const navEntries: AdminNavEntry[] = [
-    ...ADMIN_NAV,
+    ...ADMIN_NAV.map((entry) => ({ path: entry.path, label: tAdmin(`${entry.key}.nav`), icon: entry.icon })),
     { path: "/admin/changelog", label: tChangelog("nav"), icon: Newspaper },
     { path: "/admin/contacts", label: tContacts("nav"), icon: Phone },
     { path: "/admin/sops", label: tSops("nav"), icon: ScrollText },
@@ -73,7 +74,7 @@ export function AdminShell({
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
         <div className="flex shrink-0 items-center gap-2">
           <Logo className="h-7 w-7 shrink-0" />
-          <span className="text-sm font-semibold text-primary-dark">Kontent boshqaruvi</span>
+          <span className="text-sm font-semibold text-primary-dark">{tShell("title")}</span>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -82,7 +83,7 @@ export function AdminShell({
             href="/dashboard"
             className="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
-            Monitoring
+            {tShell("monitoring")}
           </Link>
           <ThemeToggle />
           <button
@@ -90,7 +91,7 @@ export function AdminShell({
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
             <LogOut size={15} className="text-text-secondary" />
-            Chiqish
+            {tShell("signOut")}
           </button>
         </div>
       </header>

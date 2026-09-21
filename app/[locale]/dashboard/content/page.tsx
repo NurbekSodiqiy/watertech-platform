@@ -1,4 +1,5 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { redirect } from "@/i18n/routing";
 import { getServerSession } from "@/lib/auth/server-session";
 import { RangePicker } from "@/components/dashboard/RangePicker";
@@ -9,7 +10,10 @@ import { parseDashboardRange } from "@/lib/dashboard/range";
 import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
 import { getContentHealth } from "@/lib/dashboard/content-health";
 
-export const metadata = { title: "Rahbariyat monitoring — Kontent" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "dashboard.metadata" });
+  return { title: t("content") };
+}
 
 const BASE_PATH = "/dashboard/content";
 

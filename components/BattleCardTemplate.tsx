@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { PageHeader } from "./PageHeader";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
@@ -8,6 +9,7 @@ import type { Competitor } from "@/lib/content/types";
 import type { PageMeta } from "@/lib/types";
 
 export function BattleCardTemplate({ competitor, meta }: { competitor: Competitor; meta?: PageMeta }) {
+  const t = useTranslations("pages.salesProcess.battleCards");
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-6 py-8">
       <RecentRecorder kind="battleCard" id={competitor.id} />
@@ -16,8 +18,8 @@ export function BattleCardTemplate({ competitor, meta }: { competitor: Competito
         <div className="min-w-0 flex-1">
           <PageHeader
             path={`/sales-process/battle-cards/${competitor.id}`}
-            title={`${competitor.name} bilan solishtirish`}
-            description={`Raqobat darajasi: ${competitor.threatLevel}`}
+            title={t("compareTitle", { name: competitor.name })}
+            description={t("threatDescription", { level: competitor.threatLevel })}
             meta={meta}
           />
         </div>

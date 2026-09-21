@@ -10,12 +10,14 @@ import type { FittingKind } from "@/components/story/fittings";
 import { useTrack } from "@/hooks/useTrack";
 import { useUserState } from "@/hooks/useUserState";
 import { onboardingKeyDef } from "@/lib/user-state/keys";
-import { onboardingDays, onboardingSummaryChecklist, type OnboardingDay } from "@/lib/content/onboarding";
+import { onboardingSummaryChecklist, type LocalizedOnboardingDay, type LocalizedOnboardingItem } from "@/lib/content/onboarding";
 
 /** Module level so the definition — and with it the setter and the hydration
  * effect inside useUserState — stays identical across renders. The item ids
  * are only needed to import the oldest storage format, which was keyed by
- * each item's index in this same array (see lib/user-state/legacy.ts). */
+ * each item's index in this same array (see lib/user-state/legacy.ts). Only
+ * the ids are read from the raw array; every visible string comes in through
+ * the localized props below. */
 const ONBOARDING_STATE = onboardingKeyDef(onboardingSummaryChecklist.map((item) => item.id));
 
 /** One fitting per day, in day order. */
@@ -24,7 +26,14 @@ const DAY_FITTINGS: FittingKind[] = ["coupling", "elbow", "tee", "valve"];
 /** The only checkable items are the summary checklist, one per day (`summary-d<day>`). */
 const summaryIdForDay = (day: number): string => `summary-d${day}`;
 
-export function OnboardingChecklist() {
+interface OnboardingChecklistProps {
+  /** Localized day-by-day program (getOnboardingDays). */
+  days: LocalizedOnboardingDay[];
+  /** Localized quick-summary checklist (getOnboardingSummaryChecklist). */
+  summary: LocalizedOnboardingItem[];
+}
+
+export function OnboardingChecklist({ days, summary }: OnboardingChecklistProps) {
   const t = useTranslations("pages.company.onboarding");
   // Synced per user, not per browser: progress follows the operator to another
   // device, and their manager can see it on /dashboard/quality. The old
@@ -50,11 +59,11 @@ export function OnboardingChecklist() {
 
   // Counted over the current summary items only, so stale keys in storage
   // (legacy or renamed ids) cannot push the count past the total.
-  const total = onboardingSummaryChecklist.length;
-  const checkedCount = onboardingSummaryChecklist.filter((item) => checkedItems[item.id]).length;
+  const total = summary.length;
+  const checkedCount = summary.filter((item) => checkedItems[item.id]).length;
   const progress = total === 0 ? 0 : checkedCount / total;
 
-  const renderDay = (dayData: OnboardingDay, index: number) => {
+  const renderDay = (dayData: LocalizedOnboardingDay, index: number) => {
     const isOpen = openDay === dayData.day;
     return (
       <div key={dayData.day} className="relative">
@@ -106,8 +115,8 @@ export function OnboardingChecklist() {
     );
   };
 
-  const leadingDays = onboardingDays.slice(0, -1);
-  const lastDay = onboardingDays[onboardingDays.length - 1];
+  const leadingDays = days.slice(0, -1);
+  const lastDay = days[days.length - 1];
 
   return (
     <div className="space-y-6 rounded-2xl border border-border bg-surface p-6 shadow-soft">
@@ -116,7 +125,7 @@ export function OnboardingChecklist() {
       <div className="flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-accent">
         <Lightbulb className="mt-0.5 shrink-0" size={20} />
         <p className="text-[15px] leading-relaxed">
-          <strong>{t("welcomeTitle")}</strong> {t("welcomeBody", { days: onboardingDays.length })}
+          <strong>{t("welcomeTitle")}</strong> {t("welcomeBody", { days: days.length })}
         </p>
       </div>
 
@@ -124,7 +133,7 @@ export function OnboardingChecklist() {
       <section>
         <div className="mb-4 flex items-baseline gap-3">
           <h2 className="text-[18px] font-bold text-primary-dark">
-            {t("checklistHeading", { days: onboardingDays.length })}
+            {t("checklistHeading", { days: days.length })}
           </h2>
           <p className="text-[15px] font-semibold text-accent">
             <CountUp value={checkedCount} /> / {total}
@@ -132,7 +141,7 @@ export function OnboardingChecklist() {
         </div>
         {status !== "loading" ? (
           <div className="space-y-2">
-            {onboardingSummaryChecklist.map((item) => {
+            {summary.map((item) => {
               const isChecked = !!checkedItems[item.id];
               return (
                 <button

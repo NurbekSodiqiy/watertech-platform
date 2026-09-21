@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Calculator } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type Op = "+" | "-" | "×" | "÷";
 
@@ -26,6 +27,7 @@ function compute(a: number, b: number, op: Op): number {
  * (or navigating away, since TopBar itself doesn't unmount) is a fine time
  * to lose an in-progress sum. */
 export function MiniCalculatorButton() {
+  const t = useTranslations("chrome.miniCalculator");
   const [open, setOpen] = useState(false);
   const [display, setDisplay] = useState("0");
   const [previousValue, setPreviousValue] = useState<number | null>(null);
@@ -111,7 +113,7 @@ export function MiniCalculatorButton() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Kalkulyator"
+        aria-label={t("label")}
         aria-haspopup="dialog"
         aria-expanded={open}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-primary-dark hover:bg-primary/10"
@@ -122,7 +124,7 @@ export function MiniCalculatorButton() {
       {open && (
         <div
           role="dialog"
-          aria-label="Kalkulyator"
+          aria-label={t("label")}
           className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg"
         >
           <div

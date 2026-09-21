@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import type { DashboardRange } from "@/lib/dashboard/range";
 
@@ -8,6 +9,7 @@ import type { DashboardRange } from "@/lib/dashboard/range";
  * filter never resets the range) rather than a client `<select onChange>` —
  * no client state, per the dashboard task's filter rule. */
 export async function OperatorFilter({ range, basePath }: { range: DashboardRange; basePath: string }) {
+  const t = await getTranslations("dashboard.operatorFilter");
   const { data, error } = await createClient()
     .from("allowed_users")
     .select("email")
@@ -25,7 +27,7 @@ export async function OperatorFilter({ range, basePath }: { range: DashboardRang
         defaultValue={range.operatorEmail ?? ""}
         className="rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-[12.5px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
       >
-        <option value="">Barcha operatorlar</option>
+        <option value="">{t("all")}</option>
         {operators.map((op) => (
           <option key={op.email} value={op.email}>
             {op.email}
@@ -36,7 +38,7 @@ export async function OperatorFilter({ range, basePath }: { range: DashboardRang
         type="submit"
         className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
       >
-        Qo&apos;llash
+        {t("apply")}
       </button>
     </form>
   );

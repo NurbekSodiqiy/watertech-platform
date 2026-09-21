@@ -24,6 +24,13 @@ import type {
   Sop,
 } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
+import {
+  onboardingDays,
+  onboardingSummaryChecklist,
+  type LocalizedOnboardingDay,
+  type LocalizedOnboardingItem,
+  type OnboardingItem,
+} from "@/lib/content/onboarding";
 import type { Locale } from "@/i18n/routing";
 import { safeContent } from "@/lib/content/safe";
 
@@ -367,6 +374,31 @@ export function getSops(locale: Locale = "uz"): Promise<Sop[]> {
 export async function getSop(locale: Locale, slug: string): Promise<Sop | undefined> {
   const sops = await getSops(locale);
   return sops.find((sop) => sop.id === slug);
+}
+
+function localizeOnboardingItem(item: OnboardingItem, locale: Locale): LocalizedOnboardingItem {
+  return {
+    id: item.id,
+    text: loc(item.text, item.textRu, locale),
+    emphasis: item.emphasis !== undefined ? loc(item.emphasis, item.emphasisRu, locale) : undefined,
+  };
+}
+
+// Onboarding is authored in lib/content/onboarding.ts, not stored in Supabase,
+// so these two getters do no I/O and are plain synchronous functions (no
+// unstable_cache, no safeContent) — they still live here so pages resolve the
+// locale in one place. The ids are the same in both languages.
+export function getOnboardingDays(locale: Locale = "uz"): LocalizedOnboardingDay[] {
+  return onboardingDays.map((day) => ({
+    day: day.day,
+    title: loc(day.title, day.titleRu, locale),
+    objective: loc(day.objective, day.objectiveRu, locale),
+    items: day.items.map((item) => localizeOnboardingItem(item, locale)),
+  }));
+}
+
+export function getOnboardingSummaryChecklist(locale: Locale = "uz"): LocalizedOnboardingItem[] {
+  return onboardingSummaryChecklist.map((item) => localizeOnboardingItem(item, locale));
 }
 
 // Each getter above already degrades on its own; the outer safeContent only

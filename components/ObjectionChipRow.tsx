@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { Objection } from "@/lib/content/types";
 import { Pressable } from "@/components/motion/Pressable";
 
@@ -13,9 +14,10 @@ export function ObjectionChipRow({
   selectedObjectionId?: string;
   onSelect: (objection: Objection) => void;
 }) {
+  const t = useTranslations("scripts");
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[12px] font-medium text-text-secondary shrink-0">Tez e&apos;tirozlar:</span>
+      <span className="text-[12px] font-medium text-text-secondary shrink-0">{t("quickObjections")}</span>
       {objections.map((o) => (
         <Pressable
           key={o.id}

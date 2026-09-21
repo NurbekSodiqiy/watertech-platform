@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { GateIssue, GateResult } from "@/lib/agents/publish-gate/types";
 
 function severityRank(issue: GateIssue): number {
@@ -9,6 +10,7 @@ function severityRank(issue: GateIssue): number {
  * inside GateReportDialog. Error rows use status-outdated, the codebase's
  * error token (see Toaster.tsx); warning rows use status-warning. */
 export function GateReport({ result }: { result: GateResult }) {
+  const t = useTranslations("admin.gate");
   const issues = [...result.issues].sort((a, b) => severityRank(a) - severityRank(b));
   const errorCount = issues.filter((i) => i.severity === "error").length;
   const warningCount = issues.length - errorCount;
@@ -16,7 +18,7 @@ export function GateReport({ result }: { result: GateResult }) {
   return (
     <div className="space-y-2.5">
       <p className="text-[12.5px] text-text-secondary">
-        {errorCount} ta xato · {warningCount} ta ogohlantirish
+        {t("counts", { errors: errorCount, warnings: warningCount })}
       </p>
       <ul className="space-y-1.5">
         {issues.map((issue, index) => {

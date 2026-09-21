@@ -151,7 +151,7 @@ export function SalesScriptsTab({
                   const ActiveScriptIcon = salesScriptIcons[activeSalesScript.id] ?? Target;
                   return <ActiveScriptIcon size={16} className="shrink-0 text-accent" />;
                 })()}
-                <span>Skript: <span className="font-bold text-accent">{activeSalesScript.name}</span></span>
+                <span>{t("scriptPrefix")} <span className="font-bold text-accent">{activeSalesScript.name}</span></span>
               </span>
               <ChevronDown className={`w-5 h-5 shrink-0 text-text-secondary transition-transform ${isScriptDropdownOpen ? "rotate-180" : ""}`} />
             </button>
@@ -190,7 +190,7 @@ export function SalesScriptsTab({
             href={`/sales-process/scripts/${activeSalesScript.id}`}
             className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-surface-alt hover:text-primary-dark"
           >
-            Batafsil ko&apos;rish
+            {t("viewDetails")}
             <ArrowUpRight size={14} />
           </Link>
 
@@ -248,7 +248,7 @@ export function SalesScriptsTab({
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 pl-6 text-[13px] font-medium text-primary hover:bg-surface hover:text-primary-dark"
                       >
-                        E&apos;tirozlar bo&apos;limiga qarang
+                        {t("seeObjections")}
                         <ArrowUpRight size={13} />
                       </Link>
                     </div>

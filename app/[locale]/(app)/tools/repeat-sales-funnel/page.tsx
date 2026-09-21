@@ -1,53 +1,29 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { Info, Zap, RefreshCw, XCircle } from "lucide-react";
 
-export default function RepeatSalesFunnelPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function RepeatSalesFunnelPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.tools.repeatSalesFunnel");
 
   const path = "/tools/repeat-sales-funnel";
 
+  // Wording lives in messages under stages.<id>; only the order, the numbering
+  // and which optional callouts a stage has stay here.
   const STAGES = [
-    {
-      num: "01",
-      title: "Mijoz (Boshlang'ich status)",
-      desc: "Asosiy voronkada birinchi xaridni amalga oshirgan barcha mijozlar uchun tizim avtomatik ravishda ushbu voronkada yangi bitim (сделка) ochadi.",
-      trigger: "Mas'ul xodimga \"Qayta sotuv qilish uchun aloqaga chiqing\" nomli vazifa (задача) belgilanadi."
-    },
-    {
-      num: "02",
-      title: "Taklif yuborilgan",
-      desc: "Mijoz bilan aloqaga chiqilib, uning ehtiyojiga qarab yangi tijorat taklifi (KP) yoki yangilangan narxlar yuborilgach o'tkaziladi."
-    },
-    {
-      num: "03",
-      title: "Muzokara jarayoni",
-      desc: "Mijoz ma'lum bir muddatdan so'ng bog'lanishni so'ragan yoki hajm, chegirma va to'lov shartlari bo'yicha muzokara ketayotgan bo'lsa yo'naltiriladi."
-    },
-    {
-      num: "04",
-      title: "Kelishuvga erishilgan",
-      desc: "Yangi buyurtmaga kelishilgan, shartnoma tuzilgan, lekin tovar hali yetkazib berilmagan holat."
-    },
-    {
-      num: "05",
-      title: "Qayta sotuv bo'ldi (Muvaffaqiyatli yakun)",
-      desc: "Qayta sotuv to'liq amalga oshirilib, to'lov qabul qilingan bitimlar.",
-      cyclic: "10 kundan so'ng tizim avtomatik tarzda \"Mijoz\" statusida ushbu mijoz uchun yangi navbatdagi bitimni (сделка) ochadi."
-    },
-    {
-      num: "06",
-      title: "Qayta sotuv bo'lmadi (Yopilgan / Rad)",
-      desc: "Hozirgi bosqichda takroriy xaridni rad etgan yoki ma'lum sabablarga ko'ra sotuv amalga oshmagan bitimlar (sababini majburiy qayd etgan holda).",
-      fail: true
-    }
-  ];
+    { id: "client", num: "01", hasTrigger: true, hasCyclic: false, fail: false },
+    { id: "offerSent", num: "02", hasTrigger: false, hasCyclic: false, fail: false },
+    { id: "negotiation", num: "03", hasTrigger: false, hasCyclic: false, fail: false },
+    { id: "agreed", num: "04", hasTrigger: false, hasCyclic: false, fail: false },
+    { id: "won", num: "05", hasTrigger: false, hasCyclic: true, fail: false },
+    { id: "lost", num: "06", hasTrigger: false, hasCyclic: false, fail: true },
+  ] as const;
 
   return (
     <DocPageTemplate
       path={path}
-      title="Qayta sotuv voronkasi reglamenti"
-      description="Mavjud mijozlar bilan qayta aloqa, yangi buyurtmalar olish va avtomatik triggerlar orqali uzluksiz savdoni ta'minlash yo'riqnomasi."
+      title={t("title")}
+      description={t("description")}
     >
       <div className="space-y-8">
         
@@ -58,7 +34,9 @@ export default function RepeatSalesFunnelPage({ params: { locale } }: { params: 
           </div>
           <div>
             <p className="text-[15px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Qayta sotuv voronkasi</strong> — birinchi marta xarid qilgan mijozlarni doimiy hamkorga aylantirish, mahsulot qoldiqlarini o&apos;z vaqtida to&apos;ldirish va takroriy buyurtmalarni avtomatlashtirish tizimi.
+              {t.rich("intro", {
+                term: (chunks) => <strong className="text-primary-dark font-bold">{chunks}</strong>,
+              })}
             </p>
           </div>
         </div>
@@ -66,7 +44,7 @@ export default function RepeatSalesFunnelPage({ params: { locale } }: { params: 
         {/* Voronka bosqichlari */}
         <div className="space-y-6">
           <h3 className="text-[18px] font-bold text-primary-dark border-b border-border pb-3">
-            Voronka bosqichlari (Statuslar)
+            {t("stagesHeading")}
           </h3>
           
           <div className="flex flex-col gap-5 relative">
@@ -85,30 +63,30 @@ export default function RepeatSalesFunnelPage({ params: { locale } }: { params: 
                 <div className="flex-1 rounded-2xl border border-border bg-surface p-5 shadow-soft transition-all hover:border-primary/30 hover:shadow-elevated">
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <h4 className="text-[17px] font-bold text-primary-dark">
-                      {stage.title}
+                      {t(`stages.${stage.id}.title`)}
                     </h4>
                     {stage.fail && (
                       <XCircle size={20} className="text-text-secondary shrink-0" />
                     )}
                   </div>
                   <p className="text-[14.5px] leading-relaxed text-text-secondary">
-                    {stage.desc}
+                    {t(`stages.${stage.id}.desc`)}
                   </p>
 
-                  {stage.trigger && (
+                  {stage.hasTrigger && (
                     <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-primary/10 p-3.5 border border-primary/20">
                       <Zap size={18} className="text-primary mt-0.5 shrink-0" />
                       <p className="text-[13.5px] font-medium text-text-secondary">
-                        <span className="text-primary-dark font-bold">Avtomatik trigger:</span> {stage.trigger}
+                        <span className="text-primary-dark font-bold">{t("triggerLabel")}</span> {t(`stages.${stage.id}.trigger`)}
                       </p>
                     </div>
                   )}
 
-                  {stage.cyclic && (
+                  {stage.hasCyclic && (
                     <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-alt p-3.5 border border-border/50">
                       <RefreshCw size={18} className="text-primary mt-0.5 shrink-0" />
                       <p className="text-[13.5px] font-medium text-text-secondary">
-                        <span className="text-primary-dark font-bold">Siklik avtomatik trigger:</span> {stage.cyclic}
+                        <span className="text-primary-dark font-bold">{t("cyclicLabel")}</span> {t(`stages.${stage.id}.cyclic`)}
                       </p>
                     </div>
                   )}

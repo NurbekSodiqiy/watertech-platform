@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
 import { History, RotateCcw } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { restoreVersion } from "@/lib/admin/actions/versions";
-import { formatRelativeUz } from "@/lib/admin/format";
+import { formatRelative } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
@@ -22,6 +22,9 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
   const online = useOnline();
   const { toast } = useToast();
   const t = useTranslations("toast");
+  const tV = useTranslations("admin.versions");
+  const tRel = useTranslations("admin.relativeTime");
+  const locale = useLocale();
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,15 +66,15 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
         <table className="w-full min-w-[480px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border bg-surface-alt/60">
-              <th className="px-4 py-2.5 font-semibold text-primary-dark">Sana</th>
-              <th className="px-4 py-2.5 font-semibold text-primary-dark">Muallif</th>
-              <th className="w-32 px-4 py-2.5 font-semibold text-primary-dark">Amal</th>
+              <th className="px-4 py-2.5 font-semibold text-primary-dark">{tV("date")}</th>
+              <th className="px-4 py-2.5 font-semibold text-primary-dark">{tV("author")}</th>
+              <th className="w-32 px-4 py-2.5 font-semibold text-primary-dark">{tV("action")}</th>
             </tr>
           </thead>
           <tbody>
             {versions.map((v) => (
               <tr key={v.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-2.5 text-text-secondary">{mounted ? formatRelativeUz(v.created_at) : "—"}</td>
+                <td className="px-4 py-2.5 text-text-secondary">{mounted ? formatRelative(v.created_at, tRel, locale) : "—"}</td>
                 <td className="px-4 py-2.5 text-text-secondary">{v.actor ?? "—"}</td>
                 <td className="px-4 py-2.5">
                   <button
@@ -81,7 +84,7 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
                     className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[12px] font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent disabled:opacity-50"
                   >
                     <RotateCcw size={12} />
-                    {pending && pendingId === v.id ? "Tiklanmoqda…" : "Tiklash"}
+                    {pending && pendingId === v.id ? tV("restoring") : tV("restore")}
                   </button>
                 </td>
               </tr>

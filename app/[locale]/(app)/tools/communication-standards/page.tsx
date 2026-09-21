@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { findNode } from "@/lib/site-config";
 import { 
@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
-export default function AmoCRMPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function AmoCRMPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.tools.communicationStandards");
 
   const path = "/tools/communication-standards";
   const node = findNode(path);
@@ -22,7 +23,7 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
   return (
     <DocPageTemplate
       path={path}
-      title="amoCRM dan foydalanish bo'yicha asosiy qoidalar"
+      title={t("title")}
       description={node?.description}
       locked={node?.locked}
     >
@@ -34,9 +35,11 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
             <AlertTriangle size={28} />
           </div>
           <div>
-            <h3 className="text-[18px] font-bold text-primary-dark">Asosiy Oltin Qoida</h3>
+            <h3 className="text-[18px] font-bold text-primary-dark">{t("goldenRule.heading")}</h3>
             <p className="mt-2 text-[15.5px] leading-relaxed text-text-secondary">
-              <strong className="text-primary-dark font-bold">Agar CRM&apos;da yozilmagan bo&apos;lsa — bo&apos;lmagan deb hisoblanadi!</strong> Barcha qo&apos;ng&apos;iroq, uchrashuv va kelishuvlar CRM&apos;da qayd etilishi shart.
+              {t.rich("goldenRule.text", {
+                strong: (chunks) => <strong className="text-primary-dark font-bold">{chunks}</strong>,
+              })}
             </p>
           </div>
         </div>
@@ -49,10 +52,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <Users size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Lid nima?</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.lead.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Lid — bu potensial mijoz yoki savdo imkoniyati.
+              {t("rules.lead.text")}
             </p>
           </div>
 
@@ -62,10 +65,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <ListTodo size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Vazifasiz bitim bo&apos;lmasin</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.tasks.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Har bir voronkadagi har bir bitimda (сделка) majburiy vazifa (задача) bo&apos;lishi shart.
+              {t("rules.tasks.text")}
             </p>
           </div>
 
@@ -75,10 +78,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <Type size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Lotin alifbosi</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.latin.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Bitimdagi mijoz ma&apos;lumotlarini har doim lotin alifbosida yozish shart.
+              {t("rules.latin.text")}
             </p>
           </div>
 
@@ -88,10 +91,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <PlusCircle size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Yangi kelishuv — yangi bitim</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.newDeal.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Mijoz bilan har bir yangi kelishuv uchun yangi сделка ochish shart.
+              {t("rules.newDeal.text")}
             </p>
           </div>
 
@@ -101,10 +104,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <CopySlash size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Dublikatlardan saqlaning</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.duplicates.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              CRM&apos;da kontaktni bir martadan ko&apos;p kiritmaslik muhim. Barcha aloqalar bitta karta ostida bo&apos;lishi kerak.
+              {t("rules.duplicates.text")}
             </p>
           </div>
 
@@ -114,10 +117,10 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-primary shadow-softer">
                 <CheckSquare size={20} />
               </span>
-              <h4 className="text-[16px] font-bold text-primary-dark">Harakatlarni belgilash</h4>
+              <h4 className="text-[16px] font-bold text-primary-dark">{t("rules.actions.title")}</h4>
             </div>
             <p className="text-[14px] leading-relaxed text-text-secondary">
-              Har bir qo&apos;ng&apos;iroq, keyingi harakat va vazifani CRM&apos;da belgilang.
+              {t("rules.actions.text")}
             </p>
           </div>
         </div>
@@ -128,7 +131,7 @@ export default function AmoCRMPage({ params: { locale } }: { params: { locale: s
             href="/tools/sales-funnel"
             className="group flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[14.5px] font-semibold text-surface shadow-soft transition-all hover:bg-primary-hover hover:shadow-elevated"
           >
-            Sotuv varonkasi qadamlari
+            {t("nextButton")}
             <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>

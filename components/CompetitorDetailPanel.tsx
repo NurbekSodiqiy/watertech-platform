@@ -1,4 +1,5 @@
 import { Package, Percent, FileText, CreditCard, Clock, Truck, MapPin, Shield, Gift } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Competitor } from "@/lib/content/types";
 
 function Row({ icon, label, value, bold = false }: { icon: React.ReactNode; label: string; value: string; bold?: boolean }) {
@@ -16,6 +17,7 @@ function Row({ icon, label, value, bold = false }: { icon: React.ReactNode; labe
 }
 
 export function CompetitorDetailPanel({ competitor }: { competitor: Competitor }) {
+  const t = useTranslations("pages.salesProcess.battleCards.detail");
   return (
     <div className="rounded-xl border border-border bg-surface p-6 shadow-sm flex flex-col h-full overflow-y-auto">
       <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4">
@@ -28,24 +30,24 @@ export function CompetitorDetailPanel({ competitor }: { competitor: Competitor }
                 : "border-border text-text-secondary bg-surface-alt"
             }`}
           >
-            Raqobat: {competitor.threatLevel}
+            {t("threat", { level: competitor.threatLevel })}
           </span>
         </div>
       </div>
 
       <div className="space-y-4">
-        <Row icon={<Package size={20} />} label="Assortiment" value={competitor.assortment} />
-        <Row icon={<Percent size={20} />} label="Baza chegirmasi" value={competitor.baseDiscount} />
-        <Row icon={<Percent size={20} />} label="Obyom chegirmasi (1 fura)" value={competitor.volumeDiscount} />
-        <Row icon={<Percent size={20} />} label="Retro-bonus (yillik)" value={competitor.retroBonus} />
-        <Row icon={<Percent size={20} />} label="Jami maks. chegirma" value={competitor.maxDiscount} bold />
-        <Row icon={<FileText size={20} />} label="Nasiya & muddatli to'lov shartlari" value={competitor.paymentTerms} />
-        <Row icon={<CreditCard size={20} />} label="To'lov shakli" value={competitor.paymentMethod} />
-        <Row icon={<Clock size={20} />} label="Yetkazish muddati" value={competitor.deliveryTime} />
-        <Row icon={<Truck size={20} />} label="Logistika & MOQ shartlari" value={competitor.logistics} />
-        <Row icon={<MapPin size={20} />} label="Dilerlik qamrovi" value={competitor.dealerCoverage} />
-        <Row icon={<Shield size={20} />} label="Sertifikatlar & garantiya" value={competitor.certificates} />
-        <Row icon={<Gift size={20} />} label="Marketing & ustalarga takliflar" value={competitor.marketingOffers} />
+        <Row icon={<Package size={20} />} label={t("assortment")} value={competitor.assortment} />
+        <Row icon={<Percent size={20} />} label={t("baseDiscount")} value={competitor.baseDiscount} />
+        <Row icon={<Percent size={20} />} label={t("volumeDiscount")} value={competitor.volumeDiscount} />
+        <Row icon={<Percent size={20} />} label={t("retroBonus")} value={competitor.retroBonus} />
+        <Row icon={<Percent size={20} />} label={t("maxDiscount")} value={competitor.maxDiscount} bold />
+        <Row icon={<FileText size={20} />} label={t("paymentTerms")} value={competitor.paymentTerms} />
+        <Row icon={<CreditCard size={20} />} label={t("paymentMethod")} value={competitor.paymentMethod} />
+        <Row icon={<Clock size={20} />} label={t("deliveryTime")} value={competitor.deliveryTime} />
+        <Row icon={<Truck size={20} />} label={t("logistics")} value={competitor.logistics} />
+        <Row icon={<MapPin size={20} />} label={t("dealerCoverage")} value={competitor.dealerCoverage} />
+        <Row icon={<Shield size={20} />} label={t("certificates")} value={competitor.certificates} />
+        <Row icon={<Gift size={20} />} label={t("marketingOffers")} value={competitor.marketingOffers} />
       </div>
     </div>
   );

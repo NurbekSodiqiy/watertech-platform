@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
 import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
@@ -82,21 +83,22 @@ const LINK_TYPE_ICON: Record<ScriptTurnLink["type"], typeof Package> = {
  * here. */
 function resolveLinkDetail(
   link: ScriptTurnLink,
-  content: Pick<ContentBundle, "packageGroups" | "competitors" | "faqs">
+  content: Pick<ContentBundle, "packageGroups" | "competitors" | "faqs">,
+  preview: (kind: "competitor" | "package", values: Record<string, string>) => string
 ): { title: string; body: string; href?: string } | null {
   if (link.type === "competitor") {
     const c = content.competitors.find((c) => c.id === link.id);
     if (!c) return null;
     return {
       title: c.name,
-      body: `Maks. chegirma: ${c.maxDiscount} · Raqobat darajasi: ${c.threatLevel}`,
+      body: preview("competitor", { discount: c.maxDiscount, level: c.threatLevel }),
       href: `/sales-process/battle-cards/${c.id}`,
     };
   }
   if (link.type === "package") {
     const p = content.packageGroups.flatMap((g) => g.packages).find((p) => p.id === link.id);
     if (!p) return null;
-    return { title: p.name, body: `${p.orderVolume} · ${p.estimatedDiscount} chegirma` };
+    return { title: p.name, body: preview("package", { volume: p.orderVolume, discount: p.estimatedDiscount }) };
   }
   const f = content.faqs.find((f) => f.id === link.id);
   if (!f) return null;
@@ -110,9 +112,10 @@ function resolveLinkDetail(
  * the same whether it's rendered from the interactive scripts view or the
  * static per-script page. */
 function LinkChip({ link }: { link: ScriptTurnLink }) {
+  const t = useTranslations("scripts");
   const [open, setOpen] = useState(false);
   const content = useScriptsContent();
-  const detail = resolveLinkDetail(link, content);
+  const detail = resolveLinkDetail(link, content, (kind, values) => t(`linkPreview.${kind}`, values));
   if (!detail) return null;
   const Icon = LINK_TYPE_ICON[link.type];
 
@@ -139,7 +142,7 @@ function LinkChip({ link }: { link: ScriptTurnLink }) {
               href={detail.href}
               className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:text-primary-hover"
             >
-              Batafsil
+              {t("details")}
               <ArrowUpRight size={11} />
             </Link>
           )}
@@ -175,6 +178,7 @@ function ConditionNote({
   clientName?: string;
   slots: SuggestedSlots | null;
 }) {
+  const t = useTranslations("scripts");
   const [show, setShow] = useState(false);
   return (
     <div className="mt-1 ml-10 flex flex-col items-start gap-1.5">
@@ -188,7 +192,7 @@ function ConditionNote({
         }`}
       >
         <Info size={12} />
-        Agar {condition}
+        {t("ifCondition", { condition })}
         <ChevronDown size={12} className={`transition-transform ${show ? "rotate-180" : ""}`} />
       </button>
       {show && (
@@ -248,6 +252,7 @@ export function ScriptTurns({
    * 1.6x the normal turn text size, nothing else scales. */
   large?: boolean;
 }) {
+  const t = useTranslations("scripts");
   const slots = useSuggestedSlots();
 
   return (
@@ -284,7 +289,7 @@ export function ScriptTurns({
               <div className={`flex flex-col flex-1 px-4 py-3 rounded-2xl rounded-tl-sm border ${isOperator ? "bg-surface border-border border-l-[3px] border-l-primary" : "bg-primary-light/25 border-primary/20"}`}>
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">
-                    {isOperator ? "Operator" : "Mijoz"}
+                    {isOperator ? t("speakerOperator") : t("speakerClient")}
                   </span>
                   {isOperator && (
                     <CopyButton

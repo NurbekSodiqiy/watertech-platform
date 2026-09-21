@@ -2,16 +2,19 @@
 
 import { useMemo, useState } from "react";
 import { Calculator, Copy, Check, Package as PackageIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/content/products";
 import type { Package, PackageGroup } from "@/lib/content/types";
 import { useTrack } from "@/hooks/useTrack";
 
-function formatSom(n: number): string {
-  return `${Math.round(n).toLocaleString("ru-RU")} so'm`;
+function formatMoney(n: number, currency: string): string {
+  return `${Math.round(n).toLocaleString("ru-RU")} ${currency}`;
 }
 
 export function BatchCalculator({ products, packageGroups }: { products: Product[]; packageGroups: PackageGroup[] }) {
+  const t = useTranslations("pages.tools.calculator");
   const track = useTrack();
+  const formatSom = (n: number): string => formatMoney(n, t("currency"));
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
@@ -19,7 +22,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
   const [copied, setCopied] = useState(false);
 
   // Real product names, for the free-text-with-suggestions field below —
-  // this is display-only (what shows on the "mijozga yuborish" summary), it
+  // this is display-only (what shows on the "send to client" summary), it
   // never feeds the arithmetic. Deduped since a few names repeat across
   // variants (e.g. "Переходник" for both the ppr and kanalizatsiya lines).
   const productNames = useMemo(() => Array.from(new Set(products.map((p) => p.name_ru))), [products]);
@@ -45,17 +48,17 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
   async function handleCopy() {
     if (!calc) return;
     const lines = [
-      `Mahsulot: ${productName.trim() || "—"}`,
-      `Miqdor: ${quantityNum} dona`,
-      `Birlik narxi: ${formatSom(unitPriceNum)}`,
-      `Oraliq summa: ${formatSom(calc.subtotal)}`,
-      `Paket: ${selectedPackage?.name ?? "—"}`,
-      `Chegirma: ${selectedPackage ? selectedPackage.estimatedDiscount : "—"}`,
-      `Yakuniy summa: ${formatSom(calc.total)}`,
+      t("summary.product", { value: productName.trim() || "—" }),
+      t("summary.quantity", { value: quantityNum }),
+      t("summary.unitPrice", { value: formatSom(unitPriceNum) }),
+      t("summary.subtotal", { value: formatSom(calc.subtotal) }),
+      t("summary.package", { value: selectedPackage?.name ?? "—" }),
+      t("summary.discount", { value: selectedPackage ? selectedPackage.estimatedDiscount : "—" }),
+      t("summary.total", { value: formatSom(calc.total) }),
       calc.advanceAmount !== null
-        ? `Avans (${calc.advancePercent}%): ${formatSom(calc.advanceAmount)}`
-        : "Avans: —",
-      `Yetkazish sharti: ${selectedPackage?.deliveryTime ?? "—"}`,
+        ? t("summary.advance", { percent: calc.advancePercent, value: formatSom(calc.advanceAmount) })
+        : t("summary.advanceNone"),
+      t("summary.delivery", { value: selectedPackage?.deliveryTime ?? "—" }),
     ];
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -78,13 +81,13 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
       <div className="rounded-2xl border border-primary-light/50 bg-surface p-6 shadow-soft space-y-5">
         <h2 className="flex items-center gap-2 text-[15px] font-bold text-primary-dark">
           <Calculator size={17} className="text-accent" />
-          Kirish ma&apos;lumotlari
+          {t("input.heading")}
         </h2>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="calc-product" className={labelClass}>
-              Mahsulot nomi (ixtiyoriy — faqat hisobotda ko&apos;rsatiladi)
+              {t("input.productLabel")}
             </label>
             <input
               id="calc-product"
@@ -92,7 +95,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
               type="text"
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
-              placeholder="Masalan: Труба ППР"
+              placeholder={t("input.productPlaceholder")}
               className={inputClass}
             />
             <datalist id="calc-product-names">
@@ -104,7 +107,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
 
           <div>
             <label htmlFor="calc-quantity" className={labelClass}>
-              Miqdor
+              {t("input.quantityLabel")}
             </label>
             <input
               id="calc-quantity"
@@ -120,7 +123,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
 
           <div>
             <label htmlFor="calc-price" className={labelClass}>
-              Birlik narxi (so&apos;m)
+              {t("input.unitPriceLabel")}
             </label>
             <input
               id="calc-price"
@@ -129,14 +132,14 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
               inputMode="decimal"
               value={unitPrice}
               onChange={(e) => setUnitPrice(e.target.value)}
-              placeholder="Qo'lda kiriting"
+              placeholder={t("input.unitPricePlaceholder")}
               className={inputClass}
             />
           </div>
 
           <div className="sm:col-span-2">
             <label htmlFor="calc-package" className={labelClass}>
-              Hamkorlik paketi
+              {t("input.packageLabel")}
             </label>
             <select
               id="calc-package"
@@ -144,7 +147,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
               onChange={(e) => setPackageId(e.target.value)}
               className={inputClass}
             >
-              <option value="">Paket tanlanmagan</option>
+              <option value="">{t("input.noPackage")}</option>
               {packageGroups.map((group) => (
                 <optgroup key={group.id} label={group.title}>
                   {group.packages.map((pkg) => (
@@ -162,24 +165,24 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
       <div className="rounded-2xl border border-primary-light/50 bg-surface p-6 shadow-soft space-y-5">
         <h2 className="flex items-center gap-2 text-[15px] font-bold text-primary-dark">
           <PackageIcon size={17} className="text-accent" />
-          Natija
+          {t("result.heading")}
         </h2>
 
         {!calc ? (
           <p className="text-[13.5px] text-text-secondary">
-            Hisoblash uchun miqdor va birlik narxini kiriting.
+            {t("result.empty")}
           </p>
         ) : (
           <div className="space-y-4">
             <div className="space-y-2 text-[14px]">
               <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Oraliq summa</span>
+                <span className="text-text-secondary">{t("result.subtotal")}</span>
                 <span className="font-medium text-primary-dark">{formatSom(calc.subtotal)}</span>
               </div>
               {selectedPackage && (
                 <div className="flex items-center justify-between">
                   <span className="text-text-secondary">
-                    Chegirma ({selectedPackage.estimatedDiscount})
+                    {t("result.discount", { value: selectedPackage.estimatedDiscount })}
                   </span>
                   <span className="font-medium text-status-ok">
                     {calc.discountPercent !== null ? `- ${formatSom(calc.discountAmount)}` : "—"}
@@ -187,18 +190,18 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
                 </div>
               )}
               <div className="flex items-center justify-between border-t border-border pt-2">
-                <span className="font-semibold text-primary-dark">Yakuniy summa</span>
+                <span className="font-semibold text-primary-dark">{t("result.total")}</span>
                 <span className="text-[18px] font-bold text-primary-dark">{formatSom(calc.total)}</span>
               </div>
               {calc.advanceAmount !== null && (
                 <div className="flex items-center justify-between">
-                  <span className="text-text-secondary">Avans ({calc.advancePercent}%)</span>
+                  <span className="text-text-secondary">{t("result.advance", { percent: calc.advancePercent })}</span>
                   <span className="font-medium text-primary-dark">{formatSom(calc.advanceAmount)}</span>
                 </div>
               )}
               {selectedPackage && (
                 <div className="flex items-center justify-between">
-                  <span className="text-text-secondary">Yetkazish sharti</span>
+                  <span className="text-text-secondary">{t("result.delivery")}</span>
                   <span className="text-right font-medium text-primary-dark">{selectedPackage.deliveryTime}</span>
                 </div>
               )}
@@ -210,7 +213,7 @@ export function BatchCalculator({ products, packageGroups }: { products: Product
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-4 py-2.5 text-[13.5px] font-medium text-accent transition-colors hover:bg-accent/20"
             >
               {copied ? <Check size={15} /> : <Copy size={15} />}
-              {copied ? "Nusxalandi" : "Mijozga yuborish (nusxalash)"}
+              {copied ? t("result.copied") : t("result.copy")}
             </button>
           </div>
         )}

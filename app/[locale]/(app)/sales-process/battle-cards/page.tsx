@@ -4,24 +4,28 @@ import { DatabaseTemplate, DbColumn } from "@/components/DatabaseTemplate";
 import { getCompetitors } from "@/lib/content/loader";
 import type { Competitor } from "@/lib/content/types";
 
-const columns: DbColumn<Competitor>[] = [
-  { key: "name", label: "Raqobatchi", sortable: true },
-  { key: "assortment", label: "Assortiment" },
-  { key: "maxDiscount", label: "Jami maks. chegirma" },
-  { key: "threatLevel", label: "Raqobat darajasi", sortable: true },
-];
-
 export default async function BattleCardsPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("emptyState.battleCardsNone");
+  const [t, tNav, tPage] = await Promise.all([
+    getTranslations("emptyState.battleCardsNone"),
+    getTranslations("nav"),
+    getTranslations("pages.salesProcess.battleCards"),
+  ]);
+
+  const columns: DbColumn<Competitor>[] = [
+    { key: "name", label: tPage("columns.name"), sortable: true },
+    { key: "assortment", label: tPage("columns.assortment") },
+    { key: "maxDiscount", label: tPage("columns.maxDiscount") },
+    { key: "threatLevel", label: tPage("columns.threatLevel"), sortable: true },
+  ];
 
   const competitors = await getCompetitors();
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <PageHeader
         path="/sales-process/battle-cards"
-        title="Raqobat kartalari"
-        description="Har bir raqobatchi bo'yicha narx, chegirma va yetkazib berish shartlari."
+        title={tNav("salesProcess.battleCards.title")}
+        description={tPage("description")}
       />
       <DatabaseTemplate
         columns={columns}

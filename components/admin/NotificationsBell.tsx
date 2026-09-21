@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { countUnread, NotificationsQueryError } from "@/lib/notifications/queries";
 
@@ -9,6 +10,7 @@ import { countUnread, NotificationsQueryError } from "@/lib/notifications/querie
  * bell instead of taking the whole manager layout down; any other error —
  * including Next.js's own dynamic-rendering bailout — is rethrown. */
 export async function NotificationsBell() {
+  const t = await getTranslations("admin.notifications");
   let unread = 0;
   try {
     unread = await countUnread();
@@ -17,7 +19,7 @@ export async function NotificationsBell() {
     console.error("[notifications] unread count failed:", error.message);
   }
 
-  const label = unread > 0 ? `Bildirishnomalar: ${unread} ta o'qilmagan` : "Bildirishnomalar";
+  const label = unread > 0 ? t("bellUnread", { count: unread }) : t("bell");
 
   return (
     <Link

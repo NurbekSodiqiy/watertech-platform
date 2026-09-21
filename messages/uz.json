@@ -128,7 +128,11 @@
       "goProducts": "Mahsulotlar (G, so'ng P)",
       "goFaq": "Savol-javob (G, so'ng F)",
       "goObjections": "E'tirozlar (G, so'ng O)"
-    }
+    },
+    "miniCalculator": {
+      "label": "Kalkulyator"
+    },
+    "logo": "WaterTech logo"
   },
   "theme": {
     "light": "Yorug'",
@@ -333,7 +337,57 @@
   },
   "scripts": {
     "selectPrompt": "O'ng paneldan skript bosqichini tanlang...",
-    "callModeButton": "Qo'ng'iroq rejimi"
+    "callModeButton": "Qo'ng'iroq rejimi",
+    "title": "Jonli skriptlar va Yordamchi",
+    "intro": "Maqsadimiz naxt savdoga ko'proq urg'u berish, eng so'ngi chora nasiya bo'lishi kerak. Mijoz naxt berishga puli yo'q emas, aynan bizga berishga puli yo'q deb qabul qilishimiz kerak.",
+    "tabs": {
+      "sales": "Sotuv skriptlari",
+      "packages": "Hamkorlik paketlari",
+      "competitors": "Raqobatchilar",
+      "faq": "FAQ savollar"
+    },
+    "scriptPrefix": "Skript:",
+    "viewDetails": "Batafsil ko'rish",
+    "seeObjections": "E'tirozlar bo'limiga qarang",
+    "details": "Batafsil",
+    "ifCondition": "Agar {condition}",
+    "speakerOperator": "Operator",
+    "speakerClient": "Mijoz",
+    "quickObjections": "Tez e'tirozlar:",
+    "backToStage": "{label}ga qaytish",
+    "jumpToClosing": "Yakunga o'tish",
+    "clientNameLabel": "Mijoz ismi:",
+    "clientNamePlaceholder": "Masalan: Aziz",
+    "selectCompetitor": "O'ng paneldan kerakli raqobatchini tanlang...",
+    "selectFaq": "O'ng paneldan kerakli savolni tanlang...",
+    "selectPackage": "O'ng paneldan kerakli paketni tanlang...",
+    "searchCompetitor": "Raqobatchi nomi bo'yicha qidirish…",
+    "objectionSearchPlaceholder": "Mijoz raqobatchi nomini aytsa — shu yerdan qidiring…",
+    "objectionSearchNotFound": "Mos raqobatchi topilmadi.",
+    "fullCard": "To'liq karta",
+    "scriptTemplate": {
+      "description": "Qo'ng'iroq skripti",
+      "summary": "Qisqacha"
+    },
+    "packages": {
+      "featured": "Tavsiya etiladi",
+      "orderVolume": "Buyurtma hajmi",
+      "paymentTerms": "To'lov turi & sharti",
+      "estimatedDiscount": "Taxminiy chegirma",
+      "logistics": "Logistika / Yetkazib berish",
+      "deliveryTime": "Yetkazish muddati",
+      "summary": {
+        "orderVolume": "Buyurtma hajmi: {value}",
+        "paymentTerms": "To'lov turi va sharti: {value}",
+        "estimatedDiscount": "Taxminiy chegirma: {value}",
+        "logistics": "Logistika: {value}",
+        "deliveryTime": "Yetkazish muddati: {value}"
+      }
+    },
+    "linkPreview": {
+      "competitor": "Maks. chegirma: {discount} · Raqobat darajasi: {level}",
+      "package": "{volume} · {discount} chegirma"
+    }
   },
   "common": {
     "copy": "Nusxalash",
@@ -358,7 +412,9 @@
       "faq": "FAQ",
       "product": "Mahsulot",
       "battleCard": "Raqobatchi kartasi"
-    }
+    },
+    "edit": "Tahrirlash",
+    "offline": "Internet yo'q"
   },
   "toast": {
     "saved": "Saqlandi",
@@ -406,6 +462,76 @@
       "progress": "Bajarilgan",
       "lastUpdate": "Oxirgi yangilanish",
       "never": "Boshlanmagan"
+    },
+    "title": "Rahbariyat monitoring",
+    "description": "Operatorlar faolligi, kontent holati va sifat ko'rsatkichlari — bir joyda.",
+    "metadata": {
+      "content": "Rahbariyat monitoring — Kontent",
+      "quality": "Rahbariyat monitoring — Sifat"
+    },
+    "tabs": {
+      "activity": "Faollik",
+      "content": "Kontent",
+      "quality": "Sifat"
+    },
+    "header": {
+      "content": "Kontent",
+      "signOut": "Chiqish"
+    },
+    "duration": {
+      "minutes": "{minutes} daq",
+      "hoursMinutes": "{hours} soat {minutes} daq"
+    },
+    "ranges": {
+      "today": "Bugun",
+      "7d": "7 kun",
+      "30d": "30 kun",
+      "month": "Oy boshidan"
+    },
+    "operatorFilter": {
+      "all": "Barcha operatorlar",
+      "apply": "Qo'llash"
+    },
+    "kpi": {
+      "activeOperators": "Faol operatorlar",
+      "totalTime": "Jami vaqt",
+      "pendingDrafts": "Nashr kutayotgan qoralamalar",
+      "zeroResults": "Natijasiz qidiruvlar"
+    },
+    "activity": {
+      "loadError": "Ma'lumotlarni yuklab bo'lmadi: {error}",
+      "perOperator": "Operatorlar bo'yicha faollik",
+      "mostViewed": "Eng ko'p ko'rilgan",
+      "noData": "Ma'lumot yo'q",
+      "copies": "{count} nusxalash",
+      "hourlyHeading": "Soatlik reja vs fakt",
+      "hour": "Soat",
+      "plan": "Reja",
+      "actual": "Fakt (hodisalar soni)",
+      "zeroHeading": "Nol-natijali qidiruvlar",
+      "query": "So'rov",
+      "times": "Necha marta",
+      "webVitals": "Web Vitals (p50 / p75)",
+      "metric": "Metrika",
+      "samples": "Namunalar"
+    },
+    "content": {
+      "all": "Barchasi →",
+      "drafts": "Nashr kutayotgan qoralamalar",
+      "stale": "Eskirgan kontent (90+ kun)",
+      "missingRu": "Ruscha tarjimasi yo'q",
+      "publish": "Nashr qilish",
+      "publishing": "Nashr qilinmoqda…",
+      "markFresh": "Yangilangan deb belgilash",
+      "marking": "Belgilanmoqda…",
+      "translate": "Tarjima qilish"
+    },
+    "quality": {
+      "notHelpful": "\"Foydali emas\" deb belgilangan sahifalar",
+      "zeroHeading": "Nol-natijali qidiruvlar",
+      "lastSeen": "Oxirgi marta: {date}",
+      "createFaq": "FAQ yaratish",
+      "mostViewed": "Eng ko'p ko'rilgan kontent"
     }
   },
   "pages": {
@@ -547,6 +673,171 @@
           "statusDraft": "Qoralama",
           "statusPublished": "Nashr etilgan"
         }
+      },
+      "shared": {
+        "versions": "Versiyalar tarixi",
+        "idLabel": "ID (slug)",
+        "nameLabel": "Nomi",
+        "statusLabel": "Holat",
+        "statusDraft": "Qoralama",
+        "statusPublished": "Nashr etilgan"
+      },
+      "overview": {
+        "nav": "Umumiy",
+        "title": "Umumiy",
+        "description": "Har bir bo'lim bo'yicha yozuvlar soni va qoralamalar holati.",
+        "entries": "{count} ta yozuv",
+        "drafts": "{count} qoralama"
+      },
+      "scripts": {
+        "nav": "Skriptlar",
+        "title": "Skriptlar",
+        "description": "Savdo skriptlari, ularning bosqichlari va repliklari.",
+        "newTitle": "Yangi skript",
+        "editTitle": "Skriptni tahrirlash"
+      },
+      "objections": {
+        "nav": "E'tirozlar",
+        "title": "E'tirozlar",
+        "description": "Mijoz e'tirozlari va ularga javoblar.",
+        "newTitle": "Yangi e'tiroz",
+        "editTitle": "E'tirozni tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: obj-qimmat",
+          "keywords": "Kalit so'zlar",
+          "keywordsHint": "Vergul bilan ajrating: qimmat, narx, chegirma",
+          "clientSays": "Mijoz aytadi",
+          "realMeaning": "Aslida nima demoqchi",
+          "response": "Javob",
+          "followUp": "Qo'shimcha (ixtiyoriy)",
+          "scriptIds": "Skript ID'lari",
+          "scriptIdsHint": "Vergul bilan ajrating"
+        }
+      },
+      "faq": {
+        "nav": "FAQ",
+        "title": "FAQ",
+        "description": "Tez-tez so'raladigan savollar ro'yxati.",
+        "columns": {
+          "question": "Savol",
+          "category": "Kategoriya"
+        },
+        "newTitle": "Yangi FAQ",
+        "editTitle": "FAQ tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: yetkazib-berish-muddati",
+          "category": "Kategoriya",
+          "question": "Savol",
+          "answer": "Javob"
+        }
+      },
+      "competitors": {
+        "nav": "Raqobatchilar",
+        "title": "Raqobatchilar",
+        "description": "Raqobatchi kompaniyalar bo'yicha taqqoslash kartalari.",
+        "columns": {
+          "threatLevel": "Tahdid darajasi"
+        },
+        "newTitle": "Yangi raqobatchi",
+        "editTitle": "Raqobatchini tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: comp-royal",
+          "assortment": "Assortiment",
+          "baseDiscount": "Bazaviy chegirma",
+          "volumeDiscount": "Hajm chegirmasi",
+          "retroBonus": "Retro bonus",
+          "maxDiscount": "Maksimal chegirma",
+          "paymentTerms": "To'lov shartlari",
+          "paymentMethod": "To'lov usuli",
+          "deliveryTime": "Yetkazib berish muddati",
+          "logistics": "Logistika",
+          "dealerCoverage": "Diler qamrovi",
+          "certificates": "Sertifikatlar",
+          "marketingOffers": "Marketing takliflari",
+          "threatLevel": "Tahdid darajasi",
+          "threatHigh": "Yuqori",
+          "threatMedium": "O'rta",
+          "threatUnknown": "Ma'lumot yo'q"
+        }
+      },
+      "packages": {
+        "nav": "Paketlar",
+        "title": "Paketlar",
+        "description": "Xarid paketlari — har biri bir guruhga tegishli.",
+        "manageGroups": "Guruhlarni boshqarish",
+        "columns": {
+          "group": "Guruh",
+          "discount": "Chegirma"
+        },
+        "newTitle": "Yangi paket",
+        "editTitle": "Paketni tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: paket-standart",
+          "group": "Guruh",
+          "isFeatured": "Tavsiya etilgan",
+          "orderVolume": "Buyurtma hajmi",
+          "paymentTerms": "To'lov shartlari",
+          "estimatedDiscount": "Taxminiy chegirma (matn)",
+          "estimatedDiscountPlaceholder": "masalan: ~15% gacha",
+          "discountPct": "Chegirma (%, raqam)",
+          "advancePct": "Avans (%, ixtiyoriy)",
+          "logistics": "Logistika",
+          "deliveryTime": "Yetkazib berish muddati"
+        }
+      },
+      "packageGroups": {
+        "title": "Paket guruhlari",
+        "description": "Har bir paket shu guruhlardan biriga tegishli bo'ladi.",
+        "backToPackages": "Paketlarga qaytish",
+        "columns": {
+          "subtitle": "Tavsif"
+        },
+        "newTitle": "Yangi guruh",
+        "editTitle": "Guruhni tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: guruh-standart",
+          "subtitle": "Tavsif"
+        }
+      },
+      "products": {
+        "nav": "Mahsulotlar",
+        "title": "Mahsulotlar",
+        "description": "Mahsulot katalogi — rasm fayllari public/products/ ichida.",
+        "columns": {
+          "line": "Yo'nalish",
+          "category": "Kategoriya"
+        },
+        "newTitle": "Yangi mahsulot",
+        "editTitle": "Mahsulotni tahrirlash",
+        "fields": {
+          "idPlaceholder": "masalan: truba-ppr",
+          "filename": "Fayl nomi",
+          "filenamePlaceholder": "masalan: truba-ppr.jpg — public/products/ ichidagi fayl bilan bir xil bo'lishi kerak",
+          "nameRu": "Nomi (rus tilida)",
+          "nameUz": "Nomi (o'zbek tilida, ixtiyoriy)",
+          "sizes": "O'lchamlar",
+          "sizesHint": "Vergul bilan ajrating: Ø20, Ø25, Ø32",
+          "line": "Yo'nalish",
+          "category": "Kategoriya",
+          "material": "Material"
+        },
+        "lines": {
+          "ppr": "PPR",
+          "kanalizatsiya": "Kanalizatsiya"
+        },
+        "categories": {
+          "truba": "Truba",
+          "fiting": "Fiting",
+          "kran": "Kran",
+          "aksessuar": "Aksessuar"
+        },
+        "materials": {
+          "latun": "Latun"
+        }
+      },
+      "notifications": {
+        "title": "Bildirishnomalar",
+        "description": "Nashr qorovuli to'xtatgan yozuvlar va kunlik kontent tekshiruvi natijalari."
       }
     },
     "company": {
@@ -924,6 +1215,378 @@
           }
         }
       }
+    },
+    "tools": {
+      "calculator": {
+        "title": "Partiya kalkulyatori",
+        "description": "Miqdor, birlik narxi va hamkorlik paketiga qarab yakuniy summani hisoblang — narxni operator o'zi kiritadi, chegirma va avans foizlari mavjud paketlar ma'lumotidan olinadi.",
+        "currency": "so'm",
+        "input": {
+          "heading": "Kirish ma'lumotlari",
+          "productLabel": "Mahsulot nomi (ixtiyoriy — faqat hisobotda ko'rsatiladi)",
+          "productPlaceholder": "Masalan: Труба ППР",
+          "quantityLabel": "Miqdor",
+          "unitPriceLabel": "Birlik narxi (so'm)",
+          "unitPricePlaceholder": "Qo'lda kiriting",
+          "packageLabel": "Hamkorlik paketi",
+          "noPackage": "Paket tanlanmagan"
+        },
+        "result": {
+          "heading": "Natija",
+          "empty": "Hisoblash uchun miqdor va birlik narxini kiriting.",
+          "subtotal": "Oraliq summa",
+          "discount": "Chegirma ({value})",
+          "total": "Yakuniy summa",
+          "advance": "Avans ({percent}%)",
+          "delivery": "Yetkazish sharti",
+          "copy": "Mijozga yuborish (nusxalash)",
+          "copied": "Nusxalandi"
+        },
+        "summary": {
+          "product": "Mahsulot: {value}",
+          "quantity": "Miqdor: {value} dona",
+          "unitPrice": "Birlik narxi: {value}",
+          "subtotal": "Oraliq summa: {value}",
+          "package": "Paket: {value}",
+          "discount": "Chegirma: {value}",
+          "total": "Yakuniy summa: {value}",
+          "advance": "Avans ({percent}%): {value}",
+          "advanceNone": "Avans: —",
+          "delivery": "Yetkazish sharti: {value}"
+        }
+      },
+      "googleSheets": {
+        "title": "Google Sheets bilan ishlash bo'yicha video qo'llanma",
+        "videoTitle": "Google Sheets qo'llanmasi",
+        "topicsHeading": "Darsdagi asosiy mavzular",
+        "topics": {
+          "orders": "Buyurtmalar bilan ishlash va ma'lumotlarni kiritish",
+          "formulas": "Asosiy formulalar va ulardan foydalanish",
+          "filters": "Filtrlar va saralash funksiyalari",
+          "reports": "Hisobotlarni shakllantirish qoidalari"
+        },
+        "templateHeading": "Google Sheets Shablon",
+        "templateText": "Darsda ko'rsatilgan ishchi shablondan nusxa oling va o'z ishingizda foydalaning."
+      },
+      "salesFunnel": {
+        "title": "amoCRM Sotuv voronkasi va bosqichlar reglamenti",
+        "intro": "<term>Sotuv voronkasi</term> — bu sotuv jarayonlarini tushunish, optimallashtirish va nazorat qilish uchun muhim instrument. U potensial leadning dastlabki xabardorligidan to muvaffaqiyatli xarid amaliyotiga qadar bo'lgan yo'lining vizual va tahliliy ifodasidir. Voronkadagi har bir bo'lak <status>status</status> deb ataladi.",
+        "stagesHeading": "Voronka bosqichlari (Statuslar)",
+        "requirementLabel": "Talab:",
+        "triggerLabel": "Avtomatik trigger:",
+        "stages": {
+          "newLead": {
+            "title": "Yangi Lead",
+            "desc": "Voronkaning eng boshlang'ich qismi. \"Неразобранное\"dan qabul qilingan, o'tkazib yuborilgan (пропущенный) qo'ng'iroqlar va ijtimoiy tarmoqlardan kelgan murojaatlar tushadi.",
+            "req": "Aloqa o'rnatilgach, albatta keyingi tegishli statusga o'tkazilishi shart."
+          },
+          "noAnswer": {
+            "title": "Javob bermadi",
+            "desc": "Qo'ng'iroqqa javob bermagan leadlar yo'naltiriladi.",
+            "trigger": "Tizim avtomatik tarzda 4 soatdan keyin \"Qayta aloqaga chiqing\" nomli vazifa (задача) qo'yadi."
+          },
+          "infoGiven": {
+            "title": "Ma'lumot berildi",
+            "desc": "Mahsulot haqida ma'lumot va taklif berilgan leadlar uchun. Mijoz ko'rib chiqqunga qadar ushbu statusda turadi."
+          },
+          "thinking": {
+            "title": "O'ylab ko'radi",
+            "desc": "Taklif bilan tanishib, qaror qabul qilish uchun vaqt so'ragan mijozlar."
+          },
+          "sampleToSend": {
+            "title": "Namuna yuborish",
+            "desc": "Sinov uchun mahsulot namunasi (obrazets) tayyorlanishi va jo'natilishi kerak bo'lgan bitimlar."
+          },
+          "sampleSent": {
+            "title": "Namuna yuborildi",
+            "desc": "Namuna yuborilgandan so'ng mijoz fikrini bilish uchun ushbu bosqichga o'tkaziladi."
+          },
+          "meetingSet": {
+            "title": "Uchrashuv belgilandi",
+            "desc": "Aniq uchrashuv vaqti tayinlanganda o'tkaziladi.",
+            "trigger": "Leadni mas'ul xodimga yo'naltiradi."
+          },
+          "meetingDone": {
+            "title": "Uchrashuv o'tkazildi",
+            "desc": "Uchrashuv yakunlangach o'tkaziladi va bitimga uchrashuv natijasi majburiy kiritiladi."
+          },
+          "negotiation": {
+            "title": "Muzokara jarayonida",
+            "desc": "Narx, to'lov shartlari yoki yetkazib berish muddatlari bo'yicha yakuniy savdolashuv bosqichi."
+          },
+          "agreed": {
+            "title": "Kelishuvga erishilgan",
+            "desc": "Kelishuvga erishilgan, buyurtma olinib shartnoma qilingan, lekin mahsulot hali to'liq yetib bormagan bitimlar."
+          }
+        }
+      },
+      "repeatSalesFunnel": {
+        "title": "Qayta sotuv voronkasi reglamenti",
+        "description": "Mavjud mijozlar bilan qayta aloqa, yangi buyurtmalar olish va avtomatik triggerlar orqali uzluksiz savdoni ta'minlash yo'riqnomasi.",
+        "intro": "<term>Qayta sotuv voronkasi</term> — birinchi marta xarid qilgan mijozlarni doimiy hamkorga aylantirish, mahsulot qoldiqlarini o'z vaqtida to'ldirish va takroriy buyurtmalarni avtomatlashtirish tizimi.",
+        "stagesHeading": "Voronka bosqichlari (Statuslar)",
+        "triggerLabel": "Avtomatik trigger:",
+        "cyclicLabel": "Siklik avtomatik trigger:",
+        "stages": {
+          "client": {
+            "title": "Mijoz (Boshlang'ich status)",
+            "desc": "Asosiy voronkada birinchi xaridni amalga oshirgan barcha mijozlar uchun tizim avtomatik ravishda ushbu voronkada yangi bitim (сделка) ochadi.",
+            "trigger": "Mas'ul xodimga \"Qayta sotuv qilish uchun aloqaga chiqing\" nomli vazifa (задача) belgilanadi."
+          },
+          "offerSent": {
+            "title": "Taklif yuborilgan",
+            "desc": "Mijoz bilan aloqaga chiqilib, uning ehtiyojiga qarab yangi tijorat taklifi (KP) yoki yangilangan narxlar yuborilgach o'tkaziladi."
+          },
+          "negotiation": {
+            "title": "Muzokara jarayoni",
+            "desc": "Mijoz ma'lum bir muddatdan so'ng bog'lanishni so'ragan yoki hajm, chegirma va to'lov shartlari bo'yicha muzokara ketayotgan bo'lsa yo'naltiriladi."
+          },
+          "agreed": {
+            "title": "Kelishuvga erishilgan",
+            "desc": "Yangi buyurtmaga kelishilgan, shartnoma tuzilgan, lekin tovar hali yetkazib berilmagan holat."
+          },
+          "won": {
+            "title": "Qayta sotuv bo'ldi (Muvaffaqiyatli yakun)",
+            "desc": "Qayta sotuv to'liq amalga oshirilib, to'lov qabul qilingan bitimlar.",
+            "cyclic": "10 kundan so'ng tizim avtomatik tarzda \"Mijoz\" statusida ushbu mijoz uchun yangi navbatdagi bitimni (сделка) ochadi."
+          },
+          "lost": {
+            "title": "Qayta sotuv bo'lmadi (Yopilgan / Rad)",
+            "desc": "Hozirgi bosqichda takroriy xaridni rad etgan yoki ma'lum sabablarga ko'ra sotuv amalga oshmagan bitimlar (sababini majburiy qayd etgan holda)."
+          }
+        }
+      },
+      "communicationStandards": {
+        "title": "amoCRM dan foydalanish bo'yicha asosiy qoidalar",
+        "goldenRule": {
+          "heading": "Asosiy Oltin Qoida",
+          "text": "<strong>Agar CRM'da yozilmagan bo'lsa — bo'lmagan deb hisoblanadi!</strong> Barcha qo'ng'iroq, uchrashuv va kelishuvlar CRM'da qayd etilishi shart."
+        },
+        "rules": {
+          "lead": {
+            "title": "Lid nima?",
+            "text": "Lid — bu potensial mijoz yoki savdo imkoniyati."
+          },
+          "tasks": {
+            "title": "Vazifasiz bitim bo'lmasin",
+            "text": "Har bir voronkadagi har bir bitimda (сделка) majburiy vazifa (задача) bo'lishi shart."
+          },
+          "latin": {
+            "title": "Lotin alifbosi",
+            "text": "Bitimdagi mijoz ma'lumotlarini har doim lotin alifbosida yozish shart."
+          },
+          "newDeal": {
+            "title": "Yangi kelishuv — yangi bitim",
+            "text": "Mijoz bilan har bir yangi kelishuv uchun yangi сделка ochish shart."
+          },
+          "duplicates": {
+            "title": "Dublikatlardan saqlaning",
+            "text": "CRM'da kontaktni bir martadan ko'p kiritmaslik muhim. Barcha aloqalar bitta karta ostida bo'lishi kerak."
+          },
+          "actions": {
+            "title": "Harakatlarni belgilash",
+            "text": "Har bir qo'ng'iroq, keyingi harakat va vazifani CRM'da belgilang."
+          }
+        },
+        "nextButton": "Sotuv varonkasi qadamlari"
+      }
+    },
+    "faq": {
+      "description": "Butun bilimlar bazasi bo'yicha ko'p beriladigan savollar.",
+      "columns": {
+        "category": "Bo'lim",
+        "question": "Savol",
+        "answer": "Javob"
+      },
+      "filterCategory": "Bo'lim",
+      "supportHeading": "Javobingizni topa olmadingizmi?",
+      "supportBody": "Bizga yozing — {role} javob beradi.",
+      "supportCta": "Bizga yozing"
+    },
+    "salesProcess": {
+      "objections": {
+        "description": "To'liq e'tirozlar bilan ishlash bazasi — nima deyiladi, bu nimani anglatadi va qanday javob berish kerak.",
+        "columns": {
+          "objection": "E'tiroz",
+          "realMeaning": "Nima demoqchi",
+          "response": "Javob",
+          "followUp": "Qo'shimcha / keyingi qadam",
+          "sourceScripts": "Qaysi skriptda"
+        },
+        "important": "<strong>Muhim:</strong> \"O'ylab ko'raman\" yoki \"Keyinroq telefon qilaman\" kabi maqsadsiz javoblar hech qachon yakuniy javob sifatida qabul qilinmaydi — operator har doim aniqlashtiruvchi savol bilan davom ettirishi kerak."
+      },
+      "battleCards": {
+        "description": "Har bir raqobatchi bo'yicha narx, chegirma va yetkazib berish shartlari.",
+        "columns": {
+          "name": "Raqobatchi",
+          "assortment": "Assortiment",
+          "maxDiscount": "Jami maks. chegirma",
+          "threatLevel": "Raqobat darajasi"
+        },
+        "compareTitle": "{name} bilan solishtirish",
+        "threatDescription": "Raqobat darajasi: {level}",
+        "detail": {
+          "threat": "Raqobat: {level}",
+          "assortment": "Assortiment",
+          "baseDiscount": "Baza chegirmasi",
+          "volumeDiscount": "Obyom chegirmasi (1 fura)",
+          "retroBonus": "Retro-bonus (yillik)",
+          "maxDiscount": "Jami maks. chegirma",
+          "paymentTerms": "Nasiya & muddatli to'lov shartlari",
+          "paymentMethod": "To'lov shakli",
+          "deliveryTime": "Yetkazish muddati",
+          "logistics": "Logistika & MOQ shartlari",
+          "dealerCoverage": "Dilerlik qamrovi",
+          "certificates": "Sertifikatlar & garantiya",
+          "marketingOffers": "Marketing & ustalarga takliflar"
+        }
+      }
+    }
+  },
+  "admin": {
+    "shell": {
+      "title": "Kontent boshqaruvi",
+      "monitoring": "Monitoring",
+      "signOut": "Chiqish"
+    },
+    "table": {
+      "add": "+ Qo'shish",
+      "status": "Holat",
+      "updated": "Yangilangan",
+      "updatedBy": "Kim tomonidan",
+      "actions": "Amallar",
+      "published": "Nashr etilgan",
+      "draft": "Qoralama",
+      "makeDraft": "Qoralama",
+      "publish": "Nashr",
+      "delete": "O'chirish",
+      "deleteTitle": "Yozuvni o'chirish",
+      "deleteDescription": "Bu amalni ortga qaytarib bo'lmaydi. Yozuv butunlay o'chiriladi."
+    },
+    "confirm": {
+      "delete": "O'chirish",
+      "cancel": "Bekor qilish",
+      "working": "Bajarilmoqda…"
+    },
+    "form": {
+      "save": "Saqlash",
+      "saving": "Saqlanmoqda…",
+      "cancel": "Bekor qilish",
+      "saved": "Saqlandi",
+      "ruSection": "Ruscha (ixtiyoriy)"
+    },
+    "gate": {
+      "counts": "{errors} ta xato · {warnings} ta ogohlantirish",
+      "title": "Nashr qorovuli to'xtatdi",
+      "description": "Quyidagi xatolar tuzatilmaguncha yozuv nashr etilmaydi. Ogohlantirishlar nashrga to'sqinlik qilmaydi.",
+      "close": "Yopish",
+      "goToEditor": "Tahrirlashga o'tish"
+    },
+    "versions": {
+      "date": "Sana",
+      "author": "Muallif",
+      "action": "Amal",
+      "restoring": "Tiklanmoqda…",
+      "restore": "Tiklash",
+      "back": "Ortga",
+      "historyTitle": "Versiyalar tarixi — {table} ({id})",
+      "metadata": "Versiyalar",
+      "tables": {
+        "content_faqs": "FAQ",
+        "content_objections": "E'tiroz",
+        "content_competitors": "Raqobatchi",
+        "content_packages": "Paket",
+        "content_package_groups": "Paket guruhi",
+        "content_products": "Mahsulot",
+        "content_scripts": "Skript",
+        "content_changelog": "O'zgarish",
+        "content_contacts": "Kontakt",
+        "content_sops": "amoCRM reglamenti"
+      }
+    },
+    "notifications": {
+      "unread": "O'qilmagan",
+      "open": "Ochish",
+      "markRead": "O'qildi",
+      "all": "Barchasi ({count})",
+      "unreadOnly": "O'qilmaganlar ({count})",
+      "markAll": "Barchasini o'qildi",
+      "markedAll": "Barchasi o'qildi deb belgilandi",
+      "bell": "Bildirishnomalar",
+      "bellUnread": "Bildirishnomalar: {count} ta o'qilmagan",
+      "kinds": {
+        "gate_blocked": "Nashr qorovuli",
+        "stale_content": "Eskirgan kontent",
+        "missing_ru": "Ruscha tarjima",
+        "scan_summary": "Kunlik tekshiruv"
+      }
+    },
+    "relativeTime": {
+      "now": "hozir",
+      "minutes": "{count} daqiqa oldin",
+      "hours": "{count} soat oldin",
+      "days": "{count} kun oldin"
+    },
+    "scriptEditor": {
+      "speakers": {
+        "operator": "Operator",
+        "mijoz": "Mijoz",
+        "note": "Izoh"
+      },
+      "linkTypes": {
+        "package": "Paket",
+        "competitor": "Raqobatchi",
+        "faq": "FAQ"
+      },
+      "linkLabelPlaceholder": "Yorliq",
+      "removeLink": "Havolani o'chirish",
+      "moveUp": "Yuqoriga",
+      "moveDown": "Pastga",
+      "removeTurn": "Replikani o'chirish",
+      "textPlaceholder": "Matn",
+      "subStepPlaceholder": "Sarlavha (ixtiyoriy)",
+      "conditionPlaceholder": "Shart (ixtiyoriy)",
+      "links": "Havolalar",
+      "addLink": "Havola",
+      "stageTitle": "{index}. Bosqich",
+      "stageTitleWithLabel": "{index}. Bosqich — {label}",
+      "removeStage": "Bosqichni o'chirish",
+      "label": "Yorliq",
+      "nextStage": "Keyingi bosqich:",
+      "lastStage": "(oxirgi bosqich)",
+      "objections": "E'tirozlar (ushbu bosqichda ko'rsatiladi)",
+      "turns": "Repliklar",
+      "addTurn": "Replika",
+      "idPlaceholder": "masalan: lead-orqali-tushgan",
+      "cheatSheet": "Shpargalka",
+      "stages": "Bosqichlar",
+      "stagesRu": "Bosqichlar (ruscha)",
+      "addStage": "Bosqich qo'shish",
+      "preview": "Ko'rinish",
+      "previewStage": "(bosqich {n})"
+    }
+  },
+  "pageMeta": {
+    "owner": "Egasi: {value}",
+    "approvedBy": "Tasdiqlagan: {value}",
+    "updated": "Yangilangan: {value}",
+    "nextReview": "Keyingi tekshiruv: {value}",
+    "audience": "Auditoriya: {value}",
+    "level": "Daraja: {value}",
+    "statuses": {
+      "up-to-date": "Dolzarb",
+      "in-review": "Tekshiruvda",
+      "outdated": "Eskirgan"
+    },
+    "audiences": {
+      "Operator": "Operator",
+      "Manager": "Menejer",
+      "Head": "Rahbar"
+    },
+    "levels": {
+      "Basic": "Boshlang'ich",
+      "Intermediate": "O'rta",
+      "Expert": "Ekspert"
     }
   }
 }

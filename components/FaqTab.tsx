@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Package, CreditCard, Truck, type LucideIcon } from "lucide-react";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { useTrack } from "@/hooks/useTrack";
@@ -31,6 +32,8 @@ const faqCategoryIcons: Record<string, LucideIcon> = {
  * own selection state; remounts (and so resets) whenever the operator
  * switches away and back, same as the inline ternary it replaced. */
 export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
+  const tS = useTranslations("scripts");
+  const tCommon = useTranslations("common");
   const { faqs } = useScriptsContent();
   const faqData = useMemo(() => buildFaqData(faqs), [faqs]);
   const [selectedFaqItem, setSelectedFaqItem] = useState<FAQItem | null>(null);
@@ -72,7 +75,7 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
         {!selectedFaqItem ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-center text-text-secondary text-lg">
-              O&apos;ng paneldan kerakli savolni tanlang...
+              {tS("selectFaq")}
             </p>
           </div>
         ) : (
@@ -81,7 +84,7 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
               <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
               <div className="flex items-center gap-2">
                 <PinButton kind="faq" id={selectedFaqItem.id} />
-                <CopyButton value={selectedFaqItem.answer} label="Nusxalash" />
+                <CopyButton value={selectedFaqItem.answer} label={tCommon("copy")} />
               </div>
             </div>
             <div className="relative rounded-2xl rounded-tl-sm border border-primary/20 border-l-[3px] border-l-primary bg-primary-light/25 px-6 py-5">

@@ -2,13 +2,14 @@
 
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { overlayFadeVariants, overlayPanelVariants } from "@/components/ui/Dialog";
 
 export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "O'chirish",
+  confirmLabel,
   pending = false,
   onConfirm,
   onCancel,
@@ -21,6 +22,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("admin.confirm");
   const reduce = useReducedMotion();
 
   return (
@@ -61,7 +63,7 @@ export function ConfirmDialog({
                 disabled={pending}
                 className="rounded-lg border border-border px-3.5 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt disabled:opacity-50"
               >
-                Bekor qilish
+                {t("cancel")}
               </button>
               <button
                 type="button"
@@ -69,7 +71,7 @@ export function ConfirmDialog({
                 disabled={pending}
                 className="rounded-lg bg-status-outdated px-3.5 py-2 text-[13px] font-medium text-surface transition-colors hover:opacity-90 disabled:opacity-50"
               >
-                {pending ? "Bajarilmoqda…" : confirmLabel}
+                {pending ? t("working") : (confirmLabel ?? t("delete"))}
               </button>
             </div>
           </m.div>

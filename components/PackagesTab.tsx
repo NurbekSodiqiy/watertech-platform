@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { Package, CreditCard, Percent, Truck, Clock, Star, ChevronRight } from "lucide-react";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import type { Package as PackageItem } from "@/lib/content/types";
@@ -9,14 +10,14 @@ import { CopyButton } from "@/components/CopyButton";
 
 // One line per real field already shown in the card below — no new content,
 // just the same values joined for the clipboard.
-function packageSummaryText(pkg: PackageItem): string {
+function packageSummaryText(pkg: PackageItem, t: (key: string, values: { value: string }) => string): string {
   return [
     pkg.name,
-    `Buyurtma hajmi: ${pkg.orderVolume}`,
-    `To'lov turi va sharti: ${pkg.paymentTerms}`,
-    `Taxminiy chegirma: ${pkg.estimatedDiscount}`,
-    `Logistika: ${pkg.logistics}`,
-    `Yetkazish muddati: ${pkg.deliveryTime}`,
+    t("orderVolume", { value: pkg.orderVolume }),
+    t("paymentTerms", { value: pkg.paymentTerms }),
+    t("estimatedDiscount", { value: pkg.estimatedDiscount }),
+    t("logistics", { value: pkg.logistics }),
+    t("deliveryTime", { value: pkg.deliveryTime }),
   ].join("\n");
 }
 
@@ -24,6 +25,9 @@ function packageSummaryText(pkg: PackageItem): string {
  * state; remounts (and so resets) whenever the operator switches away and
  * back, same as the inline ternary it replaced. */
 export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElement> }) {
+  const t = useTranslations("scripts.packages");
+  const tS = useTranslations("scripts");
+  const tCommon = useTranslations("common");
   const { packageGroups } = useScriptsContent();
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
   const track = useTrack();
@@ -45,7 +49,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
         {!selectedPackage ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-center text-text-secondary text-lg">
-              O&apos;ng paneldan kerakli paketni tanlang...
+              {tS("selectPackage")}
             </p>
           </div>
         ) : (
@@ -54,10 +58,10 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
               <h2 className="text-2xl font-bold text-primary-dark flex items-center gap-2">
                 {selectedPackage.name}
                 {selectedPackage.isFeatured && (
-                  <Star size={20} className="text-accent" fill="currentColor" aria-label="Tavsiya etiladi" />
+                  <Star size={20} className="text-accent" fill="currentColor" aria-label={t("featured")} />
                 )}
               </h2>
-              <CopyButton value={packageSummaryText(selectedPackage)} label="Nusxalash" />
+              <CopyButton value={packageSummaryText(selectedPackage, (key, values) => t(`summary.${key}`, values))} label={tCommon("copy")} />
             </div>
 
             <div className="space-y-4">
@@ -66,7 +70,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <Package size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-text-secondary mb-0.5">Buyurtma hajmi</div>
+                  <div className="text-xs font-medium text-text-secondary mb-0.5">{t("orderVolume")}</div>
                   <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.orderVolume}</div>
                 </div>
               </div>
@@ -76,7 +80,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <CreditCard size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-text-secondary mb-0.5">To&apos;lov turi &amp; sharti</div>
+                  <div className="text-xs font-medium text-text-secondary mb-0.5">{t("paymentTerms")}</div>
                   <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.paymentTerms}</div>
                 </div>
               </div>
@@ -86,7 +90,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <Percent size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-text-secondary mb-0.5">Taxminiy chegirma</div>
+                  <div className="text-xs font-medium text-text-secondary mb-0.5">{t("estimatedDiscount")}</div>
                   <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.estimatedDiscount}</div>
                 </div>
               </div>
@@ -96,7 +100,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <Truck size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-text-secondary mb-0.5">Logistika / Yetkazib berish</div>
+                  <div className="text-xs font-medium text-text-secondary mb-0.5">{t("logistics")}</div>
                   <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.logistics}</div>
                 </div>
               </div>
@@ -106,7 +110,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <Clock size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-text-secondary mb-0.5">Yetkazish muddati</div>
+                  <div className="text-xs font-medium text-text-secondary mb-0.5">{t("deliveryTime")}</div>
                   <div className="text-[15px] font-bold text-primary-dark">{selectedPackage.deliveryTime}</div>
                 </div>
               </div>
@@ -133,7 +137,7 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                 <span className="flex items-center gap-2">
                   {pkg.name}
                   {pkg.isFeatured && (
-                    <Star size={16} className="text-accent shrink-0" fill="currentColor" aria-label="Tavsiya etiladi" />
+                    <Star size={16} className="text-accent shrink-0" fill="currentColor" aria-label={t("featured")} />
                   )}
                 </span>
                 <ChevronRight className={`w-4 h-4 ${selectedPackage?.id === pkg.id ? "text-primary" : "text-text-secondary"}`} />

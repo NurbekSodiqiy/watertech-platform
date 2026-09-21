@@ -35,17 +35,11 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-const SPEAKER_OPTIONS: { value: "operator" | "mijoz" | "note"; label: string }[] = [
-  { value: "operator", label: "Operator" },
-  { value: "mijoz", label: "Mijoz" },
-  { value: "note", label: "Izoh" },
-];
+// Values are stored data; the visible labels are `admin.scriptEditor.speakers.<value>`.
+const SPEAKER_VALUES: ("operator" | "mijoz" | "note")[] = ["operator", "mijoz", "note"];
 
-const LINK_TYPE_OPTIONS: { value: ScriptTurnLink["type"]; label: string }[] = [
-  { value: "package", label: "Paket" },
-  { value: "competitor", label: "Raqobatchi" },
-  { value: "faq", label: "FAQ" },
-];
+// Labels are `admin.scriptEditor.linkTypes.<value>`.
+const LINK_TYPE_VALUES: ScriptTurnLink["type"][] = ["package", "competitor", "faq"];
 
 /** stagesRu (lib/content/types.ts) mirrors stages field-for-field — every
  * stage/turn/link editing component below is parameterized over which of
@@ -130,6 +124,7 @@ interface LinkRowProps {
 }
 
 function LinkRow({ control, path, competitors, faqs, packageGroups, onRemove }: LinkRowProps) {
+  const t = useTranslations("admin.scriptEditor");
   const { field: typeField } = useController({ control, name: `${path}.type` });
   const { field: idField } = useController({ control, name: `${path}.id` });
   const { field: labelField } = useController({ control, name: `${path}.label` });
@@ -155,9 +150,9 @@ function LinkRow({ control, path, competitors, faqs, packageGroups, onRemove }: 
         ref={typeField.ref}
         className="rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
       >
-        {LINK_TYPE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+        {LINK_TYPE_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {t(`linkTypes.${value}`)}
           </option>
         ))}
       </select>
@@ -178,7 +173,7 @@ function LinkRow({ control, path, competitors, faqs, packageGroups, onRemove }: 
       </select>
       <input
         type="text"
-        placeholder="Yorliq"
+        placeholder={t("linkLabelPlaceholder")}
         name={labelField.name}
         value={labelField.value}
         onChange={labelField.onChange}
@@ -189,7 +184,7 @@ function LinkRow({ control, path, competitors, faqs, packageGroups, onRemove }: 
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Havolani o'chirish"
+        aria-label={t("removeLink")}
         className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-status-outdated/10 hover:text-status-outdated"
       >
         <Trash2 size={11} />
@@ -229,6 +224,7 @@ function TurnFields({
   onMoveDown,
   onRemove,
 }: TurnFieldsProps) {
+  const t = useTranslations("admin.scriptEditor");
   const base = `${stagesBase}.${stageIndex}.turns.${turnIndex}` as const;
   const {
     fields: linkFields,
@@ -243,9 +239,9 @@ function TurnFields({
           {...register(`${base}.speaker`)}
           className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[12.5px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
         >
-          {SPEAKER_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {SPEAKER_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(`speakers.${value}`)}
             </option>
           ))}
         </select>
@@ -254,7 +250,7 @@ function TurnFields({
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
-          aria-label="Yuqoriga"
+          aria-label={t("moveUp")}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-surface disabled:opacity-30"
         >
           <ChevronUp size={12} />
@@ -263,7 +259,7 @@ function TurnFields({
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
-          aria-label="Pastga"
+          aria-label={t("moveDown")}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-surface disabled:opacity-30"
         >
           <ChevronDown size={12} />
@@ -271,25 +267,25 @@ function TurnFields({
         <button
           type="button"
           onClick={onRemove}
-          aria-label="Replikani o'chirish"
+          aria-label={t("removeTurn")}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-status-outdated/10 hover:text-status-outdated"
         >
           <Trash2 size={12} />
         </button>
       </div>
 
-      <AutosizeTextarea {...register(`${base}.text`)} placeholder="Matn" />
+      <AutosizeTextarea {...register(`${base}.text`)} placeholder={t("textPlaceholder")} />
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <input
           type="text"
-          placeholder="Sarlavha (ixtiyoriy)"
+          placeholder={t("subStepPlaceholder")}
           {...register(`${base}.subStepHeader`)}
           className="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
         />
         <input
           type="text"
-          placeholder="Shart (ixtiyoriy)"
+          placeholder={t("conditionPlaceholder")}
           {...register(`${base}.condition`)}
           className="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
         />
@@ -297,14 +293,14 @@ function TurnFields({
 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-medium text-text-secondary">Havolalar</p>
+          <p className="text-[11px] font-medium text-text-secondary">{t("links")}</p>
           <button
             type="button"
             onClick={() => appendLink({ type: "package", id: "", label: "" })}
             className="flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-primary-dark hover:bg-surface"
           >
             <Plus size={11} />
-            Havola
+            {t("addLink")}
           </button>
         </div>
         {linkFields.map((linkField, linkIndex) => (
@@ -362,6 +358,8 @@ function StageFields({
   onRemove,
   errors,
 }: StageFieldsProps) {
+  const t = useTranslations("admin.scriptEditor");
+  const tShared = useTranslations("pages.admin.shared");
   const {
     fields: turnFields,
     append: appendTurn,
@@ -388,13 +386,15 @@ function StageFields({
     >
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={onSelect} className="flex-1 text-left text-[14px] font-semibold text-primary-dark">
-          {stageIndex + 1}. Bosqich {labelField.value ? `— ${labelField.value}` : ""}
+          {labelField.value
+            ? t("stageTitleWithLabel", { index: stageIndex + 1, label: labelField.value })
+            : t("stageTitle", { index: stageIndex + 1 })}
         </button>
         <button
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
-          aria-label="Yuqoriga"
+          aria-label={t("moveUp")}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-alt disabled:opacity-30"
         >
           <ChevronUp size={13} />
@@ -403,7 +403,7 @@ function StageFields({
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
-          aria-label="Pastga"
+          aria-label={t("moveDown")}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-surface-alt disabled:opacity-30"
         >
           <ChevronDown size={13} />
@@ -411,7 +411,7 @@ function StageFields({
         <button
           type="button"
           onClick={onRemove}
-          aria-label="Bosqichni o'chirish"
+          aria-label={t("removeStage")}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-secondary hover:bg-status-outdated/10 hover:text-status-outdated"
         >
           <Trash2 size={13} />
@@ -420,7 +420,7 @@ function StageFields({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label className="block text-[12.5px] font-medium text-primary-dark">Yorliq</label>
+          <label className="block text-[12.5px] font-medium text-primary-dark">{t("label")}</label>
           <input
             type="text"
             name={labelField.name}
@@ -435,7 +435,7 @@ function StageFields({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="block text-[12.5px] font-medium text-primary-dark">ID (slug)</label>
+          <label className="block text-[12.5px] font-medium text-primary-dark">{tShared("idLabel")}</label>
           <input
             type="text"
             name={idField.name}
@@ -450,11 +450,11 @@ function StageFields({
       </div>
 
       <p className="text-[11px] text-text-secondary">
-        Keyingi bosqich: <span className="font-medium text-primary-dark">{nextStageLabel || "(oxirgi bosqich)"}</span>
+        {t("nextStage")} <span className="font-medium text-primary-dark">{nextStageLabel || t("lastStage")}</span>
       </p>
 
       <div className="space-y-1.5">
-        <p className="text-[12.5px] font-medium text-primary-dark">E&apos;tirozlar (ushbu bosqichda ko&apos;rsatiladi)</p>
+        <p className="text-[12.5px] font-medium text-primary-dark">{t("objections")}</p>
         <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-surface-alt p-2">
           {objections.map((o) => (
             <label key={o.id} className="flex items-center gap-2 px-1.5 py-1 text-[12.5px] text-primary-dark">
@@ -472,14 +472,14 @@ function StageFields({
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-[12.5px] font-medium text-primary-dark">Repliklar</p>
+          <p className="text-[12.5px] font-medium text-primary-dark">{t("turns")}</p>
           <button
             type="button"
             onClick={() => appendTurn({ speaker: "operator", text: "", subStepHeader: "", condition: "", links: [] })}
             className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[12px] font-medium text-primary-dark hover:bg-surface-alt"
           >
             <Plus size={12} />
-            Replika
+            {t("addTurn")}
           </button>
         </div>
 
@@ -540,6 +540,9 @@ export function ScriptEditor({
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("toast");
+  const tEditor = useTranslations("admin.scriptEditor");
+  const tShared = useTranslations("pages.admin.shared");
+  const tForm = useTranslations("admin.form");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -643,19 +646,19 @@ export function ScriptEditor({
         {success && (
           <div className="flex items-center gap-2 rounded-xl border border-status-ok/40 bg-status-ok/10 px-4 py-2.5 text-[13px] text-status-ok">
             <CheckCircle2 size={15} />
-            Saqlandi
+            {tForm("saved")}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface p-4 shadow-soft sm:grid-cols-2">
           <div className="space-y-1.5">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-id">
-              ID (slug)
+              {tShared("idLabel")}
             </label>
             <input
               id="script-id"
               type="text"
-              placeholder="masalan: lead-orqali-tushgan"
+              placeholder={tEditor("idPlaceholder")}
               readOnly={!isNew}
               {...register("id")}
               className={`w-full rounded-lg border border-border px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light ${
@@ -666,20 +669,20 @@ export function ScriptEditor({
           </div>
           <div className="space-y-1.5">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-status">
-              Holat
+              {tShared("statusLabel")}
             </label>
             <select
               id="script-status"
               {...register("status")}
               className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
             >
-              <option value="draft">Qoralama</option>
-              <option value="published">Nashr etilgan</option>
+              <option value="draft">{tShared("statusDraft")}</option>
+              <option value="published">{tShared("statusPublished")}</option>
             </select>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-name">
-              Nomi
+              {tShared("nameLabel")}
             </label>
             <input
               id="script-name"
@@ -691,7 +694,7 @@ export function ScriptEditor({
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-cheat-sheet">
-              Shpargalka
+              {tEditor("cheatSheet")}
             </label>
             <textarea
               id="script-cheat-sheet"
@@ -704,14 +707,14 @@ export function ScriptEditor({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-primary-dark">Bosqichlar</h2>
+            <h2 className="text-[15px] font-semibold text-primary-dark">{tEditor("stages")}</h2>
             <button
               type="button"
               onClick={() => appendStage({ id: "", label: "", objectionIds: [], turns: [] })}
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-primary-dark hover:bg-surface-alt"
             >
               <Plus size={13} />
-              Bosqich qo&apos;shish
+              {tEditor("addStage")}
             </button>
           </div>
 
@@ -741,13 +744,13 @@ export function ScriptEditor({
 
         <details className="rounded-2xl border border-border bg-surface-alt/60 p-4">
           <summary className="cursor-pointer text-[15px] font-semibold text-primary-dark">
-            Ruscha (ixtiyoriy)
+            {tForm("ruSection")}
           </summary>
           <div className="mt-4 space-y-6">
             <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-surface p-4 shadow-soft sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-name-ru">
-                  Nomi
+                  {tShared("nameLabel")}
                 </label>
                 <input
                   id="script-name-ru"
@@ -758,7 +761,7 @@ export function ScriptEditor({
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-cheat-sheet-ru">
-                  Shpargalka
+                  {tEditor("cheatSheet")}
                 </label>
                 <textarea
                   id="script-cheat-sheet-ru"
@@ -771,14 +774,14 @@ export function ScriptEditor({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold text-primary-dark">Bosqichlar (ruscha)</h2>
+                <h2 className="text-[15px] font-semibold text-primary-dark">{tEditor("stagesRu")}</h2>
                 <button
                   type="button"
                   onClick={() => appendStageRu({ id: "", label: "", objectionIds: [], turns: [] })}
                   className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-medium text-primary-dark hover:bg-surface-alt"
                 >
                   <Plus size={13} />
-                  Bosqich qo&apos;shish
+                  {tEditor("addStage")}
                 </button>
               </div>
 
@@ -806,15 +809,15 @@ export function ScriptEditor({
         </details>
 
         <div className="flex items-center gap-2 pt-2">
-          <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel="Saqlanmoqda…">
-            Saqlash
+          <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel={tForm("saving")}>
+            {tForm("save")}
           </SubmitButton>
           <button
             type="button"
             onClick={() => router.push("/admin/scripts")}
             className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
-            Bekor qilish
+            {tForm("cancel")}
           </button>
         </div>
       </div>
@@ -822,7 +825,7 @@ export function ScriptEditor({
       <div className="lg:sticky lg:top-4 lg:self-start">
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-soft">
           <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-text-secondary">
-            Ko&apos;rinish {stageFields.length > 0 ? `(bosqich ${selectedStage + 1})` : ""}
+            {tEditor("preview")} {stageFields.length > 0 ? tEditor("previewStage", { n: selectedStage + 1 }) : ""}
           </h2>
           <ClientNameProvider>
             <ScriptsContentProvider value={previewBundle}>

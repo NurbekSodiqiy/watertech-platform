@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
-import { formatDurationUz } from "@/lib/dashboard/format";
+import { formatDuration } from "@/lib/dashboard/format";
 import { parseDashboardRange } from "@/lib/dashboard/range";
 import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
 import {
@@ -29,7 +29,12 @@ export default async function DashboardPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   unstable_setRequestLocale(locale);
-  const t = await getTranslations("emptyState.dashboardNoEvents");
+  const [t, tDash, tDuration, tPlan] = await Promise.all([
+    getTranslations("emptyState.dashboardNoEvents"),
+    getTranslations("dashboard.activity"),
+    getTranslations("dashboard.duration"),
+    getTranslations("dailyTimeline.tasks"),
+  ]);
 
   // Access check happens here, in the page itself — role comes from the
   // JWT claim (no DB round trip). Not a manager -> home, no error shown
@@ -61,12 +66,12 @@ export default async function DashboardPage({
 
       {error && (
         <div className="rounded-2xl border border-status-outdated/40 bg-status-outdated/10 p-4 text-[13px] text-primary-dark">
-          Ma&apos;lumotlarni yuklab bo&apos;lmadi: {error}
+          {tDash("loadError", { error })}
         </div>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">Operatorlar bo&apos;yicha faollik</h2>
+        <h2 className="text-[15px] font-bold text-primary-dark">{tDash("perOperator")}</h2>
         {operators.length === 0 ? (
           <EmptyState
             variant="inline"
@@ -83,16 +88,16 @@ export default async function DashboardPage({
                   <p className="truncate text-[14px] font-semibold text-primary-dark">{op.email}</p>
                   <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-accent">
                     <Clock size={14} />
-                    {formatDurationUz(op.activeMs)}
+                    {formatDuration(op.activeMs, tDuration)}
                   </span>
                 </div>
 
                 <div>
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-                    Eng ko&apos;p ko&apos;rilgan
+                    {tDash("mostViewed")}
                   </p>
                   {op.topViewed.length === 0 ? (
-                    <p className="text-[13px] text-text-secondary">Ma&apos;lumot yo&apos;q</p>
+                    <p className="text-[13px] text-text-secondary">{tDash("noData")}</p>
                   ) : (
                     <ul className="space-y-1">
                       {op.topViewed.map((v, i) => (
@@ -116,7 +121,7 @@ export default async function DashboardPage({
                 <div className="flex items-center gap-5 border-t border-border pt-3 text-[13px]">
                   <span className="flex items-center gap-1.5 text-text-secondary">
                     <Copy size={13} />
-                    {op.copyCount} nusxalash
+                    {tDash("copies", { count: op.copyCount })}
                   </span>
                   <span className="flex items-center gap-1.5 text-text-secondary">
                     <ListChecks size={13} />
@@ -132,25 +137,25 @@ export default async function DashboardPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">Soatlik reja vs fakt</h2>
+        <h2 className="text-[15px] font-bold text-primary-dark">{tDash("hourlyHeading")}</h2>
         <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
           <table className="w-full min-w-[480px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border bg-surface-alt/60">
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Soat</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Reja</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">Fakt (hodisalar soni)</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("hour")}</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("plan")}</th>
+                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("actual")}</th>
               </tr>
             </thead>
             <tbody>
               {PLANNED_HOURS.map((block) => {
                 const actual = hourlyActual.slice(block.startHour, block.endHour).reduce((a, b) => a + b, 0);
                 return (
-                  <tr key={`${block.startHour}-${block.task}`} className="border-b border-border last:border-0">
+                  <tr key={block.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 text-text-secondary">
                       {block.startHour}:00–{block.endHour}:00
                     </td>
-                    <td className="px-4 py-2.5 text-primary-dark">{block.task}</td>
+                    <td className="px-4 py-2.5 text-primary-dark">{tPlan(String(block.id))}</td>
                     <td className="px-4 py-2.5">
                       <span
                         className={`inline-flex min-w-[32px] justify-center rounded-full px-2 py-0.5 text-[12px] font-semibold ${
@@ -169,7 +174,7 @@ export default async function DashboardPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">Nol-natijali qidiruvlar</h2>
+        <h2 className="text-[15px] font-bold text-primary-dark">{tDash("zeroHeading")}</h2>
         {zeroResultSearches.length === 0 ? (
           <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
@@ -177,8 +182,8 @@ export default async function DashboardPage({
             <table className="w-full min-w-[360px] text-left text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-alt/60">
-                  <th className="px-4 py-2.5 font-semibold text-primary-dark">So&apos;rov</th>
-                  <th className="px-4 py-2.5 font-semibold text-primary-dark">Necha marta</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("query")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("times")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,7 +200,7 @@ export default async function DashboardPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">Web Vitals (p50 / p75)</h2>
+        <h2 className="text-[15px] font-bold text-primary-dark">{tDash("webVitals")}</h2>
         {webVitals.length === 0 ? (
           <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
@@ -203,10 +208,10 @@ export default async function DashboardPage({
             <table className="w-full min-w-[360px] text-left text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-alt/60">
-                  <th className="px-4 py-2.5 font-semibold text-primary-dark">Metrika</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("metric")}</th>
                   <th className="px-4 py-2.5 font-semibold text-primary-dark">p50</th>
                   <th className="px-4 py-2.5 font-semibold text-primary-dark">p75</th>
-                  <th className="px-4 py-2.5 font-semibold text-primary-dark">Namunalar</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("samples")}</th>
                 </tr>
               </thead>
               <tbody>

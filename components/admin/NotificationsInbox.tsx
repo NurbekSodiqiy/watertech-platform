@@ -2,16 +2,16 @@
 
 import { memo, useCallback, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertCircle, AlertTriangle, Check, CheckCheck, ExternalLink, Info, type LucideIcon } from "lucide-react";
 import { Link, useRouter } from "@/i18n/routing";
 import { EmptyState } from "@/components/EmptyState";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
-import { formatRelativeUz } from "@/lib/admin/format";
+import { formatRelative } from "@/lib/admin/format";
 import { markAllRead, markRead } from "@/lib/notifications/actions";
-import type { NotificationKind, NotificationRow, NotificationSeverity } from "@/lib/notifications/types";
+import type { NotificationRow, NotificationSeverity } from "@/lib/notifications/types";
 
 const SEVERITY_ICON: Record<NotificationSeverity, LucideIcon> = {
   error: AlertTriangle,
@@ -26,13 +26,6 @@ const SEVERITY_BADGE_CLASSES: Record<NotificationSeverity, string> = {
   info: "bg-primary/10 text-primary",
 };
 
-const KIND_LABEL: Record<NotificationKind, string> = {
-  gate_blocked: "Nashr qorovuli",
-  stale_content: "Eskirgan kontent",
-  missing_ru: "Ruscha tarjima",
-  scan_summary: "Kunlik tekshiruv",
-};
-
 interface NotificationItemProps {
   row: NotificationRow;
   mounted: boolean;
@@ -41,6 +34,9 @@ interface NotificationItemProps {
 }
 
 const NotificationItem = memo(function NotificationItem({ row, mounted, pending, onMarkRead }: NotificationItemProps) {
+  const t = useTranslations("admin.notifications");
+  const tRel = useTranslations("admin.relativeTime");
+  const locale = useLocale();
   const Icon = SEVERITY_ICON[row.severity];
   const unread = row.read_at === null;
 
@@ -57,14 +53,14 @@ const NotificationItem = memo(function NotificationItem({ row, mounted, pending,
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
-          {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="O'qilmagan" />}
+          {unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label={t("unread")} />}
           <p className="min-w-0 break-words text-[13.5px] font-semibold text-primary-dark">{row.title}</p>
         </div>
         {row.body && (
           <p className="mt-1 whitespace-pre-line break-words text-[13px] text-text-secondary">{row.body}</p>
         )}
         <p className="mt-1.5 text-[12px] text-text-secondary">
-          {mounted ? formatRelativeUz(row.created_at) : "—"} · {KIND_LABEL[row.kind]}
+          {mounted ? formatRelative(row.created_at, tRel, locale) : "—"} · {t(`kinds.${row.kind}`)}
           {row.actor ? ` · ${row.actor}` : ""}
         </p>
         {(row.href || unread) && (
@@ -75,7 +71,7 @@ const NotificationItem = memo(function NotificationItem({ row, mounted, pending,
                 className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12.5px] font-medium text-surface transition-colors hover:bg-accent-hover"
               >
                 <ExternalLink size={13} />
-                Ochish
+                {t("open")}
               </Link>
             )}
             {unread && (
@@ -86,7 +82,7 @@ const NotificationItem = memo(function NotificationItem({ row, mounted, pending,
                 className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-primary-dark transition-colors hover:bg-surface-alt disabled:opacity-50"
               >
                 <Check size={13} />
-                O&apos;qildi
+                {t("markRead")}
               </button>
             )}
           </div>
@@ -107,6 +103,7 @@ export function NotificationsInbox({ rows }: { rows: NotificationRow[] }) {
   const online = useOnline();
   const { toast } = useToast();
   const tToast = useTranslations("toast");
+  const tN = useTranslations("admin.notifications");
   const tEmpty = useTranslations("emptyState.notificationsNone");
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<number | "all" | null>(null);
@@ -161,7 +158,7 @@ export function NotificationsInbox({ rows }: { rows: NotificationRow[] }) {
               !unreadOnly ? "bg-surface text-primary-dark shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            Barchasi ({rows.length})
+            {tN("all", { count: rows.length })}
           </button>
           <button
             type="button"
@@ -171,18 +168,18 @@ export function NotificationsInbox({ rows }: { rows: NotificationRow[] }) {
               unreadOnly ? "bg-surface text-primary-dark shadow-softer" : "text-text-secondary hover:text-primary-dark"
             }`}
           >
-            O&apos;qilmaganlar ({unreadCount})
+            {tN("unreadOnly", { count: unreadCount })}
           </button>
         </div>
 
         <button
           type="button"
-          onClick={() => runAction("all", markAllRead, "Barchasi o'qildi deb belgilandi")}
+          onClick={() => runAction("all", markAllRead, tN("markedAll"))}
           disabled={unreadCount === 0 || (pending && pendingId === "all")}
           className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt disabled:opacity-50"
         >
           <CheckCheck size={14} />
-          Barchasini o&apos;qildi
+          {tN("markAll")}
         </button>
       </div>
 

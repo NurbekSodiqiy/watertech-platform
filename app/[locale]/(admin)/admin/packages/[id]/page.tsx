@@ -1,45 +1,50 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import type { Metadata } from "next";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getPackageRow, listPackageGroupRows } from "@/lib/admin/queries";
 import { packageFormSchema, type PackageFormInput } from "@/lib/admin/schemas";
 import { upsertPackage } from "@/lib/admin/actions/packages";
-import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
+import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
 
-export const metadata = { title: "Kontent boshqaruvi — Paket tahrirlash" };
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "pages.admin.packages" });
+  return { title: t("editTitle") };
+}
 
 function buildFields(
   isNew: boolean,
-  groupOptions: { value: string; label: string }[]
+  groupOptions: { value: string; label: string }[],
+  t: AdminTranslate, tShared: AdminTranslate
 ): EntityFieldDef<PackageFormInput>[] {
   return [
-    { kind: "text", name: "id", label: "ID (slug)", placeholder: "masalan: paket-standart", readOnly: !isNew },
-    { kind: "select", name: "groupId", label: "Guruh", options: groupOptions },
-    { kind: "text", name: "name", label: "Nomi" },
-    { kind: "checkbox", name: "isFeatured", label: "Tavsiya etilgan" },
-    { kind: "text", name: "orderVolume", label: "Buyurtma hajmi" },
-    { kind: "text", name: "paymentTerms", label: "To'lov shartlari" },
-    { kind: "text", name: "estimatedDiscount", label: "Taxminiy chegirma (matn)", placeholder: "masalan: ~15% gacha" },
-    { kind: "number", name: "discountPct", label: "Chegirma (%, raqam)", step: "0.01" },
-    { kind: "number", name: "advancePct", label: "Avans (%, ixtiyoriy)", step: "0.01" },
-    { kind: "text", name: "logistics", label: "Logistika" },
-    { kind: "text", name: "deliveryTime", label: "Yetkazib berish muddati" },
+    { kind: "text", name: "id", label: tShared("idLabel"), placeholder: t("fields.idPlaceholder"), readOnly: !isNew },
+    { kind: "select", name: "groupId", label: t("fields.group"), options: groupOptions },
+    { kind: "text", name: "name", label: tShared("nameLabel") },
+    { kind: "checkbox", name: "isFeatured", label: t("fields.isFeatured") },
+    { kind: "text", name: "orderVolume", label: t("fields.orderVolume") },
+    { kind: "text", name: "paymentTerms", label: t("fields.paymentTerms") },
+    { kind: "text", name: "estimatedDiscount", label: t("fields.estimatedDiscount"), placeholder: t("fields.estimatedDiscountPlaceholder") },
+    { kind: "number", name: "discountPct", label: t("fields.discountPct"), step: "0.01" },
+    { kind: "number", name: "advancePct", label: t("fields.advancePct"), step: "0.01" },
+    { kind: "text", name: "logistics", label: t("fields.logistics") },
+    { kind: "text", name: "deliveryTime", label: t("fields.deliveryTime") },
     {
       kind: "select",
       name: "status",
-      label: "Holat",
+      label: tShared("statusLabel"),
       options: [
-        { value: "draft", label: "Qoralama" },
-        { value: "published", label: "Nashr etilgan" },
+        { value: "draft", label: tShared("statusDraft") },
+        { value: "published", label: tShared("statusPublished") },
       ],
     },
-    { kind: "text", name: "nameRu", label: "Nomi", group: "ru" },
-    { kind: "text", name: "orderVolumeRu", label: "Buyurtma hajmi", group: "ru" },
-    { kind: "text", name: "paymentTermsRu", label: "To'lov shartlari", group: "ru" },
-    { kind: "text", name: "estimatedDiscountRu", label: "Taxminiy chegirma (matn)", group: "ru" },
-    { kind: "text", name: "logisticsRu", label: "Logistika", group: "ru" },
-    { kind: "text", name: "deliveryTimeRu", label: "Yetkazib berish muddati", group: "ru" },
+    { kind: "text", name: "nameRu", label: tShared("nameLabel"), group: "ru" },
+    { kind: "text", name: "orderVolumeRu", label: t("fields.orderVolume"), group: "ru" },
+    { kind: "text", name: "paymentTermsRu", label: t("fields.paymentTerms"), group: "ru" },
+    { kind: "text", name: "estimatedDiscountRu", label: t("fields.estimatedDiscount"), group: "ru" },
+    { kind: "text", name: "logisticsRu", label: t("fields.logistics"), group: "ru" },
+    { kind: "text", name: "deliveryTimeRu", label: t("fields.deliveryTime"), group: "ru" },
     { kind: "hidden", name: "version" },
   ];
 }
@@ -51,6 +56,10 @@ export default async function AdminPackageEditPage({
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
+  const [t, tShared] = await Promise.all([
+    getTranslations("pages.admin.packages"),
+    getTranslations("pages.admin.shared"),
+  ]);
 
   const isNew = params.id === "new";
   const [row, groups] = await Promise.all([
@@ -107,21 +116,21 @@ export default async function AdminPackageEditPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? "Yangi paket" : "Paketni tahrirlash"}</h1>
+        <h1 className="text-[24px] font-bold text-primary-dark">{isNew ? t("newTitle") : t("editTitle")}</h1>
         {!isNew && row && (
           <Link
             href={`/admin/versions/content_packages/${row.id}`}
             className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline"
           >
             <History size={13} />
-            Versiyalar tarixi
+            {tShared("versions")}
           </Link>
         )}
       </div>
       <EntityForm
         schema={packageFormSchema}
         defaultValues={defaultValues}
-        fields={buildFields(isNew, groupOptions)}
+        fields={buildFields(isNew, groupOptions, t, tShared)}
         onSubmit={upsertPackage}
         backHref="/admin/packages"
       />

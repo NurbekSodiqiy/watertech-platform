@@ -1,10 +1,13 @@
-import { unstable_setRequestLocale } from "next-intl/server";
+import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { DocPageTemplate } from "@/components/DocPageTemplate";
 import { findNode } from "@/lib/site-config";
 import { CheckCircle2, FileSpreadsheet } from "lucide-react";
 
-export default function GoogleSheetsPage({ params: { locale } }: { params: { locale: string } }) {
+const TOPICS = ["orders", "formulas", "filters", "reports"] as const;
+
+export default async function GoogleSheetsPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
+  const t = await getTranslations("pages.tools.googleSheets");
 
   const path = "/tools/google-sheets";
   const node = findNode(path);
@@ -12,7 +15,7 @@ export default function GoogleSheetsPage({ params: { locale } }: { params: { loc
   return (
     <DocPageTemplate
       path={path}
-      title="Google Sheets bilan ishlash bo'yicha video qo'llanma"
+      title={t("title")}
       description={node?.description}
     >
       <div className="space-y-6">
@@ -22,7 +25,7 @@ export default function GoogleSheetsPage({ params: { locale } }: { params: { loc
           <div className="relative aspect-video w-full h-full rounded-xl overflow-hidden bg-surface-alt">
             <iframe
               src="https://www.youtube-nocookie.com/embed/RSpQXvnXe8E?rel=0"
-              title="Google Sheets qo'llanmasi"
+              title={t("videoTitle")}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="absolute top-0 left-0 w-full h-full border-0"
@@ -36,18 +39,13 @@ export default function GoogleSheetsPage({ params: { locale } }: { params: { loc
           {/* Mavzular ro'yxati */}
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-soft space-y-4">
             <h3 className="text-[17px] font-bold text-primary-dark border-b border-border pb-3">
-              Darsdagi asosiy mavzular
+              {t("topicsHeading")}
             </h3>
             <ul className="space-y-3">
-              {[
-                "Buyurtmalar bilan ishlash va ma'lumotlarni kiritish",
-                "Asosiy formulalar va ulardan foydalanish",
-                "Filtrlar va saralash funksiyalari",
-                "Hisobotlarni shakllantirish qoidalari"
-              ].map((topic, i) => (
-                <li key={i} className="flex items-start gap-2.5">
+              {TOPICS.map((topic) => (
+                <li key={topic} className="flex items-start gap-2.5">
                   <CheckCircle2 size={18} className="text-primary mt-0.5 shrink-0" />
-                  <span className="text-[14.5px] text-text-secondary leading-snug">{topic}</span>
+                  <span className="text-[14.5px] text-text-secondary leading-snug">{t(`topics.${topic}`)}</span>
                 </li>
               ))}
             </ul>
@@ -59,14 +57,11 @@ export default function GoogleSheetsPage({ params: { locale } }: { params: { loc
               <FileSpreadsheet size={32} />
             </div>
             <div>
-              <h3 className="text-[17px] font-bold text-primary-dark">Google Sheets Shablon</h3>
+              <h3 className="text-[17px] font-bold text-primary-dark">{t("templateHeading")}</h3>
               <p className="text-[13.5px] text-text-secondary mt-1.5 max-w-[260px] mx-auto leading-relaxed">
-                Darsda ko&apos;rsatilgan ishchi shablondan nusxa oling va o&apos;z ishingizda foydalaning.
+                {t("templateText")}
               </p>
             </div>
-            {/* TODO: "Shablonni ochish" tugmasi haqiqiy shablon havolasi
-                qo'shilganda qaytariladi — avvalgi versiyada href="#" bo'lib,
-                hech qanday manzilga ulanmagan edi. */}
           </div>
 
         </div>
