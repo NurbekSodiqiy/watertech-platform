@@ -1,6 +1,7 @@
 import Fuse from "fuse.js";
 import type { ContentBundle } from "@/lib/content/loader";
 import type { Sop } from "@/lib/content/types";
+import { findStageFor } from "@/lib/search/find-stage";
 import { normalizeSearchText } from "@/lib/search/normalize";
 
 export type SearchResultType = "objection" | "script_stage" | "faq" | "competitor" | "package" | "sop";
@@ -31,14 +32,6 @@ export interface SearchDoc {
   keywords: string;
   searchTitle: string;
   body: string;
-}
-
-export function findStageFor(scripts: ContentBundle["scripts"], objectionId: string): { scriptId: string; stageId: string } | null {
-  for (const script of scripts) {
-    const stage = script.stages.find((s) => s.objectionIds.includes(objectionId));
-    if (stage) return { scriptId: script.id, stageId: stage.id };
-  }
-  return null;
 }
 
 /** Builds the flat, Fuse-ready document set from a content bundle. Pure —

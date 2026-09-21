@@ -9,6 +9,7 @@ import { WebVitalsReporter } from "@/components/providers/WebVitalsReporter";
 import { Toaster } from "@/components/ui/Toaster";
 import { MotionProvider } from "@/components/motion/MotionProvider";
 import { routing } from "@/i18n/routing";
+import { ROOT_CLIENT_NAMESPACES, pickMessages } from "@/lib/i18n/client-messages";
 import "../globals.css";
 
 const inter = localFont({
@@ -40,7 +41,9 @@ export default async function LocaleLayout({
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) notFound();
 
   unstable_setRequestLocale(locale);
-  const messages = await getMessages();
+  // Only what client components read — see lib/i18n/client-messages.ts. Server
+  // Components get their copy from getTranslations(), not from this provider.
+  const messages = pickMessages(await getMessages(), ROOT_CLIENT_NAMESPACES);
 
   return (
     <html lang={locale} suppressHydrationWarning>

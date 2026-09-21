@@ -12,7 +12,7 @@ export function CertificateGrid({ certificates }: { certificates: CertificateIte
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {certificates.map((cert) => (
+      {certificates.map((cert, index) => (
         <div
           key={cert.id}
           className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-soft transition-all hover:border-primary/40 hover:shadow-elevated"
@@ -28,6 +28,8 @@ export function CertificateGrid({ certificates }: { certificates: CertificateIte
                 alt={cert.title}
                 fill
                 sizes="(min-width: 768px) 50vw, 100vw"
+                // The first card's image is the LCP element; the rest stay lazy.
+                priority={index === 0}
                 className="object-contain transition-transform duration-300 group-hover:scale-105"
               />
             </div>

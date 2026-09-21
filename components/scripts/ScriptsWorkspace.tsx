@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { m, useReducedMotion } from "framer-motion";
 import { Compass } from "lucide-react";
@@ -12,7 +13,6 @@ import { objectionToTurns } from "@/components/ScriptTurns";
 import { ClientNameProvider } from "@/components/ClientNameContext";
 import { ClientNameInput } from "@/components/ClientNameInput";
 import { ObjectionChipRow } from "@/components/ObjectionChipRow";
-import { CallModeOverlay } from "@/components/CallModeOverlay";
 import { FaqTab } from "@/components/FaqTab";
 import { PackagesTab } from "@/components/PackagesTab";
 import { CompetitorsTab } from "@/components/CompetitorsTab";
@@ -25,6 +25,13 @@ import { useUserState } from "@/hooks/useUserState";
 import { useRecordRecent } from "@/hooks/useRecordRecent";
 import { scriptsPositionKey } from "@/lib/user-state/keys";
 import { noTransition, springs } from "@/lib/motion/tokens";
+import { scheduleIdle } from "@/lib/idle";
+
+// Only mounted once Call Mode is switched on; it is also what pulls the fuse.js search
+// index into this route, so it stays out of the first-load chunk (CLAUDE.md #3).
+const CallModeOverlay = dynamic(() => import("@/components/CallModeOverlay").then((m) => m.CallModeOverlay), {
+  ssr: false,
+});
 
 /** Sliding active tab, same pattern as Sidebar's ActivePill. */
 function TabPill() {
@@ -166,6 +173,13 @@ function ScriptsPageContentBody() {
     }
     track(callModeOn ? "call_mode_on" : "call_mode_off");
   }, [callModeOn, track]);
+
+  // Warms the chunk once the page is idle so switching Call Mode on mid-call is instant.
+  useEffect(() => {
+    return scheduleIdle(() => {
+      void import("@/components/CallModeOverlay");
+    });
+  }, []);
 
   // Last opened script/stage, now per user rather than per browser: an
   // operator who starts on the office desktop and continues on a laptop lands

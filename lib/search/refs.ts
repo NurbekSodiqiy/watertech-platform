@@ -1,6 +1,6 @@
 import type { ContentBundle } from "@/lib/content/loader";
 import type { Product } from "@/lib/content/products";
-import { findStageFor } from "@/lib/search";
+import { findStageFor } from "@/lib/search/find-stage";
 import type { PinKind, PinRef } from "@/lib/user-state/keys";
 
 /** What a stored PinRef resolves to: a title to show and a locale-less

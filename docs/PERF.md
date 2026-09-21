@@ -1,0 +1,197 @@
+# Performance notes
+
+What operator pages ship to the browser, how it is measured, and the budgets. Numbers come from a
+production build only (`npm run build`, served with `npm run start`), never from `npm run dev`.
+
+## How to measure
+
+```
+npm run build      # route table: Page JS / First Load JS (gzip)
+npm run analyze    # bundle analyzer; on Windows: set ANALYZE=true&& next build
+                   # reports land in .next/analyze/{client,nodejs,edge}.html
+```
+
+**Reading the route table.** `next build` builds each row from the page entry plus the shared chunks. It does
+**not** include the chunks that only the `(app)` layout pulls in (AppShell, SessionProvider and what they import).
+A second, measured figure is therefore recorded below: the gzip size of every `<script src>` in the prerendered
+HTML of a route (`.next/server/app/uz/**/*.html`, `polyfills` excluded), plus the HTML size itself. That is what a
+browser really downloads before the page is interactive. The budgets in CLAUDE.md §4 use the table figure; the
+measured figure is tracked so the gap stays visible.
+
+## Baseline 2026-09-21
+
+Commit `88d4272`, Next.js 14.2.35. Shared by all routes: **89.2 kB**.
+
+| Route | Area | Page JS | First Load JS |
+|---|---|---:|---:|
+| `/` | operator | 7.81 kB | 237 kB |
+| `/admin` | manager | 186 B | 100 kB |
+| `/admin/changelog` | manager | 160 B | 140 kB |
+| `/admin/changelog/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/competitors` | manager | 160 B | 140 kB |
+| `/admin/competitors/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/contacts` | manager | 160 B | 140 kB |
+| `/admin/contacts/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/faq` | manager | 160 B | 140 kB |
+| `/admin/faq/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/notifications` | manager | 6.13 kB | 127 kB |
+| `/admin/objections` | manager | 160 B | 140 kB |
+| `/admin/objections/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/packages` | manager | 160 B | 140 kB |
+| `/admin/packages/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/packages/groups` | manager | 159 B | 140 kB |
+| `/admin/packages/groups/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/products` | manager | 160 B | 140 kB |
+| `/admin/products/[id]` | manager | 2.05 kB | 149 kB |
+| `/admin/scripts` | manager | 160 B | 140 kB |
+| `/admin/scripts/[id]` | manager | 9.03 kB | 172 kB |
+| `/admin/sops` | manager | 160 B | 140 kB |
+| `/admin/sops/[id]` | manager | 4.91 kB | 165 kB |
+| `/admin/versions/[table]/[id]` | manager | 5.14 kB | 126 kB |
+| `/changelog` | operator | 5.86 kB | 212 kB |
+| `/company` | operator | 155 B | 134 kB |
+| `/company/about` | operator | 596 B | 163 kB |
+| `/company/contacts` | operator | 160 B | 139 kB |
+| `/company/factory-tour` | operator | 1.29 kB | 139 kB |
+| `/company/internal-rules` | operator | 1.29 kB | 139 kB |
+| `/company/mission-values` | operator | 234 B | 163 kB |
+| `/company/onboarding` | operator | 10.6 kB | 248 kB |
+| `/dashboard` | manager | 4.19 kB | 117 kB |
+| `/dashboard/content` | manager | 5.89 kB | 137 kB |
+| `/dashboard/quality` | manager | 4.19 kB | 117 kB |
+| `/faq` | operator | 2.96 kB | 139 kB |
+| `/login` | public | 2.46 kB | 200 kB |
+| `/logistics` | operator | 155 B | 134 kB |
+| `/logistics/returns-policy` | operator | 924 B | 125 kB |
+| `/logistics/sample-shipping` | operator | 924 B | 125 kB |
+| `/offline` | public | 3.67 kB | 109 kB |
+| `/products` | operator | 10.3 kB | 231 kB |
+| `/products/comparisons` | operator | 4.02 kB | 128 kB |
+| `/products/roadmap` | operator | 924 B | 125 kB |
+| `/products/technical-docs` | operator | 3.67 kB | 143 kB |
+| `/sales-process` | operator | 156 B | 134 kB |
+| `/sales-process/battle-cards` | operator | 160 B | 139 kB |
+| `/sales-process/battle-cards/[slug]` | operator | 5.47 kB | 223 kB |
+| `/sales-process/objections` | operator | 160 B | 139 kB |
+| `/sales-process/scripts` | operator | 15.2 kB | 248 kB |
+| `/sales-process/scripts/[slug]` | operator | 7.61 kB | 142 kB |
+| `/standards` | operator | 156 B | 134 kB |
+| `/standards/career-path` | operator | 924 B | 125 kB |
+| `/standards/communication-standards` | operator | 924 B | 125 kB |
+| `/standards/kpi-system` | operator | 486 B | 140 kB |
+| `/standards/motivation-bonus` | operator | 486 B | 140 kB |
+| `/tools` | operator | 156 B | 134 kB |
+| `/tools/amocrm` | operator | 154 B | 134 kB |
+| `/tools/amocrm/[slug]` | operator | 924 B | 125 kB |
+| `/tools/calculator` | operator | 5.71 kB | 126 kB |
+| `/tools/communication-standards` | operator | 924 B | 125 kB |
+| `/tools/google-sheets` | operator | 924 B | 125 kB |
+| `/tools/repeat-sales-funnel` | operator | 924 B | 125 kB |
+| `/tools/sales-funnel` | operator | 924 B | 125 kB |
+
+### Five largest client modules (bundle analyzer, parsed size)
+
+| # | Module | Parsed | Gzip | Where it loads |
+|---|---|---:|---:|---|
+| 1 | `react-dom` (Next's compiled copy) | 168.7 kB | 52.3 kB | every route (shared chunk) |
+| 2 | `react-dom` in `framework-*.js` | 125.7 kB | 40.1 kB | Pages Router framework chunk, referenced by no App Router page |
+| 3 | `@sentry-internal/replay` | 119.7 kB | 37.1 kB | separate async chunk, referenced by no page HTML |
+| 4 | `@supabase/auth-js` `GoTrueClient` | 67.1 kB | 14.0 kB | **every operator page** (see Open items) |
+| 5 | `zod` v3 | 49.1 kB | 10.8 kB | **every operator page** (via `lib/env` and user-state schemas) |
+
+Next in line: `public/sw.js` 53.3 kB (service worker, not page JS), `react-hook-form` 37.9 kB (admin only),
+`@supabase/storage-js` + `postgrest-js` 29.3 + 28.1 kB (same chunk as `createBrowserClient`, 53 kB gzip),
+`fuse.js` 25.5 kB. `framer-motion` totals 160 kB parsed across chunks, of which the `domMax` feature bundle is async.
+
+### Measured payload (scripts in the HTML, gzip; HTML uncompressed)
+
+49 prerendered `uz` pages excluding `/offline`: scripts **248 / 252 / 281 kB** (min / median / max),
+HTML **90 / 110 / 160 kB**. Every operator page, including the ones the table shows at 125-139 kB, loads the
+Supabase browser client chunks (`5283`, `44530001`, `1351`), because the `(app)` layout's `SessionProvider`
+imports it.
+
+## Changes (S16)
+
+**Client messages scoped per area.** `app/[locale]/layout.tsx` used to pass the whole `messages` object to
+`NextIntlClientProvider`, so every page serialized every namespace. It now passes only what client components read
+(`ROOT_CLIENT_NAMESPACES` in `lib/i18n/client-messages.ts`; the long-form `pages.*` copy that only Server
+Components render stays out: 17.5 of 47.4 kB of `uz.json` remain). `(admin)/admin/layout.tsx` and
+`dashboard/layout.tsx` nest a second provider with the root list plus their own (`admin` + `pages.admin`;
+`dashboard` + `admin.gate`). A nested `IntlProvider` replaces its parent's messages instead of merging, so the
+root list is repeated there. `tests/unit/i18n/client-messages.test.ts` walks the imports from every
+`"use client"` file and fails when a `useTranslations` namespace is missing from the list for that area (it
+caught `admin.gate` for the dashboard's `QuickActionButton` while this was written).
+
+**Lazy Call Mode.** `ScriptsWorkspace` loaded `CallModeOverlay` statically, which dragged `lib/search` and
+`fuse.js` into the scripts route. It is now `next/dynamic` (`ssr: false`) and warmed on idle, like
+`CommandPalette` in `AppShell`.
+
+**fuse.js off the home page.** `lib/search/refs.ts` imported `findStageFor` from `lib/search` (which imports
+`fuse.js`). The 7-line function moved to `lib/search/find-stage.ts`; `lib/search/index.ts` imports it from there.
+
+**Images.** The first certificate card image is `priority` (LCP candidate of `/products/technical-docs`).
+
+### What was checked and left alone
+
+| Item | Finding |
+|---|---|
+| framer-motion features | `MotionProvider` uses `LazyMotion strict` with a dynamic `import("@/lib/motion/features")`; no `motion.*` anywhere, all `m.*`. The `domMax` chunk (~50 kB raw) is referenced by 0 HTML files. |
+| `components/story/*` | Scene code (`PipelineStory`, `PipelineChapter`, `geometry`) sits in one chunk referenced only by `/company/about` and `/company/mission-values`. `/company/onboarding` imports only `fittings.tsx` (1.5 kB of SVG glyphs). |
+| `lucide-react` | Only named per-icon imports (several multi-line); no namespace import, no `icons` map. |
+| `CommandPalette`, `CopilotPanel`, `ShortcutsHelp` | already `next/dynamic`, `ssr: false`. |
+| Certificate lightbox | Static import from a Server Component page; 4 kB parsed on a route at 143 kB. `ssr: false` is not allowed in a Server Component, so a client wrapper would be needed for ~1.5 kB gzip. Left. |
+| `MiniCalculatorButton` | 3.9 kB parsed in the `(app)` layout chunk, inside `TopBar` (a structural file this task does not name). Left. |
+| `BatchCalculator`, admin editors | Primary content of their routes, not below the fold: lazy loading would only add a waterfall. Admin routes are at 100-172 kB. |
+| `next/image` | Every `<Image>` (`ProductsCatalog` x2, `CertificateGrid`, `CertificateGallery`) has `sizes`. `priority` was on none; now only on the first certificate. Product grid images are not priority. |
+
+## After 2026-09-21
+
+Only rows whose First Load JS changed (every other route is identical to the baseline table):
+
+| Route | Baseline | After |
+|---|---:|---:|
+| `/` | 237 kB | 226 kB |
+| `/company/factory-tour` | 139 kB | 138 kB |
+| `/company/internal-rules` | 139 kB | 138 kB |
+| `/sales-process/scripts` | 248 kB | 235 kB |
+
+Measured payload, same 49 pages: scripts **249 / 252 / 281 kB**, HTML **58 / 78 / 128 kB**. Every page's HTML is
+**~32 kB smaller (uncompressed)** from message scoping; home goes 269 to 259 kB and scripts 280 to 265 kB of script
+gzip from the fuse and Call Mode changes. Wire size depends on compression and was not measured.
+
+## Budgets
+
+| Budget | Limit |
+|---|---|
+| Operator route First Load JS (`next build` table) | <= 180 kB |
+| Client message payload | only allow-listed namespaces (`lib/i18n/client-messages.ts`), enforced by vitest |
+| Modules mounted only after an interaction | `next/dynamic` when >= ~4 kB parsed or when they pull a dependency into first load |
+
+### Routes over 180 kB after S16 (6 of 36 operator routes; baseline: 6)
+
+| Route | Baseline | After |
+|---|---:|---:|
+| `/company/onboarding` | 248 kB | 248 kB |
+| `/sales-process/scripts` | 248 kB | 235 kB |
+| `/products` | 231 kB | 231 kB |
+| `/` | 237 kB | 226 kB |
+| `/sales-process/battle-cards/[slug]` | 223 kB | 223 kB |
+| `/changelog` | 212 kB | 212 kB |
+
+**Why.** All six import the per-user state store (`useUserState`: pins, favourites, onboarding progress, scripts
+position, changelog read receipts), and `lib/user-state/store.ts` imports `lib/supabase/client` statically. That
+brings the Supabase browser client into the page's first-load JS: `auth-js` 14.0 kB + `supabase-js` with
+storage/postgrest/realtime 53.2 kB + `zod` 12.7 kB, all gzip, about 80 kB. `/company/onboarding` (248 kB) and
+`/sales-process/scripts` (235 kB) add their own page code on top. `/login` (200 kB, public) needs the client to
+start OAuth.
+
+## Open items
+
+1. **The Supabase browser client is imported statically in three places**: `components/providers/SessionProvider.tsx`,
+   `lib/user-state/store.ts` and `lib/auth/sign-out.ts`. Each only uses it inside an effect or an async function, so a
+   dynamic `import("@/lib/supabase/client")` would take about 67 kB gzip (auth-js + supabase-js; zod stays if anything
+   else uses it) out of the scripts every operator page needs before it can hydrate. It is the largest remaining item and
+   the only one that would bring the six routes above under budget. Not done in S16: it changes when the session resolves
+   in an auth-related provider, which is outside this task's steps.
+2. `MiniCalculatorButton` and the certificate lightbox could be split (~1.5 kB gzip each) if a later task names `TopBar`.
+3. LCP was not measured in a browser (operator routes need a Google OAuth session); the `priority` choice is by layout.

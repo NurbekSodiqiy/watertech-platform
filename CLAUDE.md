@@ -165,6 +165,25 @@ Hydration safety (hard rules):
 - Keep operator pages statically prerenderable (no `dynamic = "force-dynamic"`, no `cookies()` in pages).
   Data that must be live goes through cached loaders (`unstable_cache` + tags) or client fetch.
 
+### Performance budgets
+
+Measured on a production build only (`npm run build`; `npm run analyze` for the bundle report — on Windows
+`set ANALYZE=true&& next build`). Baselines, the measuring method and the exception list live in `docs/PERF.md`.
+
+- **Operator routes: First Load JS ≤ 180 kB** (the `next build` route table). A route above it needs a written
+  reason in `docs/PERF.md`; do not raise the number to make a route pass.
+- **Client messages:** layouts give `NextIntlClientProvider` only the namespaces in `lib/i18n/client-messages.ts`
+  (`pickMessages`). A new `useTranslations("x")` in a client component means adding `x` to that list — the vitest
+  test in `tests/unit/i18n/client-messages.test.ts` fails otherwise. Never pass the full `getMessages()` result.
+- **Lazy by default:** anything ≥ ~4 kB parsed that is only mounted after an interaction (dialogs, overlays,
+  calculators, editors that are not the page's main content) loads via `next/dynamic` and, where the user will
+  need it quickly, warms on idle with `scheduleIdle` (see `AppShell`, `ScriptsWorkspace`).
+- **Keep heavy libraries out of shared paths:** a client module reachable from a layout or a page's first render must
+  not statically import `fuse.js` (`lib/search/index.ts`) or `components/story/*`; import the small pure helper
+  (`lib/search/find-stage.ts`, `lib/search/refs.ts`) instead. `lucide-react`: named per-icon imports only.
+- Re-run the build and compare the route table with `docs/PERF.md` before merging a change that adds a dependency
+  or a client-side import to a layout.
+
 ## 5. TypeScript rules
 
 - `strict` stays on. No `any`, no `as unknown as`, no `!` non-null assertions except on
