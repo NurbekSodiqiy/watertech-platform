@@ -65,12 +65,58 @@ placeholder URL is no longer sufficient.
   the same kind, then posts one summary notification.
 - Both need migration `supabase/migrations/0007_notifications_and_gate.sql` applied.
 
-The endpoint requires `Authorization: Bearer $CRON_SECRET` (set `CRON_SECRET`, at least 16 characters, in
-the deployment env) and answers `401` otherwise. On Vercel, `vercel.json` schedules it daily at 03:00 UTC
-and Vercel Cron sends that header automatically. **On any other host**, call it from whatever scheduler
-you have (system cron, GitHub Actions `schedule`, a monitoring pinger) with the same header:
+The endpoint requires `Authorization: Bearer $CRON_SECRET` (set `CRON_SECRET`, at least 32 characters, in
+the deployment env — generate one with `openssl rand -base64 48`) and answers `401` otherwise. On Vercel,
+`vercel.json` schedules it daily at 03:00 UTC and Vercel Cron sends that header automatically. **On any
+other host**, call it from whatever scheduler you have (system cron, GitHub Actions `schedule`, a
+monitoring pinger) with the same header:
 
 ```bash
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<your-host>/api/cron/content-scan
 # -> {"created":3,"skipped":1}
 ```
+
+## Sharing the codebase
+
+Never zip the working directory by hand — it can pick up `.env.local`, `node_modules`, `.next` or
+`test-results` and hand a real `SUPABASE_SERVICE_ROLE_KEY` to whoever receives the archive. Always create
+a shareable archive from git's own tracked-file list instead:
+
+```bash
+git archive --format=zip -o watertech-kb.zip HEAD
+```
+
+`git archive` includes only the files tracked in the `HEAD` commit — no untracked or gitignored files, so
+`.env*`, `node_modules/`, `.next/` and `test-results/` are never in the zip. If you need a specific branch
+or tag instead of the current checkout, pass it in place of `HEAD` (e.g. `git archive --format=zip -o
+watertech-kb.zip main`).
+
+## Secret rotation runbook
+
+Run this whenever a secret may have leaked (e.g. a `.env.local` was shared by mistake), and periodically
+as routine hygiene. Rotate one secret at a time and verify it before moving to the next.
+
+1. **Supabase service-role key**
+   - In the Supabase dashboard: **Settings → API → API keys → "Create new secret key"** (`sb_secret_...`
+     format). Do **not** reuse or "regenerate" the old legacy JWT-based key in place — create a new one.
+   - Put the new key in Vercel's project env (`SUPABASE_SERVICE_ROLE_KEY`) and in your local `.env.local`.
+   - Redeploy, then confirm content pages, the admin CMS and `/api/copilot` still work (they all go
+     through `createAdminClient()`).
+   - Once everything is confirmed on the new key, go back to **Settings → API → API keys** and disable
+     the old legacy JWT-based service key so a leaked copy of it stops working.
+2. **Gemini API key**
+   - In [Google AI Studio](https://aistudio.google.com/apikey), delete the old key and create a new one.
+   - Put it in Vercel's project env (`GEMINI_API_KEY`) and in local `.env.local`. Redeploy.
+   - Confirm `/api/copilot` answers normally (not `503 copilot_disabled`).
+3. **CRON_SECRET**
+   - Generate a new value: `openssl rand -base64 48`.
+   - Set it in Vercel's project env (`CRON_SECRET`). Redeploy.
+   - Update whatever scheduler calls the endpoint (Vercel Cron picks up the new env automatically; any
+     other scheduler needs its stored header updated by hand).
+   - Verify the old secret no longer works and the new one does:
+     ```bash
+     curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $OLD_CRON_SECRET" \
+       https://<your-host>/api/cron/content-scan   # -> 401
+     curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $NEW_CRON_SECRET" \
+       https://<your-host>/api/cron/content-scan   # -> 200
+     ```

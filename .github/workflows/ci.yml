@@ -15,7 +15,7 @@ env:
   # answers 500 instead of the 401 the e2e spec asserts. No service-role key
   # and no GEMINI_API_KEY ever reach CI: Copilot is disabled (503) here.
   SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-not-a-service-role-key
-  CRON_SECRET: ci-placeholder-cron-secret
+  CRON_SECRET: ci-placeholder-cron-secret-at-least-32-characters-long
 
 jobs:
   ci:

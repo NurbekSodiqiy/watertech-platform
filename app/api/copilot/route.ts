@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth/server-session";
-import { getServerEnv } from "@/lib/env";
+import { getCopilotEnv } from "@/lib/env";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { durableRateLimitHit } from "@/lib/security/durable-rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -98,7 +98,7 @@ async function handlePost(request: Request): Promise<Response> {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const { GEMINI_API_KEY: apiKey, COPILOT_MODEL: model } = getServerEnv();
+  const { GEMINI_API_KEY: apiKey, COPILOT_MODEL: model } = getCopilotEnv();
   if (!apiKey) {
     return NextResponse.json({ error: "copilot_disabled" }, { status: 503 });
   }

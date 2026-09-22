@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { getServerEnv } from "@/lib/env";
+import { getCronEnv } from "@/lib/env";
 import { runContentScan, type ContentScanResult } from "@/lib/agents/stale-scan";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ function isAuthorized(header: string | null, secret: string): boolean {
 export async function GET(request: NextRequest): Promise<NextResponse<CronResponse>> {
   let secret: string;
   try {
-    secret = getServerEnv().CRON_SECRET;
+    secret = getCronEnv().CRON_SECRET;
   } catch (error) {
     console.error("[api/cron/content-scan] server env invalid:", error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });

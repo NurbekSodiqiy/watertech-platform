@@ -1,5 +1,6 @@
+import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { clientEnv, getServerEnv } from "@/lib/env";
+import { clientEnv, getSupabaseServiceEnv } from "@/lib/env";
 import type { Database } from "@/lib/supabase/database.types";
 
 /** Service-role client — bypasses Row Level Security. Server-only: never
@@ -8,7 +9,9 @@ import type { Database } from "@/lib/supabase/database.types";
  * under a fixed, trusted identity rather than the caller's own RLS-scoped
  * session. */
 export function createAdminClient() {
-  return createSupabaseClient<Database>(clientEnv.NEXT_PUBLIC_SUPABASE_URL, getServerEnv().SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  return createSupabaseClient<Database>(
+    clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+    getSupabaseServiceEnv().SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 }
