@@ -25,12 +25,17 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0011 | `content_contacts.sql` | `content_contacts` | 0002 |
 | 0012 | `content_sops.sql` | `content_sops` | 0002 |
 | 0013 | `baseline_and_audit_integrity.sql` | baseline for `allowed_users` + `telemetry_events`; `status` defaults to `'draft'`; `updated_by` stamped by the DB; delete snapshots; `content_versions` locked down | 0002, 0010–0012 |
+| 0014 | `role_gated_rls.sql` | `private.app_role/is_member/is_manager`; every policy role-gated and InitPlan-wrapped; the access-token hook refuses instead of stamping `'none'` | 0013 (and 0009, see below) |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0013` goes last. It aborts with a clear message if `0010`–`0012` have not been applied yet, so the
+`0014` goes last. Both it and `0013` abort with a clear message when an earlier file is missing, so the
 order is enforced rather than assumed.
+
+`0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
+no effect until it is **enabled in the dashboard** (Authentication → Hooks). That step and the rest of
+the manual configuration are the checklist in [SECURITY.md](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps).
 
 `0013` runs as one transaction and builds three indexes on `telemetry_events`, which blocks writes to
 that table (`/api/events`) until it commits. At this project's volume that is a second or two, and a
@@ -51,7 +56,8 @@ statements into their own file and run them concurrently, outside a transaction.
 3. **`0013` again.** Now the content sections run: `status` defaults, the `stamp_content_actor` and
    delete-snapshot triggers, `content_versions.op`, and the `content_versions` lockdown. Every
    statement in the file is idempotent, so the second pass re-applies the baseline harmlessly.
-4. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+4. **`0014`.** Once, after `0013`'s second pass.
+5. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -62,10 +68,19 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
 - [ ] **0011** `content_contacts` — the contacts page shows its empty state.
 - [ ] **0012** `content_sops` — the six `/tools/amocrm/*` pages 404 until this **and** `npm run seed:content` have run.
 - [ ] **0013** baseline + audit integrity — requires 0010–0012 first.
+- [ ] **0014** role-gated RLS + the refusing access-token hook — requires 0013 first. **P0**: until it is
+      applied, any Google account that completes the OAuth flow with the public anon key can read every
+      content table over PostgREST.
+- [ ] Enable the Custom Access Token hook and walk the rest of
+      [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
+      nothing on its own.
 - [ ] `npm run gen:types` after 0013 (see below).
-- [ ] `supabase/tests/rls-checks.sql` on staging, after 0013.
+- [ ] `supabase/tests/rls-checks.sql` on staging, after 0014.
 
-`0009` (`user_state`) may or may not be applied; the app degrades to local-only state without it.
+`0009` (`user_state`) may or may not be applied; the app degrades to local-only state without it. It is
+no longer free to skip, though: `0014` hardens the policies `0009` creates, and if `0009` is applied
+**after** `0014`, its own email-only policies come back — so **re-run `0014`** in that case. `0014`
+raises a notice saying exactly that when it finds no `user_state` table.
 
 ### After applying 0013
 
@@ -77,6 +92,20 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
    `0013` changed the column default to `'draft'`. Re-running the seed publishes the shipped content
    and leaves `content_contacts` as drafts, exactly as before.
 3. **Run the RLS checks** (next section) — `0013` changes policies and grants.
+
+### After applying 0014
+
+1. **Enable the Custom Access Token hook** and work through
+   [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps). The SQL is inert until
+   that switch is on: nothing stamps `app_metadata.role`, so `middleware.ts` sends everyone to
+   `/login?error=not_allowed` and every read policy sees a non-member.
+2. **Sign in once as an operator and once as a manager** before announcing it. This migration can lock
+   every user out if the allow-list is wrong (a mixed-case email is fine now; `is_active = false` is
+   not). The Supabase dashboard is a separate login and stays reachable, so turning the hook off there
+   is always the way back.
+3. **No type regeneration needed.** The `private` schema is not exposed by PostgREST and nothing in the
+   app calls its functions, so `lib/supabase/database.types.ts` is unaffected.
+4. **Run the RLS checks** (next section).
 
 ## Running `rls-checks.sql` on staging
 
@@ -99,9 +128,20 @@ What it asserts about `0013` specifically:
 - deleting a row writes a snapshot with `op = 'delete'`, including the `content_packages` row deleted
   by the `on delete cascade` from its group.
 
-A failure of that last block on a project where `0013` has not been applied means "apply 0013", not
-"the policies are wrong". `permission denied … missing GRANT` anywhere means a table is missing its
-`GRANT … to authenticated` (the lesson of `0003`).
+What it asserts about `0014` specifically:
+
+- the access-token hook stamps the role for an active `allowed_users` row, matching the email
+  case-insensitively, and returns `{"error":{"http_code":403,"message":"not_allowed"}}` for an unknown
+  email, an `is_active = false` row, and claims with no email at all;
+- three non-member identities — `role: "none"`, a token with no `app_metadata`, and a deactivated user —
+  see **zero rows in every table, published content included**, and cannot insert into `user_state`;
+- an operator still reads published content and their own `user_state`; a manager still reads drafts and
+  every dashboard table, `allowed_users` included.
+
+A failure of the `0013` block on a project where `0013` has not been applied means "apply 0013", not
+"the policies are wrong"; the `0014` blocks fail the same way with "is 0014 applied?".
+`permission denied … missing GRANT` anywhere means a table is missing its `GRANT … to authenticated`
+(the lesson of `0003`).
 
 ## Rollback
 
@@ -144,3 +184,18 @@ inserting into it. Existing rows are not otherwise affected.
 authenticated;`, `grant usage, select on sequence public.content_versions_id_seq to authenticated;`
 and re-create `content_versions_manager_insert` from `0002`. Only needed if the `SECURITY DEFINER`
 snapshot function is rolled back too — with it in place, nothing in the app uses these privileges.
+
+### Rolling back 0014
+
+Don't, unless the hook is locking out legitimate users — and in that case **turn the hook off in
+Authentication → Hooks first**. That is instant, reversible, and restores sign-in without touching the
+schema; it leaves the RLS half of `0014` in place, which is the half that closed the data leak. Fixing
+the `allowed_users` row (lowercase email, `is_active = true`, `role` set) is almost always the real
+remedy.
+
+If the SQL itself has to go back, a new numbered file re-creates the `0002`/`0010`–`0012` read policies
+(`<t>_authenticated_select_published` + `<t>_manager_select_all`), the `0009` `user_state` policies and
+the `0001` hook body, then `drop schema private cascade;` last — the policies reference its functions,
+so dropping it first fails. **Doing this re-opens the P0 in `docs/SECURITY.md` §2.** Reverting only the
+hook, and keeping the role-gated policies, is the safe partial rollback: restore the `0001` body and
+nothing else.

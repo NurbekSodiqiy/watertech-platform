@@ -117,6 +117,12 @@ export async function middleware(request: NextRequest) {
     return redirectTo("/login");
   }
 
+  // A session whose JWT carries no operator/manager role claim. Since
+  // migration 0014 the access-token hook refuses to issue such a token at all,
+  // so this is a fail-safe, not the main gate: it still catches a token minted
+  // before 0014 (role "none"), and the case where the Custom Access Token hook
+  // is not enabled in the Supabase dashboard. It stays network-free either way
+  // — the answer is read off the locally verified JWT (CLAUDE.md section 4).
   if (role === null) {
     return redirectTo("/login", "error=not_allowed");
   }

@@ -7,8 +7,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Reads app_metadata.role from decoded JWT claims, returning it only when
- * it is exactly "operator" or "manager" — anything else (missing, "none",
- * malformed) means the caller isn't on the allow-list. */
+ * it is exactly "operator" or "manager" — anything else means the caller
+ * isn't on the allow-list.
+ *
+ * Since migration 0014 the access-token hook refuses to issue a token for an
+ * email that is not an active `allowed_users` row, so a token that reaches
+ * this function normally always carries one of the two roles. It stays a
+ * fail-closed check for the three cases that can still produce neither: the
+ * hook not enabled in the Supabase dashboard, a token minted before 0014 that
+ * still carries the old `role: "none"` stamp, and malformed claims. RLS makes
+ * the same distinction in the database via `private.is_member()`. */
 export function roleFromClaims(claims: unknown): Role | null {
   if (!isRecord(claims)) return null;
   const appMetadata = claims.app_metadata;

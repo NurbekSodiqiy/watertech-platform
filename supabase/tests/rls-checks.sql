@@ -1,11 +1,12 @@
 -- RLS verification — run against the STAGING project only (see docs/TESTING.md).
 --
 -- Paste the whole file into the Supabase SQL editor and run it once. It inserts
--- its own fixture rows (ids/emails prefixed `rls-test` / `@test`), switches to
--- the `authenticated` role with an operator's and then a manager's JWT claims,
--- and asserts what each can SELECT. Everything runs in one transaction that
--- ends in ROLLBACK, and a failed assertion aborts that transaction — either
--- way no fixture row is ever committed.
+-- its own fixture rows (ids/emails prefixed `rls-test` / `@test`), calls the
+-- access-token hook directly, then switches to the `authenticated` role with an
+-- operator's, three non-members' and finally a manager's JWT claims, and asserts
+-- what each can SELECT. Everything runs in one transaction that ends in
+-- ROLLBACK, and a failed assertion aborts that transaction — either way no
+-- fixture row is ever committed.
 --
 --   Passed: the last result is a single row "RLS checks passed".
 --   Failed: an error whose message starts with "RLS FAIL:".
@@ -14,13 +15,16 @@
 -- 0007 (admin_notifications, content_gate_reports), 0008 (rate_limits),
 -- 0009 (user_state), 0010 (content_changelog), 0011 (content_contacts),
 -- 0012 (content_sops), 0013 (allowed_users, telemetry_events, and the write-side
--- integrity block at the end: append-only history, draft default, updated_by).
+-- integrity block at the end: append-only history, draft default, updated_by),
+-- 0014 (the role gate on every policy above, and the access-token hook itself).
 --
 -- 0013 is the baseline for allowed_users and telemetry_events, which predate
 -- supabase/migrations. On a project where 0013 has not been applied yet, the
 -- telemetry_events checks test whatever policy that project actually has, and
 -- the write-side block fails — that failure means "apply 0013", not "the
--- policies are wrong".
+-- policies are wrong". The same applies to 0014: the hook block at the top
+-- fails with "is 0014 applied?" and the non-member block reports rows that a
+-- pre-0014 policy really does expose.
 
 begin;
 
@@ -79,6 +83,107 @@ insert into public.user_state (user_email, key, value) values
   ('op@test', 'onboarding.v2', '{"summary-d1":true}'),
   ('rls-other-op@test', 'onboarding.v2', '{"summary-d1":true}');
 
+-- allowed_users: the allow-list the access-token hook reads (0001/0014) and the
+-- dashboard's operator filter lists (0005). The two emails match the operator
+-- and manager identities used below; `rls-deactivated@test` is the is_active =
+-- false case, and `rls-unknown@test` is deliberately NOT inserted.
+insert into public.allowed_users (email, role, is_active) values
+  ('op@test', 'operator', true),
+  ('rls-manager@test', 'manager', true),
+  ('rls-deactivated@test', 'operator', false);
+
+-- === The access-token hook (0014) ==============================================
+-- Runs as the editor's own role, before any role switch: EXECUTE on the hook is
+-- granted to supabase_auth_admin alone, and the SQL editor's `postgres` role
+-- reaches it as the function's owner.
+--
+-- This is the half of 0014 that RLS cannot cover. An unknown or deactivated
+-- account is refused a *token*, so there is no JWT for the policy checks to
+-- simulate — what the policies do see in that case is the claim-less identity
+-- asserted in the non-member section further down.
+
+do $$
+declare
+  c record;
+  result jsonb;
+begin
+  if to_regprocedure('public.custom_access_token_hook(jsonb)') is null then
+    raise exception 'RLS FAIL: public.custom_access_token_hook(jsonb) does not exist — apply 0001 and 0014';
+  end if;
+  if to_regprocedure('private.is_member()') is null then
+    raise exception 'RLS FAIL: private.is_member() does not exist — apply 0014_role_gated_rls.sql, then re-run this file';
+  end if;
+
+  -- On the allow-list and active: the role is stamped onto app_metadata, and
+  -- the email matches case-insensitively (0014 lowercases both sides).
+  for c in
+    select * from (values
+      ('an active operator',             'op@test',          'operator'),
+      ('an active manager',              'rls-manager@test', 'manager'),
+      ('an active operator, MIXED case', 'Op@TEST',          'operator')
+    ) as t(label, email, expected)
+  loop
+    result := public.custom_access_token_hook(jsonb_build_object(
+      'user_id', '00000000-0000-4000-8000-000000000009',
+      'authentication_method', 'oauth',
+      'claims', jsonb_build_object(
+        'sub', '00000000-0000-4000-8000-000000000009',
+        'role', 'authenticated',
+        'email', c.email,
+        'app_metadata', '{}'::jsonb
+      )
+    ));
+
+    if result -> 'error' is not null then
+      raise exception 'RLS FAIL: the access-token hook REFUSED % (%)',
+        c.label, coalesce(result -> 'error' ->> 'message', '<no message>');
+    end if;
+    if result -> 'claims' -> 'app_metadata' ->> 'role' is distinct from c.expected then
+      raise exception 'RLS FAIL: the access-token hook stamped role % for % (expected %)',
+        coalesce(result -> 'claims' -> 'app_metadata' ->> 'role', '<null>'), c.label, c.expected;
+    end if;
+  end loop;
+
+  -- Absent from the allow-list, deactivated, or carrying no email at all: the
+  -- hook must return the Supabase Auth Hooks error response, so GoTrue issues
+  -- NO token. Contract: {"error":{"http_code":403,"message":"not_allowed"}}.
+  -- Before 0014 each of these got a real `authenticated` JWT stamped
+  -- role = 'none' instead, which is the P0 this file now guards.
+  for c in
+    select * from (values
+      ('an email that is not in allowed_users',
+        jsonb_build_object('sub', 'x', 'role', 'authenticated', 'email', 'rls-unknown@test', 'app_metadata', '{}'::jsonb)),
+      ('an allowed_users row with is_active = false',
+        jsonb_build_object('sub', 'x', 'role', 'authenticated', 'email', 'rls-deactivated@test', 'app_metadata', '{}'::jsonb)),
+      ('claims with no email at all',
+        jsonb_build_object('sub', 'x', 'role', 'authenticated', 'app_metadata', '{}'::jsonb))
+    ) as t(label, claims)
+  loop
+    result := public.custom_access_token_hook(
+      jsonb_build_object('authentication_method', 'oauth', 'claims', c.claims)
+    );
+
+    if result -> 'error' is null then
+      raise exception 'RLS FAIL: the access-token hook ISSUED a token for % (role %) — is 0014 applied?',
+        c.label, coalesce(result -> 'claims' -> 'app_metadata' ->> 'role', '<null>');
+    end if;
+    if coalesce((result -> 'error' ->> 'http_code')::int, 0) <> 403 then
+      raise exception 'RLS FAIL: the hook refused % with http_code % (expected 403)',
+        c.label, coalesce(result -> 'error' ->> 'http_code', '<null>');
+    end if;
+    if result -> 'error' ->> 'message' is distinct from 'not_allowed' then
+      raise exception 'RLS FAIL: the hook refused % with message % (expected not_allowed)',
+        c.label, coalesce(result -> 'error' ->> 'message', '<null>');
+    end if;
+    -- No claims may come back alongside the error: GoTrue reads the error
+    -- branch first, but a response carrying both would mean the function fell
+    -- through to the stamping path for someone it had already refused.
+    if result -> 'claims' is not null then
+      raise exception 'RLS FAIL: the hook returned claims alongside the error for %', c.label;
+    end if;
+  end loop;
+end $$;
+
 -- === As an operator ============================================================
 
 set local role authenticated;
@@ -136,7 +241,10 @@ begin
       ('admin_notifications',              'public.admin_notifications',    $f$true$f$),
       ('content_gate_reports',             'public.content_gate_reports',   $f$true$f$),
       ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$),
-      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$)
+      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$),
+      -- The allow-list is manager-only (0005/0014) — not even an operator's own
+      -- row is readable, so the filter is deliberately unrestricted.
+      ('allowed_users',                     'public.allowed_users',          $f$true$f$)
     ) as t(label, relation, filter)
   loop
     begin
@@ -224,6 +332,103 @@ begin
   end;
 end $$;
 
+-- === As a non-member (0014) ====================================================
+-- Three JWTs the access-token hook would never issue any more, but that the
+-- database has to refuse on its own:
+--
+--   * role 'none'          — exactly what 0001's hook stamped for an unknown
+--                            email, and what a token minted before 0014 still
+--                            carries until it expires;
+--   * no app_metadata      — a token issued while the hook was disabled in the
+--                            dashboard, or through an Auth API call that never
+--                            reached it;
+--   * a deactivated user   — allowed_users.is_active = false. The hook refuses
+--                            them a new token (asserted at the top of this
+--                            file); RLS cannot see is_active, so what it has to
+--                            refuse is the claim-less token they are left with.
+--
+-- Each must see NOTHING — PUBLISHED CONTENT INCLUDED. That is the difference
+-- 0014 makes: before it, `status = 'published'` was the only condition on every
+-- operator read policy, so any Google account that completed the OAuth flow
+-- with the public anon key could read the whole knowledge base over PostgREST.
+-- The counts below are therefore unfiltered, not id lookups, and every table
+-- listed holds at least one fixture row — so each 0 means "hidden", not
+-- "empty".
+
+do $$
+declare
+  ident record;
+  c record;
+  n bigint;
+begin
+  for ident in
+    select * from (values
+      ('role "none"',
+        '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated","email":"rls-none@test","app_metadata":{"role":"none"}}'),
+      ('a token with no app_metadata',
+        '{"sub":"00000000-0000-4000-8000-000000000004","role":"authenticated","email":"rls-noclaim@test"}'),
+      ('a deactivated allowed_users row',
+        '{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated","email":"rls-deactivated@test"}')
+    ) as t(label, claims)
+  loop
+    perform set_config('request.jwt.claims', ident.claims, true);
+
+    -- Setup control: the 0014 helpers must be callable by `authenticated`
+    -- (USAGE on private + EXECUTE) and must classify this identity as an
+    -- outsider. Without it, every 0 below could just be a broken fixture.
+    if private.app_role() <> 'none' then
+      raise exception 'RLS FAIL: setup — private.app_role() is "%" for % (expected none)',
+        private.app_role(), ident.label;
+    end if;
+    if private.is_member() or private.is_manager() then
+      raise exception 'RLS FAIL: setup — % is classified as a member', ident.label;
+    end if;
+
+    for c in
+      select * from (values
+        ('content_scripts'),        -- also holds a PUBLISHED fixture row
+        ('content_objections'),
+        ('content_faqs'),
+        ('content_competitors'),
+        ('content_package_groups'),
+        ('content_packages'),
+        ('content_products'),
+        ('content_changelog'),      -- published fixture row
+        ('content_contacts'),       -- published fixture row
+        ('content_sops'),           -- published fixture row
+        ('content_versions'),
+        ('copilot_logs'),
+        ('admin_notifications'),
+        ('content_gate_reports'),
+        ('telemetry_events'),
+        ('allowed_users'),
+        ('user_state'),
+        ('rate_limits')
+      ) as t(relation)
+    loop
+      begin
+        execute format('select count(*) from public.%I', c.relation) into n;
+      exception when insufficient_privilege then
+        n := 0; -- "permission denied" hides the rows just as well
+      end;
+      if n <> 0 then
+        raise exception 'RLS FAIL: % can select public.% (% rows visible, published rows included)',
+          ident.label, c.relation, n;
+      end if;
+    end loop;
+
+    -- ...and cannot write per-user state either. user_email defaults to this
+    -- identity's own email claim, so before 0014 — when user_state_own_insert
+    -- checked only that claim — this row WOULD have been written.
+    begin
+      insert into public.user_state (key, value) values ('pins', '[]');
+      raise exception 'RLS FAIL: % can INSERT a user_state row', ident.label;
+    exception
+      when insufficient_privilege then null; -- the WITH CHECK rejected it
+    end;
+  end loop;
+end $$;
+
 -- === As a manager ==============================================================
 
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated","email":"rls-manager@test","app_metadata":{"role":"manager"}}';
@@ -255,7 +460,8 @@ begin
       ('admin_notifications',              'public.admin_notifications',    $f$row_id = 'rls-test-draft'$f$),
       ('content_gate_reports',             'public.content_gate_reports',   $f$row_id = 'rls-test-draft'$f$),
       ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$),
-      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$)
+      ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$),
+      ('allowed_users',                     'public.allowed_users',          $f$email = 'op@test'$f$)
     ) as t(label, relation, filter)
   loop
     begin

@@ -105,12 +105,22 @@ every painted element and fails on the widest one whose right edge is past the v
 
 | As | Must NOT see | Must see |
 | --- | --- | --- |
-| operator | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, other operators' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
+| operator | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, `allowed_users`, other operators' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
 | manager | `rate_limits` | all of the left column, read-only for `user_state` |
+| non-member × 3 | **every table, published content included** | nothing at all |
 
 It also asserts the write side: an operator may insert/update/delete only their own `user_state` rows, a
-manager may not write them at all, and neither role may select `rate_limits` or execute `rate_limit_hit()`
-— that counter belongs to the server's service-role client alone (migration 0008).
+manager may not write them at all, a non-member may not insert one, and no session role may select
+`rate_limits` or execute `rate_limit_hit()` — that counter belongs to the server's service-role client
+alone (migration 0008).
+
+The three non-member identities are the tokens migration 0014 exists to neutralize: `role: "none"` (what
+the old hook stamped for an unknown email), a token carrying no `app_metadata` at all, and a user whose
+`allowed_users.is_active` is `false`. A separate block at the top of the file calls
+`public.custom_access_token_hook()` directly and asserts the other half of 0014 — that those accounts are
+refused a token, with `{"error":{"http_code":403,"message":"not_allowed"}}`, while an active member's
+email is matched case-insensitively and gets its role stamped. See [SECURITY.md](SECURITY.md) for the
+model this verifies and the dashboard steps it cannot.
 
 The last manager block covers the integrity rules migration 0013 moved into the database: a manager cannot
 insert a fabricated `content_versions` row, a content row inserted without a `status` lands as `draft`,
@@ -135,8 +145,9 @@ which is what `auth.jwt()` reads, so the policies run exactly as for a real requ
 `telemetry_events` and `allowed_users` were created before `supabase/migrations/` existed; migration 0013
 is their baseline. On a project where 0013 has not been applied yet the telemetry check tests whatever
 policy that project actually has, and the 0013 block fails — that failure means "apply 0013" (see
-`docs/MIGRATIONS.md`), not that the policies are wrong. Either way, write the fix as a new migration
-instead of editing the table by hand.
+`docs/MIGRATIONS.md`), not that the policies are wrong. The same reading applies to 0014: the hook block
+fails with "is 0014 applied?" and the non-member block reports rows a pre-0014 policy genuinely exposes.
+Either way, write the fix as a new migration instead of editing the table by hand.
 
 Re-run it after every migration that touches a policy or GRANT.
 
