@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "analyze": "ANALYZE=true next build",
-    "seed:content": "tsx supabase/seed/seed-content.ts"
+    "seed:content": "tsx --conditions=react-server supabase/seed/seed-content.ts"
   },
   "dependencies": {
     "@google/genai": "2.23.0",

@@ -264,6 +264,10 @@ explicit strings (Tailwind must see full class names — never build class names
 - No `dangerouslySetInnerHTML` with content that can come from the database. Render structured data.
 - Any new `<script>` needs the CSP nonce (`headers().get("x-nonce")` in the server component that renders it).
 - Secrets and env: read only via `lib/env.ts`; never log env values; never commit `.env*`.
+  One exception, and only this one: `supabase/seed/seed-content.ts` and `supabase/seed/guard.ts` read
+  `SEED_TARGET`, `PROD_PROJECT_REFS` and `NEXT_PUBLIC_SUPABASE_URL` from `process.env` directly. The
+  seed is a developer CLI, not app runtime — it never ships in a bundle, and those variables only
+  describe the machine running the command. Nothing under `app/`, `components/` or `lib/` may copy it.
 
 ## 8. Content layer rules
 

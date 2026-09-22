@@ -164,6 +164,74 @@ uploaded when a step fails.
 - **Deliberately absent.** No service-role key and no `GEMINI_API_KEY`. `SUPABASE_SERVICE_ROLE_KEY` and
   `CRON_SECRET` are set to obvious placeholders only because `lib/env.ts` requires them to be present.
   Copilot therefore answers 503 to a signed-in caller in CI, and 401 to everyone else.
+- **`CONTENT_BUILD_MODE: allow-empty`.** See below.
 - **Playwright browsers** are cached under `~/.cache/ms-playwright`, keyed by the installed Playwright version.
 - **No session cookies.** `TEST_OPERATOR_COOKIE` and `TEST_SESSION_COOKIE` are deliberately unset, so every
   signed-in spec skips. CI covers the public routes; the operator ones are a local, pre-merge check.
+
+### `CONTENT_BUILD_MODE` (the build's content guard)
+
+Operator pages are statically prerendered and revalidated through `unstable_cache` in
+`lib/content/loader.ts`. A content read that fails now behaves differently depending on who is reading
+(`ContentReadMode` in `lib/content/safe.ts`):
+
+| Getter | Mode | On a failed read |
+| --- | --- | --- |
+| `getScripts()`, `getFaqs()`, `getContentBundle()`, ... | `"page"` | throws `ContentUnavailableError`, naming the content kind |
+| `getScriptsOrEmpty()`, `getContentBundleOrEmpty()`, ... | `"degrade"` | logs `[content:<kind>]` and returns an empty result |
+
+Pages use the first, Route Handlers (`/api/search-index`, `/api/content-refs`), the Copilot retriever
+and the request-time manager dashboard use the second. Throwing is the point on a page: `next build`
+stops instead of generating a knowledge base with nothing in it, and a Supabase outage during
+background ISR revalidation leaves the last good page in the Full Route Cache rather than replacing it
+with empty sections for up to an hour.
+
+CI cannot satisfy that — it builds against a placeholder project where every read fails by design — so
+the workflow sets `CONTENT_BUILD_MODE: allow-empty`, which makes `"page"` behave like `"degrade"`. It is
+the only supported value besides `strict`; anything unreadable (a typo, a blank `CONTENT_BUILD_MODE=`
+line) is treated as `strict`, so a misspelled flag can only make a build stricter.
+
+**Never set it in Vercel, in production, or in `.env.local`.** Leaving it unset is what makes a broken
+deploy fail loudly. To reproduce either half locally:
+
+```powershell
+# fails: "Content unavailable: "sops" could not be read. …"
+$env:NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:1'; npm run build
+
+# succeeds, prerendering empty pages — what CI does
+$env:CONTENT_BUILD_MODE = 'allow-empty'; npm run build
+Remove-Item Env:CONTENT_BUILD_MODE, Env:NEXT_PUBLIC_SUPABASE_URL
+```
+
+`tests/unit/content/safe.test.ts` covers both modes and the flag; the route table is unchanged either
+way (`docs/PERF.md`), since none of this reaches the browser.
+
+## Seeding content (`npm run seed:content`)
+
+The seed writes every `content_*` table from `lib/content/*.ts` with the service-role key, which is why
+it now refuses to run unless it is told, twice, that it is not pointed at production
+(`supabase/seed/guard.ts`, covered by `tests/unit/seed/guard.test.ts`):
+
+| Variable / flag | Effect |
+| --- | --- |
+| `SEED_TARGET=staging` | required; any other value (or unset) refuses |
+| `PROD_PROJECT_REFS` | comma-separated project refs that are never seeded; required for a hosted project |
+| `--dry-run` | prints the plan and writes nothing |
+| `--force` | overwrites existing rows instead of skipping them |
+
+The project ref is parsed from `NEXT_PUBLIC_SUPABASE_URL` (`https://<ref>.supabase.co`). A local stack
+(`localhost`, `127.0.0.1`) is allowed; a host that is neither is **refused** — an unrecognised domain
+cannot be proven not to be production.
+
+Writes are insert-only by default (`upsert … ignoreDuplicates`, i.e. `ON CONFLICT DO NOTHING`), so a
+re-run leaves every row a manager has edited exactly as they saved it, `status` included. That is the
+accident the guard exists for: the old unconditional upsert reset published contacts back to draft and
+overwrote CMS edits with the shipped TS arrays. Both a dry run and a real run print the same per-table
+plan before anything is written.
+
+```powershell
+$env:SEED_TARGET = 'staging'; $env:PROD_PROJECT_REFS = '<prod-ref>'
+npm run seed:content -- --dry-run     # plan only
+npm run seed:content                  # insert what is missing
+npm run seed:content -- --force       # overwrite existing rows (rarely what you want)
+```

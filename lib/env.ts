@@ -102,3 +102,26 @@ export function getCronEnv(): z.infer<typeof cronEnvSchema> {
   }
   return cronEnv;
 }
+
+// Build-time escape hatch for lib/content/safe.ts, not a secret: it only
+// decides whether a failed content read fails the build or degrades to empty.
+// Unset (production, Vercel) means strict. CI sets `allow-empty` because it
+// builds against a placeholder Supabase project — see docs/TESTING.md.
+export type ContentBuildMode = "strict" | "allow-empty";
+
+/** Not cached, and its schema is built inside the call rather than at module
+ * scope: `safeContent` only reads this on a failed read, the parse is a single
+ * enum check, and keeping the schema out of the module body keeps it out of
+ * the browser bundles that import `clientEnv` from here.
+ *
+ * `.catch` instead of a hard parse error, deliberately fail-closed: an
+ * unreadable value (a typo, a blank `CONTENT_BUILD_MODE=` line) resolves to
+ * `strict`, so a misspelled flag can only ever make a build stricter, never
+ * silently re-open the empty-knowledge-base hole the guard exists to close.
+ * Safe to evaluate anywhere — a browser bundle has no `CONTENT_BUILD_MODE`
+ * inlined, which reads as `strict`. */
+export function getContentBuildEnv(): { CONTENT_BUILD_MODE: ContentBuildMode } {
+  return parseEnv(z.object({ CONTENT_BUILD_MODE: z.enum(["strict", "allow-empty"]).catch("strict") }), {
+    CONTENT_BUILD_MODE: process.env.CONTENT_BUILD_MODE,
+  });
+}

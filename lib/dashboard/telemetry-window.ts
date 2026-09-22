@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { getContentBundle } from "@/lib/content/loader";
+import { getContentBundleOrEmpty } from "@/lib/content/loader";
 import { buildEntityLabelMaps, type TelemetryRow, type EntityLabelMaps } from "@/lib/telemetry/aggregate";
 import { computeDashboardKpis, type DashboardKpis } from "@/lib/dashboard/kpi";
 import { dashboardRangeWindow, combinedQueryWindow, type DashboardRange } from "@/lib/dashboard/range";
@@ -34,7 +34,10 @@ export async function fetchDashboardTelemetry(range: DashboardRange): Promise<Da
       .select("id, user_email, session_id, ts, type, path, entity_type, entity_id, duration_ms, meta")
       .gte("ts", queryWindow.startUTC)
       .lt("ts", queryWindow.endUTC),
-    getContentBundle().then(buildEntityLabelMaps),
+    // "degrade" mode: this only resolves ids to human labels on a
+    // request-time manager render. Unreadable content costs the charts their
+    // labels, never the telemetry numbers themselves.
+    getContentBundleOrEmpty().then(buildEntityLabelMaps),
   ]);
 
   const allRows = (data ?? []) as TelemetryRow[];

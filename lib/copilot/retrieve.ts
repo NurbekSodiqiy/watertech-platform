@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { getContentBundle, getProducts } from "@/lib/content/loader";
+import { getContentBundleOrEmpty, getProductsOrEmpty } from "@/lib/content/loader";
 import { buildCopilotDocs, createCopilotIndex, type CopilotChunk, type CopilotDoc } from "@/lib/copilot/docs";
 import type { Locale } from "@/i18n/routing";
 
@@ -10,7 +10,7 @@ import type { Locale } from "@/i18n/routing";
 // remembered as "the knowledge base is empty" for the next hour.
 const getCopilotDocs = unstable_cache(
   async (locale: Locale): Promise<CopilotDoc[]> => {
-    const [bundle, products] = await Promise.all([getContentBundle(locale), getProducts(locale)]);
+    const [bundle, products] = await Promise.all([getContentBundleOrEmpty(locale), getProductsOrEmpty(locale)]);
     const docs = buildCopilotDocs(bundle, products);
     if (docs.length === 0) throw new Error("copilot docs are empty");
     return docs;

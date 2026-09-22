@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_CONTEXT_CHARS } from "@/lib/copilot/docs";
 import type { CopilotChunk } from "@/lib/copilot/docs";
-import { getContentBundle, getProducts } from "@/lib/content/loader";
+import { getContentBundleOrEmpty, getProductsOrEmpty } from "@/lib/content/loader";
 import { retrieve } from "@/lib/copilot/retrieve";
 import { products, publishedContentBundle } from "../../fixtures/content";
 
@@ -10,7 +10,10 @@ import { products, publishedContentBundle } from "../../fixtures/content";
 // re-reads the mocked loaders), the loaders by the published fixture bundle —
 // so the real doc building, ranking and context budget run end to end.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock("@/lib/content/loader", () => ({ getContentBundle: vi.fn(), getProducts: vi.fn() }));
+// retrieve() reads in "degrade" mode (lib/content/safe.ts): an unreadable
+// knowledge base makes the Copilot answer "not in the knowledge base", never
+// a 500, so it calls the OrEmpty getters rather than the page ones.
+vi.mock("@/lib/content/loader", () => ({ getContentBundleOrEmpty: vi.fn(), getProductsOrEmpty: vi.fn() }));
 
 const RETRIEVAL_TYPES = new Set(["package", "objection"]);
 
@@ -19,8 +22,8 @@ function totalChars(hits: CopilotChunk[]): number {
 }
 
 beforeEach(() => {
-  vi.mocked(getContentBundle).mockResolvedValue(publishedContentBundle());
-  vi.mocked(getProducts).mockResolvedValue(products);
+  vi.mocked(getContentBundleOrEmpty).mockResolvedValue(publishedContentBundle());
+  vi.mocked(getProductsOrEmpty).mockResolvedValue(products);
 });
 
 afterEach(() => {
@@ -50,7 +53,7 @@ describe("retrieve", () => {
   // "chegirma" outranks our own discount packages.
   it.fails("ranks our packages above a battle-card that also mentions chegirma", async () => {
     const bundle = publishedContentBundle();
-    vi.mocked(getContentBundle).mockResolvedValue({
+    vi.mocked(getContentBundleOrEmpty).mockResolvedValue({
       ...bundle,
       competitors: bundle.competitors.map((c) => ({ ...c, marketingOffers: "Katta hajmga qo'shimcha chegirma" })),
     });
@@ -61,8 +64,8 @@ describe("retrieve", () => {
 
   it("loads content for the requested locale", async () => {
     await retrieve("chegirma", "ru");
-    expect(getContentBundle).toHaveBeenCalledWith("ru");
-    expect(getProducts).toHaveBeenCalledWith("ru");
+    expect(getContentBundleOrEmpty).toHaveBeenCalledWith("ru");
+    expect(getProductsOrEmpty).toHaveBeenCalledWith("ru");
   });
 
   it("returns [] for a term that isn't in the knowledge base", async () => {
@@ -75,8 +78,8 @@ describe("retrieve", () => {
 
   it("returns [] instead of throwing when content can't be loaded", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(getContentBundle).mockResolvedValue({ scripts: [], objections: [], faqs: [], competitors: [], packageGroups: [] });
-    vi.mocked(getProducts).mockResolvedValue([]);
+    vi.mocked(getContentBundleOrEmpty).mockResolvedValue({ scripts: [], objections: [], faqs: [], competitors: [], packageGroups: [] });
+    vi.mocked(getProductsOrEmpty).mockResolvedValue([]);
 
     expect(await retrieve("chegirma", "uz")).toEqual([]);
     expect(consoleError).toHaveBeenCalledWith("[copilot] retrieval docs unavailable:", expect.any(Error));
@@ -84,7 +87,7 @@ describe("retrieve", () => {
 
   it(`keeps the total context within ${MAX_CONTEXT_CHARS} chars`, async () => {
     const bundle = publishedContentBundle();
-    vi.mocked(getContentBundle).mockResolvedValue({
+    vi.mocked(getContentBundleOrEmpty).mockResolvedValue({
       ...bundle,
       faqs: Array.from({ length: 10 }, (_, i) => ({
         id: `faq-chegirma-${i}`,

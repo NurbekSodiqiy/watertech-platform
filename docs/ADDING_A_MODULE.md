@@ -74,6 +74,9 @@ for you is the database, the content mappers, the pages, and the entry itself.
         listColumns: ["title", "category"],   // what the list view shows; keep big JSONB out
         titleColumn: "title",
         // listOrder       — only when `sort_order` is not the right order (see content_changelog)
+        // staleColumn     — only when "old" is not "nobody edited it": the daily scan measures
+        //                   `updated_at` unless the entry names another column (see content_changelog,
+        //                   which is measured by `published_on`)
         // sortScopeColumn — only when rows are ordered inside a parent (see content_packages)
         // referenceCheck  — ids this row points at, with no DB-level foreign key
         // referencedBy    — rows that point at THIS one, for the delete guard: mode "block"
@@ -105,9 +108,11 @@ for you is the database, the content mappers, the pages, and the entry itself.
       `listGuideRows() → listRows("content_guides")` and `getGuideRow(id) → getRow("content_guides", id)`
       plus `withStatus`. Add a `toAdminGuide` narrowing helper only if the table has CHECK-constrained
       columns beyond `status`. Add `"content_guides"` to `OverviewTable` for the overview card.
-- [ ] `lib/admin/actions/versions.ts` and `/admin/trash` need nothing — both read the registry
-      (the trash list resolves a deleted row's title through the entry's `titleColumn`, and a restore
-      re-inserts it through the entry's own create path as a draft).
+- [ ] `lib/admin/actions/versions.ts`, `/admin/trash` and the daily content scan
+      (`lib/agents/stale-scan.ts`) need nothing — all three read the registry. The trash list resolves a
+      deleted row's title through the entry's `titleColumn`, a restore re-inserts it through the entry's
+      own create path as a draft, and the scan sweeps every table in `CONTENT_REGISTRY`, so the new one
+      joins the nightly stale / missing-RU sweep as soon as its entry exists.
 - [ ] Pages under `app/[locale]/(admin)/admin/guides/`:
   - `page.tsx` — `DataTable<AdminListRow<"content_guides">>` list; pass `deleteGuide` and `setGuideStatus`
     straight through.
@@ -118,6 +123,11 @@ for you is the database, the content mappers, the pages, and the entry itself.
 
 - [ ] Follow CLAUDE.md §10: `siteTree` node, Server Component page calling `getGuides(locale)`,
       interactive bits as client islands in `components/<domain>/`.
+- [ ] `lib/content/loader.ts` — the getter comes in two, over one internal `readGuides(locale, mode)`:
+      `getGuides()` for pages (a failed read throws, so a broken build never ships an empty page and ISR
+      keeps the last good one) and `getGuidesOrEmpty()` for Route Handlers, the Copilot retriever and
+      request-time manager renders (a failed read degrades to `[]`). Pick the one that matches what the
+      caller renders — see `ContentReadMode` in `lib/content/safe.ts` and docs/TESTING.md.
 - [ ] Any client widget on the page that can crash independently → wrap at the usage site in
       `<WidgetBoundary>` (Server Component) or `<ErrorBoundary fallback={(reset) => …}>` (Client Component).
 - [ ] Telemetry: new event types go through `TelemetryEventType` + `useTrack()` (CLAUDE.md §9).

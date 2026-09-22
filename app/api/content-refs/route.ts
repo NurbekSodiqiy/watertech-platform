@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth/server-session";
-import { getContentBundle, getProducts } from "@/lib/content/loader";
+import { getContentBundleOrEmpty, getProductsOrEmpty } from "@/lib/content/loader";
 import { buildContentRefs, type ContentRef } from "@/lib/search/refs";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -12,12 +12,13 @@ export const dynamic = "force-dynamic";
 
 const localeSchema = z.enum(routing.locales).catch(routing.defaultLocale);
 
-// An empty result is thrown, not returned, so unstable_cache never stores the
-// degraded bundle a Supabase outage produces; the client then keeps its
-// pins untouched and retries on the next visit.
+// Reads in "degrade" mode (lib/content/safe.ts): a resolved pin list is a
+// convenience, not a page. An empty result is thrown, not returned, so
+// unstable_cache never stores the degraded bundle a Supabase outage produces;
+// the client then keeps its pins untouched and retries on the next visit.
 const getCachedContentRefs = unstable_cache(
   async (locale: Locale): Promise<ContentRef[]> => {
-    const [bundle, products] = await Promise.all([getContentBundle(locale), getProducts(locale)]);
+    const [bundle, products] = await Promise.all([getContentBundleOrEmpty(locale), getProductsOrEmpty(locale)]);
     const refs = buildContentRefs(bundle, products);
     if (refs.length === 0) throw new Error("content refs are empty");
     return refs;

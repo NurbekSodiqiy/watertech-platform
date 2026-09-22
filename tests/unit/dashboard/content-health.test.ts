@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STALE_DAYS, getContentHealth } from "@/lib/dashboard/content-health";
 import { runContentScan } from "@/lib/agents/stale-scan";
+import { CONTENT_REGISTRY } from "@/lib/admin/registry";
+import type { DashboardTableName } from "@/lib/dashboard/content-health";
 
 type Row = Record<string, unknown>;
 
@@ -26,6 +28,11 @@ const db = vi.hoisted(() => {
         rows = rows.filter((row) => values.includes(row[column]));
         return builder;
       },
+      // supabase-js's overrideTypes is a type-level cast that returns the
+      // builder unchanged at runtime; the scan calls it on its dynamic reads.
+      overrideTypes() {
+        return builder;
+      },
       then<T>(onFulfilled: (result: { data: Row[]; error: null }) => T) {
         return Promise.resolve({ data: rows, error: null }).then(onFulfilled);
       },
@@ -47,7 +54,13 @@ const db = vi.hoisted(() => {
 });
 
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn, revalidatePath: vi.fn() }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => db.client }));
+// The scan reads content tables through the column-agnostic client (its table
+// names come from CONTENT_REGISTRY at runtime) and writes notifications through
+// the typed one. Both are the same fake here.
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => db.client,
+  createDynamicAdminClient: () => db.client,
+}));
 
 const NOW = Date.parse("2026-09-17T09:00:00.000Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -202,5 +215,152 @@ describe("runContentScan (daily scan, same thresholds)", () => {
     ]);
 
     expect(await runContentScan()).toEqual({ created: 1, skipped: 0 });
+  });
+});
+// === Registry coverage ============================================================
+// The scan derives its table list from CONTENT_REGISTRY. Before that it named
+// seven tables by hand, so content_changelog, content_contacts and content_sops
+// were published, edited and never once swept.
+
+const REGISTRY_TABLES = Object.keys(CONTENT_REGISTRY) as DashboardTableName[];
+
+/** A published row carrying only what the scan reads: the registry's own title
+ * column, the bookkeeping columns, and `published_on` for the one table whose
+ * age is measured on it. Built from the registry so a new content table is
+ * covered by these tests the moment it is added. */
+function registryRow(table: DashboardTableName, patch: Row = {}): Row {
+  const entry = CONTENT_REGISTRY[table];
+  const row: Row = {
+    id: `${table}-1`,
+    [entry.titleColumn]: `Sarlavha (${table})`,
+    status: "published",
+    sort_order: 0,
+    version: 1,
+    updated_at: daysAgo(1),
+    created_at: daysAgo(400),
+    updated_by: null,
+  };
+  if (table === "content_changelog") row.published_on = daysAgo(1).slice(0, 10);
+  return { ...row, ...patch };
+}
+
+function seedEvery(patch: (table: DashboardTableName) => Row): void {
+  for (const table of REGISTRY_TABLES) seed(table, [registryRow(table, patch(table))]);
+}
+
+describe("runContentScan — registry coverage", () => {
+  it("sweeps every table in CONTENT_REGISTRY, the three it used to miss included", async () => {
+    expect(REGISTRY_TABLES).toHaveLength(10);
+    seedEvery((table) =>
+      table === "content_changelog" ? { published_on: daysAgo(91).slice(0, 10) } : { updated_at: daysAgo(91) }
+    );
+
+    await runContentScan();
+
+    expect(new Set(inserted("stale_content").map((row) => row.table_name))).toEqual(new Set(REGISTRY_TABLES));
+    for (const table of ["content_changelog", "content_contacts", "content_sops"]) {
+      expect(inserted("stale_content").map((row) => row.table_name)).toContain(table);
+    }
+  });
+
+  it("counts every published row it looked at in the summary", async () => {
+    seedEvery(() => ({}));
+
+    await runContentScan();
+
+    expect(String(inserted("scan_summary")[0]?.body)).toContain(
+      `Tekshirilgan nashr etilgan yozuvlar: ${REGISTRY_TABLES.length}`
+    );
+  });
+
+  it("links each finding to that table's own editor", async () => {
+    seedEvery((table) =>
+      table === "content_changelog" ? { published_on: daysAgo(91).slice(0, 10) } : { updated_at: daysAgo(91) }
+    );
+
+    await runContentScan();
+
+    for (const row of inserted("stale_content")) {
+      const entry = CONTENT_REGISTRY[row.table_name as DashboardTableName];
+      expect(row.href).toBe(`${entry.adminPath}/${row.row_id}`);
+    }
+  });
+});
+
+describe("runContentScan — per-table stale rules", () => {
+  it("measures a changelog entry by published_on, not by when it was last saved", async () => {
+    seed("content_changelog", [
+      registryRow("content_changelog", { id: "old-news", published_on: daysAgo(91).slice(0, 10), updated_at: daysAgo(1) }),
+    ]);
+
+    await runContentScan();
+
+    const stale = inserted("stale_content");
+    expect(stale.map((row) => row.row_id)).toEqual(["old-news"]);
+    expect(String(stale[0]?.body)).toContain("e'lon qilingan");
+    expect(String(stale[0]?.body)).not.toContain("yangilanmagan");
+  });
+
+  it("leaves a freshly published entry alone however long ago the row was created", async () => {
+    seed("content_changelog", [
+      registryRow("content_changelog", { published_on: daysAgo(2).slice(0, 10), updated_at: daysAgo(400) }),
+    ]);
+
+    await runContentScan();
+    // The row is still reported for its empty *_ru columns; what it must not
+    // be is stale, which measuring `updated_at` would have made it.
+    expect(inserted("stale_content")).toEqual([]);
+  });
+
+  it("measures contacts and SOPs by updated_at, like every other table", async () => {
+    seed("content_contacts", [registryRow("content_contacts", { id: "sotuv-boshligi", updated_at: daysAgo(91) })]);
+    seed("content_sops", [registryRow("content_sops", { id: "amocrm-lead", updated_at: daysAgo(89) })]);
+
+    await runContentScan();
+
+    const stale = inserted("stale_content");
+    expect(stale.map((row) => row.row_id)).toEqual(["sotuv-boshligi"]);
+    expect(String(stale[0]?.body)).toContain("yangilanmagan");
+  });
+
+  it("falls back to updated_at when the age column holds no usable date", async () => {
+    seed("content_changelog", [
+      registryRow("content_changelog", { id: "no-date", published_on: null, updated_at: daysAgo(91) }),
+    ]);
+
+    await runContentScan();
+    expect(inserted("stale_content").map((row) => row.row_id)).toEqual(["no-date"]);
+  });
+});
+
+describe("runContentScan — missing RU across the registry", () => {
+  it("never flags the two tables with nothing to translate", async () => {
+    seed("content_competitors", [registryRow("content_competitors")]);
+    seed("content_products", [registryRow("content_products")]);
+
+    expect(await runContentScan()).toEqual({ created: 0, skipped: 0 });
+    expect(inserted("missing_ru")).toEqual([]);
+  });
+
+  it("flags the three tables the old hand-written list never reached", async () => {
+    seed("content_changelog", [registryRow("content_changelog", { id: "cl-1" })]);
+    seed("content_contacts", [registryRow("content_contacts", { id: "ct-1" })]);
+    seed("content_sops", [registryRow("content_sops", { id: "sop-1" })]);
+
+    await runContentScan();
+
+    const missing = inserted("missing_ru");
+    expect(missing.map((row) => row.table_name).sort()).toEqual([
+      "content_changelog",
+      "content_contacts",
+      "content_sops",
+    ]);
+    expect(String(missing.find((row) => row.table_name === "content_contacts")?.body)).toContain("role_ru");
+  });
+
+  it("stops flagging a contact once both Russian columns are filled", async () => {
+    seed("content_contacts", [registryRow("content_contacts", { role_ru: "Менеджер", topic_ru: "Продажи" })]);
+
+    expect(await runContentScan()).toEqual({ created: 0, skipped: 0 });
   });
 });

@@ -128,6 +128,11 @@ export interface ContentEntry<
   readonly listColumns: TColumns;
   /** Column that names a row in a notification, a gate report or a log line. */
   readonly titleColumn: ContentColumn<T>;
+  /** Column whose age the daily content scan measures (lib/agents/stale-scan.ts).
+   * Omitted means `updated_at` — "nobody has touched this row in STALE_DAYS".
+   * A changelog entry is not edited after it ships, so its age is the date it
+   * announces, not the date someone last saved it. */
+  readonly staleColumn?: ContentColumn<T>;
   readonly listOrder?: readonly ListOrder[];
   /** Column a row's `sort_order` is scoped by: a new (or restored) package is
    * appended after the last package of its own group, everything else after
@@ -327,6 +332,9 @@ export const CONTENT_REGISTRY = {
     toRow: changelogToRow,
     listColumns: ["title", "published_on", "approved_by"],
     titleColumn: "title",
+    // An entry announcing a change from last year is not "untouched content" —
+    // it is an old announcement, and that is what the scan should measure.
+    staleColumn: "published_on",
     // Newest first, like the operator page — drafts included.
     listOrder: [
       { column: "published_on", ascending: false },

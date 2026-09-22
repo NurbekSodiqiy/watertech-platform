@@ -16,6 +16,13 @@ env:
   # and no GEMINI_API_KEY ever reach CI: Copilot is disabled (503) here.
   SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-not-a-service-role-key
   CRON_SECRET: ci-placeholder-cron-secret-at-least-32-characters-long
+  # CI builds against a placeholder project, so every content read fails by
+  # design. Without this, `next build` stops on the first unreadable content
+  # kind (lib/content/safe.ts, "page" mode) — which is exactly what we want a
+  # production build to do, and exactly what CI cannot satisfy. Operator routes
+  # are therefore prerendered empty here; nothing in the CI e2e suite is signed
+  # in, so no spec asserts content. Never set this in Vercel or production.
+  CONTENT_BUILD_MODE: allow-empty
 
 jobs:
   ci:

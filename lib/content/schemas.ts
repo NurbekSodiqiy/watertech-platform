@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ContentBundle } from "./loader";
-import { ContentValidationError } from "./safe";
+import { ContentValidationError } from "./errors";
 
 export const scriptTurnLinkSchema = z.object({
   label: z.string(),

@@ -6,8 +6,10 @@ import { WidgetBoundary } from "@/components/ui/WidgetBoundary";
 import { getSop, getSops } from "@/lib/content/loader";
 import type { Locale } from "@/i18n/routing";
 
-// getSops() degrades to [] when Supabase is unreachable (a fresh clone, CI
-// without a project), so the build just prerenders nothing and dynamicParams
+// getSops() is a page read: an unreachable Supabase fails the build here
+// rather than prerendering a knowledge base with no SOPs in it. CI builds
+// against a placeholder project and sets CONTENT_BUILD_MODE=allow-empty, which
+// degrades this to [] — the build then prerenders nothing and dynamicParams
 // renders each SOP on demand.
 export async function generateStaticParams() {
   const sops = await getSops();

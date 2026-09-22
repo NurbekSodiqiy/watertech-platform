@@ -22,12 +22,17 @@ export type DashboardTableName =
   | "content_contacts"
   | "content_sops";
 
-// content_changelog, content_contacts and content_sops are dashboard tables for
-// their action links and the publish gate, but deliberately absent from TABLES
-// below: a changelog entry is a dated record, not something that goes "stale"
-// after 90 days, and its Russian twins are optional per entry; a contact is a
-// person's details, edited when they change, with optional Russian twins; a
-// SOP's Russian twins are optional too.
+// TABLES below is this widget's scope, not the app's: content_changelog,
+// content_contacts and content_sops are dashboard tables for their action links
+// and the publish gate, but the manager's health card leaves them out on
+// purpose — a changelog entry is a dated record rather than content that goes
+// "stale" after 90 days, and all three carry per-row optional Russian twins
+// that would read as permanent findings here.
+//
+// The daily scan (lib/agents/stale-scan.ts) does cover all ten, derived from
+// CONTENT_REGISTRY, and measures the changelog by `published_on` instead of
+// `updated_at`. The two surfaces answer different questions: this one is "what
+// should I look at right now", the scan is "what has nobody looked at".
 export const DASHBOARD_TABLE_KIND: Record<DashboardTableName, ContentKind> = {
   content_scripts: "scripts",
   content_objections: "objections",

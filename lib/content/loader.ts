@@ -32,7 +32,7 @@ import {
   type OnboardingItem,
 } from "@/lib/content/onboarding";
 import type { Locale } from "@/i18n/routing";
-import { safeContent } from "@/lib/content/safe";
+import { safeContent, type ContentReadMode } from "@/lib/content/safe";
 
 export interface ContentBundle {
   scripts: Script[];
@@ -182,6 +182,24 @@ function localizeProduct(product: Product, locale: Locale): Product {
   };
 }
 
+// === Read modes ===================================================================
+// Every content kind below is exported twice, over one internal `read*(locale,
+// mode)` that owns the query:
+//
+//   getX()        — for a statically prerendered or ISR page. A failed read
+//                   throws (ContentUnavailableError), so `next build` fails
+//                   instead of shipping an empty knowledge base and an outage
+//                   during background revalidation leaves the last good page in
+//                   the Full Route Cache. Pages keep calling `getX(locale)`
+//                   exactly as before; only the failure behaviour changed.
+//   getXOrEmpty() — for a Route Handler, the Copilot retriever or a
+//                   request-time manager render, which can show less rather
+//                   than nothing. Logs and degrades to an empty result.
+//
+// The mode is a value at the call site, never sniffed from a Next.js internal:
+// which of the two a caller wants is a property of what it renders. See
+// lib/content/safe.ts.
+//
 // Every getter below reads with the service-role admin client rather than
 // the request-scoped session client: unstable_cache runs outside the
 // request lifecycle and cannot see cookies. Each query filters
@@ -209,8 +227,14 @@ const getScriptsCached = unstable_cache(
   ["content:scripts"],
   { tags: ["content", "content:scripts"], revalidate: 3600 }
 );
+function readScripts(locale: Locale, mode: ContentReadMode): Promise<Script[]> {
+  return safeContent("scripts", () => getScriptsCached(locale), [], mode);
+}
 export function getScripts(locale: Locale = "uz"): Promise<Script[]> {
-  return safeContent("scripts", () => getScriptsCached(locale), []);
+  return readScripts(locale, "page");
+}
+export function getScriptsOrEmpty(locale: Locale = "uz"): Promise<Script[]> {
+  return readScripts(locale, "degrade");
 }
 
 const getObjectionsCached = unstable_cache(
@@ -226,8 +250,14 @@ const getObjectionsCached = unstable_cache(
   ["content:objections"],
   { tags: ["content", "content:objections"], revalidate: 3600 }
 );
+function readObjections(locale: Locale, mode: ContentReadMode): Promise<Objection[]> {
+  return safeContent("objections", () => getObjectionsCached(locale), [], mode);
+}
 export function getObjections(locale: Locale = "uz"): Promise<Objection[]> {
-  return safeContent("objections", () => getObjectionsCached(locale), []);
+  return readObjections(locale, "page");
+}
+export function getObjectionsOrEmpty(locale: Locale = "uz"): Promise<Objection[]> {
+  return readObjections(locale, "degrade");
 }
 
 const getFaqsCached = unstable_cache(
@@ -243,8 +273,14 @@ const getFaqsCached = unstable_cache(
   ["content:faqs"],
   { tags: ["content", "content:faqs"], revalidate: 3600 }
 );
+function readFaqs(locale: Locale, mode: ContentReadMode): Promise<Faq[]> {
+  return safeContent("faqs", () => getFaqsCached(locale), [], mode);
+}
 export function getFaqs(locale: Locale = "uz"): Promise<Faq[]> {
-  return safeContent("faqs", () => getFaqsCached(locale), []);
+  return readFaqs(locale, "page");
+}
+export function getFaqsOrEmpty(locale: Locale = "uz"): Promise<Faq[]> {
+  return readFaqs(locale, "degrade");
 }
 
 // content_competitors has no *_ru columns (battle-cards stay Uzbek-only, see
@@ -262,8 +298,14 @@ const getCompetitorsCached = unstable_cache(
   ["content:competitors"],
   { tags: ["content", "content:competitors"], revalidate: 3600 }
 );
+function readCompetitors(mode: ContentReadMode): Promise<Competitor[]> {
+  return safeContent("competitors", () => getCompetitorsCached(), [], mode);
+}
 export function getCompetitors(): Promise<Competitor[]> {
-  return safeContent("competitors", () => getCompetitorsCached(), []);
+  return readCompetitors("page");
+}
+export function getCompetitorsOrEmpty(): Promise<Competitor[]> {
+  return readCompetitors("degrade");
 }
 
 const getPackageGroupsCached = unstable_cache(
@@ -288,8 +330,14 @@ const getPackageGroupsCached = unstable_cache(
   ["content:packages"],
   { tags: ["content", "content:packages"], revalidate: 3600 }
 );
+function readPackageGroups(locale: Locale, mode: ContentReadMode): Promise<PackageGroup[]> {
+  return safeContent("packages", () => getPackageGroupsCached(locale), [], mode);
+}
 export function getPackageGroups(locale: Locale = "uz"): Promise<PackageGroup[]> {
-  return safeContent("packages", () => getPackageGroupsCached(locale), []);
+  return readPackageGroups(locale, "page");
+}
+export function getPackageGroupsOrEmpty(locale: Locale = "uz"): Promise<PackageGroup[]> {
+  return readPackageGroups(locale, "degrade");
 }
 
 const getProductsCached = unstable_cache(
@@ -305,8 +353,14 @@ const getProductsCached = unstable_cache(
   ["content:products"],
   { tags: ["content", "content:products"], revalidate: 3600 }
 );
+function readProducts(locale: Locale, mode: ContentReadMode): Promise<Product[]> {
+  return safeContent("products", () => getProductsCached(locale), [], mode);
+}
 export function getProducts(locale: Locale = "uz"): Promise<Product[]> {
-  return safeContent("products", () => getProductsCached(locale), []);
+  return readProducts(locale, "page");
+}
+export function getProductsOrEmpty(locale: Locale = "uz"): Promise<Product[]> {
+  return readProducts(locale, "degrade");
 }
 
 // Newest first — the order operators read a changelog in. sort_order only
@@ -327,8 +381,14 @@ const getChangelogCached = unstable_cache(
   ["content:changelog"],
   { tags: ["content", "content:changelog"], revalidate: 3600 }
 );
+function readChangelog(locale: Locale, mode: ContentReadMode): Promise<ChangelogEntry[]> {
+  return safeContent("changelog", () => getChangelogCached(locale), [], mode);
+}
 export function getChangelog(locale: Locale = "uz"): Promise<ChangelogEntry[]> {
-  return safeContent("changelog", () => getChangelogCached(locale), []);
+  return readChangelog(locale, "page");
+}
+export function getChangelogOrEmpty(locale: Locale = "uz"): Promise<ChangelogEntry[]> {
+  return readChangelog(locale, "degrade");
 }
 
 // Not part of ContentBundle, same as the changelog: contacts are not searchable
@@ -346,8 +406,14 @@ const getContactsCached = unstable_cache(
   ["content:contacts"],
   { tags: ["content", "content:contacts"], revalidate: 3600 }
 );
+function readContacts(locale: Locale, mode: ContentReadMode): Promise<Contact[]> {
+  return safeContent("contacts", () => getContactsCached(locale), [], mode);
+}
 export function getContacts(locale: Locale = "uz"): Promise<Contact[]> {
-  return safeContent("contacts", () => getContactsCached(locale), []);
+  return readContacts(locale, "page");
+}
+export function getContactsOrEmpty(locale: Locale = "uz"): Promise<Contact[]> {
+  return readContacts(locale, "degrade");
 }
 
 // Not part of ContentBundle either: a SOP is searched through the separate
@@ -366,11 +432,19 @@ const getSopsCached = unstable_cache(
   ["content:sops"],
   { tags: ["content", "content:sops"], revalidate: 3600 }
 );
+function readSops(locale: Locale, mode: ContentReadMode): Promise<Sop[]> {
+  return safeContent("sops", () => getSopsCached(locale), [], mode);
+}
 export function getSops(locale: Locale = "uz"): Promise<Sop[]> {
-  return safeContent("sops", () => getSopsCached(locale), []);
+  return readSops(locale, "page");
+}
+export function getSopsOrEmpty(locale: Locale = "uz"): Promise<Sop[]> {
+  return readSops(locale, "degrade");
 }
 
-/** One published SOP by its slug, or undefined when there is none. */
+/** One published SOP by its slug, or undefined when there is none. Page read
+ * (it backs /tools/amocrm/[slug]); no `OrEmpty` twin because no handler looks
+ * a single SOP up — a handler that needs one filters `getSopsOrEmpty()`. */
 export async function getSop(locale: Locale, slug: string): Promise<Sop | undefined> {
   const sops = await getSops(locale);
   return sops.find((sop) => sop.id === slug);
@@ -401,24 +475,36 @@ export function getOnboardingSummaryChecklist(locale: Locale = "uz"): LocalizedO
   return onboardingSummaryChecklist.map((item) => localizeOnboardingItem(item, locale));
 }
 
-// Each getter above already degrades on its own; the outer safeContent only
-// guards the bundle assembly itself. assertValidInDev throws a
-// ContentValidationError, which safeContent rethrows — dev still fails loudly.
-export function getContentBundle(locale: Locale = "uz"): Promise<ContentBundle> {
+// The bundle's own mode is the one its five member reads run in, so a page
+// bundle fails on the first unreadable kind (and safeContent rethrows that
+// ContentUnavailableError untouched, keeping the failing kind's name) while a
+// handler bundle degrades member by member. The outer safeContent then only
+// guards the assembly itself. assertValidInDev throws a ContentValidationError,
+// which safeContent rethrows in either mode — dev still fails loudly.
+function readContentBundle(locale: Locale, mode: ContentReadMode): Promise<ContentBundle> {
   return safeContent(
     "bundle",
     async () => {
       const [scripts, objections, faqs, competitors, packageGroups] = await Promise.all([
-        getScripts(locale),
-        getObjections(locale),
-        getFaqs(locale),
-        getCompetitors(),
-        getPackageGroups(locale),
+        readScripts(locale, mode),
+        readObjections(locale, mode),
+        readFaqs(locale, mode),
+        readCompetitors(mode),
+        readPackageGroups(locale, mode),
       ]);
       const bundle = { scripts, objections, faqs, competitors, packageGroups };
       await assertValidInDev(bundle);
       return bundle;
     },
-    { scripts: [], objections: [], faqs: [], competitors: [], packageGroups: [] }
+    { scripts: [], objections: [], faqs: [], competitors: [], packageGroups: [] },
+    mode
   );
+}
+
+export function getContentBundle(locale: Locale = "uz"): Promise<ContentBundle> {
+  return readContentBundle(locale, "page");
+}
+
+export function getContentBundleOrEmpty(locale: Locale = "uz"): Promise<ContentBundle> {
+  return readContentBundle(locale, "degrade");
 }
