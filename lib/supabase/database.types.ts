@@ -4,12 +4,16 @@
 // content_contacts / content_sops by hand from 0011 / 0012 on 2026-09-20
 // (Supabase CLI unavailable locally: SUPABASE_PROJECT_ID unset).
 //
-// allowed_users and telemetry_events are NOT created by any migration in
-// supabase/migrations (they predate the migrations folder). Their columns are
-// inferred from usage: allowed_users from 0001_custom_access_token_hook.sql
-// (email, role), telemetry_events from app/api/events/route.ts (insert) and
-// lib/telemetry/aggregate.ts (TelemetryRow). Run `npm run gen:types` against
-// the real project to confirm them.
+// allowed_users (full_name, is_active, created_at, updated_at, updated_by) and
+// content_versions (op) added by hand from 0013 on 2026-09-22 — run
+// `npm run gen:types` once 0013 is applied to confirm them against the project.
+//
+// allowed_users and telemetry_events were created by hand before
+// supabase/migrations existed; 0013_baseline_and_audit_integrity.sql is their
+// baseline. The columns below are the shape that migration declares:
+// allowed_users from 0001_custom_access_token_hook.sql (email, role) plus 0013's
+// bookkeeping columns, telemetry_events from app/api/events/route.ts (insert)
+// and lib/telemetry/aggregate.ts (TelemetryRow).
 
 export type Json =
   | string
@@ -72,16 +76,31 @@ export type Database = {
       }
       allowed_users: {
         Row: {
+          created_at: string
           email: string
+          full_name: string | null
+          is_active: boolean
           role: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          created_at?: string
           email: string
+          full_name?: string | null
+          is_active?: boolean
           role: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          created_at?: string
           email?: string
+          full_name?: string | null
+          is_active?: boolean
           role?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -722,6 +741,7 @@ export type Database = {
           actor: string | null
           created_at: string
           id: number
+          op: string
           row_id: string
           snapshot: Json
           table_name: string
@@ -730,6 +750,7 @@ export type Database = {
           actor?: string | null
           created_at?: string
           id?: number
+          op?: string
           row_id: string
           snapshot: Json
           table_name: string
@@ -738,6 +759,7 @@ export type Database = {
           actor?: string | null
           created_at?: string
           id?: number
+          op?: string
           row_id?: string
           snapshot?: Json
           table_name?: string

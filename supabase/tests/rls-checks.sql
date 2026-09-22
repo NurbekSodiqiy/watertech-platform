@@ -13,10 +13,14 @@
 -- Policies under test: 0002 (content_* + content_versions), 0006 (copilot_logs),
 -- 0007 (admin_notifications, content_gate_reports), 0008 (rate_limits),
 -- 0009 (user_state), 0010 (content_changelog), 0011 (content_contacts),
--- 0012 (content_sops).
--- telemetry_events has no migration in this repo (it predates
--- supabase/migrations), so its checks test whatever policy the project
--- actually has.
+-- 0012 (content_sops), 0013 (allowed_users, telemetry_events, and the write-side
+-- integrity block at the end: append-only history, draft default, updated_by).
+--
+-- 0013 is the baseline for allowed_users and telemetry_events, which predate
+-- supabase/migrations. On a project where 0013 has not been applied yet, the
+-- telemetry_events checks test whatever policy that project actually has, and
+-- the write-side block fails — that failure means "apply 0013", not "the
+-- policies are wrong".
 
 begin;
 
@@ -263,6 +267,89 @@ begin
       raise exception 'RLS FAIL: manager cannot select % (0 rows visible)', c.label;
     end if;
   end loop;
+end $$;
+
+-- === As a manager: write-side integrity (0013) =================================
+-- The publish gate, the updated_by stamp and the append-only version history are
+-- enforced by the database now, so they are asserted the same way the read side
+-- is: through a real manager session, not the editor's own role. Note this block
+-- deletes the content_package_groups fixture, so it must stay after the manager
+-- read loop above.
+
+do $$
+declare
+  n bigint;
+  s text;
+  ub text;
+  snap jsonb;
+begin
+  -- content_versions is append-only and written only by the snapshot trigger
+  -- (SECURITY DEFINER): 0013 drops content_versions_manager_insert and revokes
+  -- the INSERT grant, so a hand-written history row must be rejected.
+  begin
+    insert into public.content_versions (table_name, row_id, snapshot, actor)
+    values ('content_faqs', 'rls-test-draft', '{"forged":true}', 'rls-manager@test');
+    raise exception 'RLS FAIL: manager can insert a fabricated content_versions row';
+  exception
+    when insufficient_privilege then null; -- policy dropped + grant revoked, as intended
+  end;
+
+  -- A new row defaults to draft: status is deliberately not named here, exactly
+  -- like a direct insert from a seed script or psql would leave it.
+  insert into public.content_faqs (id, category, question, answer)
+  values ('rls-test-default', 'RLS', 'Default status?', '-');
+  select status, updated_by into s, ub from public.content_faqs where id = 'rls-test-default';
+  if s <> 'draft' then
+    raise exception 'RLS FAIL: a new content_faqs row defaulted to % instead of draft', s;
+  end if;
+  if ub is distinct from 'rls-manager@test' then
+    raise exception 'RLS FAIL: updated_by not stamped from the JWT on insert (got %)', coalesce(ub, '<null>');
+  end if;
+
+  -- updated_by comes from the JWT, never from the payload — on insert...
+  insert into public.content_faqs (id, category, question, answer, status, updated_by)
+  values ('rls-test-spoof', 'RLS', 'Whose email?', '-', 'draft', 'attacker@test');
+  select updated_by into ub from public.content_faqs where id = 'rls-test-spoof';
+  if ub is distinct from 'rls-manager@test' then
+    raise exception 'RLS FAIL: insert payload set updated_by to % instead of the JWT email', coalesce(ub, '<null>');
+  end if;
+
+  -- ...and on update.
+  update public.content_faqs set answer = 'edited', updated_by = 'attacker@test'
+  where id = 'rls-test-spoof';
+  select updated_by into ub from public.content_faqs where id = 'rls-test-spoof';
+  if ub is distinct from 'rls-manager@test' then
+    raise exception 'RLS FAIL: update payload set updated_by to % instead of the JWT email', coalesce(ub, '<null>');
+  end if;
+
+  -- A delete leaves history behind, and so does the cascade it triggers:
+  -- content_packages.group_id references content_package_groups on delete
+  -- cascade, so deleting the group must snapshot the package too.
+  delete from public.content_package_groups where id = 'rls-test-draft';
+
+  select count(*) into n from public.content_versions
+  where table_name = 'content_package_groups' and row_id = 'rls-test-draft' and op = 'delete';
+  if n <> 1 then
+    raise exception 'RLS FAIL: deleting a content_package_groups row left % delete snapshots (expected 1)', n;
+  end if;
+
+  select snapshot, actor into snap, ub from public.content_versions
+  where table_name = 'content_packages' and row_id = 'rls-test-draft' and op = 'delete';
+  if snap is null then
+    raise exception 'RLS FAIL: the CASCADED content_packages delete left no snapshot';
+  end if;
+  if snap->>'id' <> 'rls-test-draft' or snap->>'group_id' <> 'rls-test-draft' then
+    raise exception 'RLS FAIL: the cascaded content_packages snapshot holds the wrong row (%)', snap;
+  end if;
+  if ub is distinct from 'rls-manager@test' then
+    raise exception 'RLS FAIL: delete snapshot actor is % instead of the JWT email', coalesce(ub, '<null>');
+  end if;
+
+  -- The rows themselves are gone; only their history remains.
+  select count(*) into n from public.content_packages where id = 'rls-test-draft';
+  if n <> 0 then
+    raise exception 'RLS FAIL: the cascaded content_packages row survived the delete';
+  end if;
 end $$;
 
 -- A manager may READ every user_state row (the onboarding progress table on

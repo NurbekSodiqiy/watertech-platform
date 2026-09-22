@@ -112,6 +112,12 @@ It also asserts the write side: an operator may insert/update/delete only their 
 manager may not write them at all, and neither role may select `rate_limits` or execute `rate_limit_hit()`
 — that counter belongs to the server's service-role client alone (migration 0008).
 
+The last manager block covers the integrity rules migration 0013 moved into the database: a manager cannot
+insert a fabricated `content_versions` row, a content row inserted without a `status` lands as `draft`,
+`updated_by` is stamped from the JWT even when the payload sends another email, and a delete leaves a
+snapshot with `op = 'delete'` — including the `content_packages` row removed by the `on delete cascade`
+from its group.
+
 **Run it against the staging project only, never production.** It writes fixture rows. They are always
 rolled back, but while it runs it holds locks on live tables, and rolled-back inserts still consume
 `bigserial` ids.
@@ -126,9 +132,11 @@ rolled back, but while it runs it holds locks on live tables, and rolled-back in
 The script switches roles with `set local role authenticated` and `set local request.jwt.claims = '…'`,
 which is what `auth.jwt()` reads, so the policies run exactly as for a real request.
 
-`telemetry_events` (and `allowed_users`) were created before `supabase/migrations/` existed, so their
-policies aren't in this repo. The telemetry check tests whatever policy staging actually has. If it fails,
-write the missing policy as a new migration instead of editing the table by hand.
+`telemetry_events` and `allowed_users` were created before `supabase/migrations/` existed; migration 0013
+is their baseline. On a project where 0013 has not been applied yet the telemetry check tests whatever
+policy that project actually has, and the 0013 block fails — that failure means "apply 0013" (see
+`docs/MIGRATIONS.md`), not that the policies are wrong. Either way, write the fix as a new migration
+instead of editing the table by hand.
 
 Re-run it after every migration that touches a policy or GRANT.
 

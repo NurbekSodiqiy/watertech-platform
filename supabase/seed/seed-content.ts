@@ -46,15 +46,25 @@ async function main() {
 
   // sort_order = array position, so the seeded DB renders in the exact same
   // order the current static TS arrays do.
-  const scriptRows = scripts.map((s, i) => ({ ...scriptToRow(s), sort_order: i }));
-  const objectionRows = objections.map((o, i) => ({ ...objectionToRow(o), sort_order: i }));
-  const faqRows = faqs.map((f, i) => ({ ...faqToRow(f), sort_order: i }));
-  const competitorRows = competitors.map((c, i) => ({ ...competitorToRow(c), sort_order: i }));
-  const packageGroupRows = packageGroups.map((g, i) => ({ ...packageGroupToRow(g), sort_order: i }));
+  //
+  // status is spelled out on every table: since 0013 the column defaults to
+  // 'draft' so that nothing reaches operators without passing the publish gate,
+  // and the seed is a direct service-role insert that bypasses it. These arrays
+  // are the reviewed content this app shipped with, so they are seeded as
+  // published — deliberately, here, instead of by leaning on a column default.
+  const scriptRows = scripts.map((s, i) => ({ ...scriptToRow(s), status: "published", sort_order: i }));
+  const objectionRows = objections.map((o, i) => ({ ...objectionToRow(o), status: "published", sort_order: i }));
+  const faqRows = faqs.map((f, i) => ({ ...faqToRow(f), status: "published", sort_order: i }));
+  const competitorRows = competitors.map((c, i) => ({ ...competitorToRow(c), status: "published", sort_order: i }));
+  const packageGroupRows = packageGroups.map((g, i) => ({
+    ...packageGroupToRow(g),
+    status: "published",
+    sort_order: i,
+  }));
   const packageRows = packageGroups.flatMap((g) =>
-    g.packages.map((p, i) => ({ ...packageToRow(p, g.id), sort_order: i }))
+    g.packages.map((p, i) => ({ ...packageToRow(p, g.id), status: "published", sort_order: i }))
   );
-  const productRows = products.map((p, i) => ({ ...productToRow(p), sort_order: i }));
+  const productRows = products.map((p, i) => ({ ...productToRow(p), status: "published", sort_order: i }));
 
   // The contacts are still placeholders (lib/content/contacts.ts), so they land
   // as drafts — operators see the "no contacts yet" state instead of fake
@@ -63,7 +73,7 @@ async function main() {
   // seed after publishing real contacts would put them back to draft.
   const contactRows = contacts.map((c, i) => ({ ...contactToRow(c), status: "draft", sort_order: i }));
 
-  const sopRows = sops.map((s, i) => ({ ...sopToRow(s), sort_order: i }));
+  const sopRows = sops.map((s, i) => ({ ...sopToRow(s), status: "published", sort_order: i }));
 
   const counts: Record<string, number> = {};
 
