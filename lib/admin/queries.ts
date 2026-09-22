@@ -14,7 +14,9 @@ import { changelogReadKey } from "@/lib/user-state/keys";
 import { aggregateChangelogReads, type ChangelogReadCounts } from "@/lib/user-state/changelog";
 import type { ContentBundle } from "@/lib/content/loader";
 import { statusSchema } from "@/lib/admin/schemas";
+import { CONTENT_REGISTRY, DEFAULT_LIST_ORDER, type ListColumnOf } from "@/lib/admin/registry";
 import type { StatusValue } from "@/lib/admin/actions/status";
+import type { DashboardTableName } from "@/lib/dashboard/content-health";
 import type {
   ScriptRow,
   ObjectionRow,
@@ -29,12 +31,23 @@ import type {
 } from "@/lib/content/db";
 import type { Competitor } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
-import type { Tables } from "@/lib/supabase/typed";
+import type { DynamicTablesDatabase, Tables } from "@/lib/supabase/typed";
 
 // Reads with the RLS-scoped session client (not the cached admin loader in
 // lib/content/loader.ts) so a manager's own "select all" policy returns
 // draft rows too — the whole point of the admin list/edit views. Never
 // cached: managers need to see their own writes immediately.
+//
+// Three shapes of read, one implementation each instead of two per table:
+//   listRows(table)     — the list view's projection (bookkeeping columns plus
+//                         the entry's listColumns). A script's stage trees are
+//                         megabytes of JSONB that a table rendering one name
+//                         has no use for, and every row of a list is shipped
+//                         to the browser inside the RSC payload.
+//   listFullRows(table) — whole rows, for the publish gate's cross-reference
+//                         bundle and the script editor's link pickers.
+//   getRow(table, id)   — one whole row, for an edit page.
+// The per-table names below stay as typed wrappers so pages read the same.
 
 // === Admin row types ==============================================================
 // Generated row types widen CHECK-constrained columns to string; the admin
@@ -60,6 +73,38 @@ export type AdminProductRow = Omit<WithStatus<ProductRow>, "line" | "category" |
   material: NonNullable<Product["material"]> | null;
 };
 export type ContentVersionRow = Tables<"content_versions">;
+
+/** Columns every admin list needs whatever the table is: the row's identity,
+ * the status toggle, the version the row actions send back for the optimistic
+ * concurrency check, and the "updated" columns the table renders. */
+interface ListBookkeeping {
+  id: string;
+  status: string;
+  version: number;
+  updated_at: string;
+  updated_by: string | null;
+  sort_order: number;
+}
+
+const LIST_BOOKKEEPING_COLUMNS = [
+  "id",
+  "status",
+  "version",
+  "updated_at",
+  "updated_by",
+  "sort_order",
+] as const satisfies readonly (keyof ListBookkeeping)[];
+
+type ListContentColumn<T extends DashboardTableName> = Exclude<
+  Extract<ListColumnOf<T>, keyof Tables<T>>,
+  keyof ListBookkeeping
+>;
+
+type AdminListRowRaw<T extends DashboardTableName> = ListBookkeeping & Pick<Tables<T>, ListContentColumn<T>>;
+
+/** What a list page hands to DataTable: the bookkeeping columns plus the
+ * registry entry's `listColumns`, and nothing else. */
+export type AdminListRow<T extends DashboardTableName> = WithStatus<AdminListRowRaw<T>>;
 
 function withStatus<T extends { id: string; status: string }>(row: T): WithStatus<T> {
   return { ...row, status: narrowColumn(statusSchema, row.status, "draft", "status", row.id) };
@@ -87,83 +132,153 @@ function toAdminProduct(row: ProductRow): AdminProductRow {
   };
 }
 
-// === Queries ======================================================================
+// === Generic reads ================================================================
+// The table name is a runtime value in all three, so they go through the
+// column-agnostic client (lib/supabase/typed.ts) and restate the row shape the
+// projection produces with `overrideTypes`. The allow-list that makes that
+// safe is the registry's own key set: `T` cannot be anything else.
 
-export async function listScriptRows(): Promise<AdminScriptRow[]> {
-  const { data, error } = await createClient().from("content_scripts").select("*").order("sort_order");
-  if (error) throw new Error(`content_scripts: ${error.message}`);
+function dynamicClient() {
+  return createClient<DynamicTablesDatabase>();
+}
+
+/** The list view's rows: bookkeeping columns + the entry's `listColumns`. */
+export async function listRows<T extends DashboardTableName>(table: T): Promise<AdminListRow<T>[]> {
+  const entry = CONTENT_REGISTRY[table];
+  const columns = [...LIST_BOOKKEEPING_COLUMNS, ...entry.listColumns].join(",");
+
+  let query = dynamicClient().from(table).select(columns);
+  for (const order of entry.listOrder ?? DEFAULT_LIST_ORDER) {
+    query = query.order(order.column, { ascending: order.ascending });
+  }
+
+  const { data, error } = await query.overrideTypes<AdminListRowRaw<T>[], { merge: false }>();
+  if (error) throw new Error(`${table}: ${error.message}`);
   return data.map(withStatus);
+}
+
+/** Whole rows, ordered like the list. Used where the columns a caller needs
+ * are the row itself: the publish gate's cross-reference bundle and the
+ * script editor's link pickers, which both map rows through lib/content/db. */
+export async function listFullRows<T extends DashboardTableName>(table: T): Promise<Tables<T>[]> {
+  const entry = CONTENT_REGISTRY[table];
+
+  let query = dynamicClient().from(table).select("*");
+  for (const order of entry.listOrder ?? DEFAULT_LIST_ORDER) {
+    query = query.order(order.column, { ascending: order.ascending });
+  }
+
+  const { data, error } = await query.overrideTypes<Tables<T>[], { merge: false }>();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return data;
+}
+
+/** One whole row for an edit page, or null when there is no such row.
+ * `.limit(1)` rather than `.maybeSingle()` so the overridden row type stays
+ * an array, which is the shape the generic `T` resolves cleanly in. */
+export async function getRow<T extends DashboardTableName>(table: T, id: string): Promise<Tables<T> | null> {
+  const { data, error } = await dynamicClient()
+    .from(table)
+    .select("*")
+    .eq("id", id)
+    .limit(1)
+    .overrideTypes<Tables<T>[], { merge: false }>();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return data[0] ?? null;
+}
+
+// === Per-table wrappers ===========================================================
+// Same names the pages have always imported; each is the generic read above
+// plus this table's column narrowing.
+
+export function listScriptRows(): Promise<AdminListRow<"content_scripts">[]> {
+  return listRows("content_scripts");
 }
 
 export async function getScriptRow(id: string): Promise<AdminScriptRow | null> {
-  const { data, error } = await createClient().from("content_scripts").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_scripts: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_scripts", id);
+  return row && withStatus(row);
 }
 
-export async function listObjectionRows(): Promise<AdminObjectionRow[]> {
-  const { data, error } = await createClient().from("content_objections").select("*").order("sort_order");
-  if (error) throw new Error(`content_objections: ${error.message}`);
-  return data.map(withStatus);
+export function listObjectionRows(): Promise<AdminListRow<"content_objections">[]> {
+  return listRows("content_objections");
 }
 
 export async function getObjectionRow(id: string): Promise<AdminObjectionRow | null> {
-  const { data, error } = await createClient().from("content_objections").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_objections: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_objections", id);
+  return row && withStatus(row);
 }
 
-export async function listFaqRows(): Promise<AdminFaqRow[]> {
-  const { data, error } = await createClient().from("content_faqs").select("*").order("sort_order");
-  if (error) throw new Error(`content_faqs: ${error.message}`);
-  return data.map(withStatus);
+export function listFaqRows(): Promise<AdminListRow<"content_faqs">[]> {
+  return listRows("content_faqs");
 }
 
 export async function getFaqRow(id: string): Promise<AdminFaqRow | null> {
-  const { data, error } = await createClient().from("content_faqs").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_faqs: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_faqs", id);
+  return row && withStatus(row);
 }
 
-// Newest first, like the operator page — drafts included.
-export async function listChangelogRows(): Promise<AdminChangelogRow[]> {
-  const { data, error } = await createClient()
-    .from("content_changelog")
-    .select("*")
-    .order("published_on", { ascending: false })
-    .order("sort_order");
-  if (error) throw new Error(`content_changelog: ${error.message}`);
-  return data.map(withStatus);
+export function listChangelogRows(): Promise<AdminListRow<"content_changelog">[]> {
+  return listRows("content_changelog");
 }
 
 export async function getChangelogRow(id: string): Promise<AdminChangelogRow | null> {
-  const { data, error } = await createClient().from("content_changelog").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_changelog: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_changelog", id);
+  return row && withStatus(row);
 }
 
-export async function listContactRows(): Promise<AdminContactRow[]> {
-  const { data, error } = await createClient().from("content_contacts").select("*").order("sort_order");
-  if (error) throw new Error(`content_contacts: ${error.message}`);
-  return data.map(withStatus);
+export function listContactRows(): Promise<AdminListRow<"content_contacts">[]> {
+  return listRows("content_contacts");
 }
 
 export async function getContactRow(id: string): Promise<AdminContactRow | null> {
-  const { data, error } = await createClient().from("content_contacts").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_contacts: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_contacts", id);
+  return row && withStatus(row);
 }
 
-export async function listSopRows(): Promise<AdminSopRow[]> {
-  const { data, error } = await createClient().from("content_sops").select("*").order("sort_order");
-  if (error) throw new Error(`content_sops: ${error.message}`);
-  return data.map(withStatus);
+export function listSopRows(): Promise<AdminListRow<"content_sops">[]> {
+  return listRows("content_sops");
 }
 
 export async function getSopRow(id: string): Promise<AdminSopRow | null> {
-  const { data, error } = await createClient().from("content_sops").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_sops: ${error.message}`);
-  return data && withStatus(data);
+  const row = await getRow("content_sops", id);
+  return row && withStatus(row);
+}
+
+export function listCompetitorRows(): Promise<AdminListRow<"content_competitors">[]> {
+  return listRows("content_competitors");
+}
+
+export async function getCompetitorRow(id: string): Promise<AdminCompetitorRow | null> {
+  const row = await getRow("content_competitors", id);
+  return row && toAdminCompetitor(row);
+}
+
+export function listPackageGroupRows(): Promise<AdminListRow<"content_package_groups">[]> {
+  return listRows("content_package_groups");
+}
+
+export async function getPackageGroupRow(id: string): Promise<AdminPackageGroupRow | null> {
+  const row = await getRow("content_package_groups", id);
+  return row && withStatus(row);
+}
+
+export function listPackageRows(): Promise<AdminListRow<"content_packages">[]> {
+  return listRows("content_packages");
+}
+
+export async function getPackageRow(id: string): Promise<AdminPackageRow | null> {
+  const row = await getRow("content_packages", id);
+  return row && withStatus(row);
+}
+
+export function listProductRows(): Promise<AdminListRow<"content_products">[]> {
+  return listRows("content_products");
+}
+
+export async function getProductRow(id: string): Promise<AdminProductRow | null> {
+  const row = await getRow("content_products", id);
+  return row && toAdminProduct(row);
 }
 
 /** "Read by n / total operators" for the admin changelog list. Manager-only
@@ -191,58 +306,6 @@ export async function getChangelogReadCounts(): Promise<ChangelogReadCounts | nu
       return parsed.success ? parsed.data : null;
     }
   );
-}
-
-export async function listCompetitorRows(): Promise<AdminCompetitorRow[]> {
-  const { data, error } = await createClient().from("content_competitors").select("*").order("sort_order");
-  if (error) throw new Error(`content_competitors: ${error.message}`);
-  return data.map(toAdminCompetitor);
-}
-
-export async function getCompetitorRow(id: string): Promise<AdminCompetitorRow | null> {
-  const { data, error } = await createClient().from("content_competitors").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_competitors: ${error.message}`);
-  return data && toAdminCompetitor(data);
-}
-
-export async function listPackageGroupRows(): Promise<AdminPackageGroupRow[]> {
-  const { data, error } = await createClient().from("content_package_groups").select("*").order("sort_order");
-  if (error) throw new Error(`content_package_groups: ${error.message}`);
-  return data.map(withStatus);
-}
-
-export async function getPackageGroupRow(id: string): Promise<AdminPackageGroupRow | null> {
-  const { data, error } = await createClient()
-    .from("content_package_groups")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(`content_package_groups: ${error.message}`);
-  return data && withStatus(data);
-}
-
-export async function listPackageRows(): Promise<AdminPackageRow[]> {
-  const { data, error } = await createClient().from("content_packages").select("*").order("sort_order");
-  if (error) throw new Error(`content_packages: ${error.message}`);
-  return data.map(withStatus);
-}
-
-export async function getPackageRow(id: string): Promise<AdminPackageRow | null> {
-  const { data, error } = await createClient().from("content_packages").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_packages: ${error.message}`);
-  return data && withStatus(data);
-}
-
-export async function listProductRows(): Promise<AdminProductRow[]> {
-  const { data, error } = await createClient().from("content_products").select("*").order("sort_order");
-  if (error) throw new Error(`content_products: ${error.message}`);
-  return data.map(toAdminProduct);
-}
-
-export async function getProductRow(id: string): Promise<AdminProductRow | null> {
-  const { data, error } = await createClient().from("content_products").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`content_products: ${error.message}`);
-  return data && toAdminProduct(data);
 }
 
 export type CountableTable =
@@ -287,7 +350,7 @@ export interface AdminContentBundle {
   publishedIds: Record<CountableTable, ReadonlySet<string>>;
 }
 
-function publishedIdSet(rows: { id: string; status: StatusValue }[]): ReadonlySet<string> {
+function publishedIdSet(rows: { id: string; status: string }[]): ReadonlySet<string> {
   return new Set(rows.filter((row) => row.status === "published").map((row) => row.id));
 }
 
@@ -296,13 +359,13 @@ function publishedIdSet(rows: { id: string; status: StatusValue }[]): ReadonlySe
  * so it only works inside a manager's request — the cron scan never calls it. */
 export async function getContentBundleAdmin(): Promise<AdminContentBundle> {
   const [scripts, objections, faqs, competitors, packageGroups, packages, products] = await Promise.all([
-    listScriptRows(),
-    listObjectionRows(),
-    listFaqRows(),
-    listCompetitorRows(),
-    listPackageGroupRows(),
-    listPackageRows(),
-    listProductRows(),
+    listFullRows("content_scripts"),
+    listFullRows("content_objections"),
+    listFullRows("content_faqs"),
+    listFullRows("content_competitors"),
+    listFullRows("content_package_groups"),
+    listFullRows("content_packages"),
+    listFullRows("content_products"),
   ]);
 
   return {

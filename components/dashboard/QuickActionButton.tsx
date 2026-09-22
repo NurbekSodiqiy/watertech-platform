@@ -6,8 +6,8 @@ import { useRouter } from "@/i18n/routing";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
-import type { ActionResult } from "@/lib/admin/actions/guard";
+import { useActionError } from "@/hooks/useActionError";
+import type { ActionResult } from "@/lib/admin/errors";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 /** Same pattern as components/admin/DataTable.tsx's row actions: `action` is
@@ -37,6 +37,7 @@ export function QuickActionButton({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("toast");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
@@ -50,11 +51,11 @@ export function QuickActionButton({
     startTransition(async () => {
       const result = await action(table, id, version);
       if (!result.ok) {
-        const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
+        const { title, isConflict } = describeError(result);
         if (result.gate) setGateResult(result.gate);
         toast({
           kind: "error",
-          title: isConflict ? t("conflict") : result.error,
+          title: isConflict ? t("conflict") : title,
           action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
         });
         return;

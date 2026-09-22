@@ -13,8 +13,8 @@ import { formatRelative } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
-import type { ActionResult } from "@/lib/admin/actions/guard";
+import { useActionError } from "@/hooks/useActionError";
+import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
@@ -62,13 +62,16 @@ export function DataTable<T extends AdminRow>({
   /** Shown instead of the generic filter-empty state when `rows` itself is
    * empty (no records created yet, not just filtered down to nothing). */
   emptyState?: DataTableEmptyState;
-  onDelete: (id: string) => Promise<ActionResult>;
+  /** Version-guarded like every other write — the row the manager saw is the
+   * row that gets deleted, or nothing is. */
+  onDelete: (id: string, expectedVersion: number) => Promise<ActionResult>;
   onToggleStatus: (id: string, next: StatusValue, expectedVersion: number) => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const mounted = useMounted();
   const online = useOnline();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("toast");
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const tTable = useTranslations("admin.table");
@@ -78,7 +81,9 @@ export function DataTable<T extends AdminRow>({
   const locale = useLocale();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: keyof T & string; dir: 1 | -1 } | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  // The row awaiting delete confirmation, with the version the delete is
+  // guarded on — not just its id.
+  const [confirmRow, setConfirmRow] = useState<{ id: string; version: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -112,12 +117,12 @@ export function DataTable<T extends AdminRow>({
       const result = await onToggleStatus(row.id, next, row.version);
       setPendingId(null);
       if (!result.ok) {
-        const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
-        setError(result.error);
+        const { title, isConflict } = describeError(result);
+        setError(title);
         if (result.gate) setBlocked({ id: row.id, result: result.gate });
         toast({
           kind: "error",
-          title: isConflict ? t("conflict") : result.error,
+          title: isConflict ? t("conflict") : title,
           action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
         });
         return;
@@ -128,21 +133,26 @@ export function DataTable<T extends AdminRow>({
   }
 
   function handleDelete() {
-    if (!confirmId) return;
+    if (!confirmRow) return;
     if (!online) {
       toast({ kind: "error", title: t("offline") });
       return;
     }
-    const id = confirmId;
+    const { id, version } = confirmRow;
     setPendingId(id);
     setError(null);
     startTransition(async () => {
-      const result = await onDelete(id);
+      const result = await onDelete(id, version);
       setPendingId(null);
-      setConfirmId(null);
+      setConfirmRow(null);
       if (!result.ok) {
-        setError(result.error);
-        toast({ kind: "error", title: result.error });
+        const { title, isConflict } = describeError(result);
+        setError(title);
+        toast({
+          kind: "error",
+          title,
+          action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
+        });
         return;
       }
       toast({ kind: "success", title: t("deleted") });
@@ -264,7 +274,7 @@ export function DataTable<T extends AdminRow>({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setConfirmId(row.id)}
+                        onClick={() => setConfirmRow({ id: row.id, version: row.version })}
                         aria-label={tTable("delete")}
                         className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-text-secondary transition-colors hover:bg-status-outdated/10 hover:text-status-outdated"
                       >
@@ -280,12 +290,12 @@ export function DataTable<T extends AdminRow>({
       )}
 
       <ConfirmDialog
-        open={confirmId !== null}
+        open={confirmRow !== null}
         title={tTable("deleteTitle")}
         description={tTable("deleteDescription")}
-        pending={pending && pendingId === confirmId}
+        pending={pending && pendingId === confirmRow?.id}
         onConfirm={handleDelete}
-        onCancel={() => setConfirmId(null)}
+        onCancel={() => setConfirmRow(null)}
       />
 
       <GateReportDialog

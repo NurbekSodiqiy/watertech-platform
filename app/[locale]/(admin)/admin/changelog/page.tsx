@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { getChangelogReadCounts, listChangelogRows, type AdminChangelogRow } from "@/lib/admin/queries";
+import { getChangelogReadCounts, listChangelogRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteChangelog, setChangelogStatus } from "@/lib/admin/actions/changelog";
 import type { Locale } from "@/i18n/routing";
@@ -12,7 +12,7 @@ export async function generateMetadata({ params: { locale } }: { params: { local
 
 /** The list row plus its "read by n / total" cell, already formatted — DataTable
  * renders every column as text from the row's own keys. */
-type ChangelogListRow = AdminChangelogRow & { reads: string };
+type ChangelogListRow = AdminListRow<"content_changelog"> & { reads: string };
 
 export default async function AdminChangelogListPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);

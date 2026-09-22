@@ -3,7 +3,7 @@ import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { listFaqRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteFaq, setFaqStatus } from "@/lib/admin/actions/faq";
-import type { AdminFaqRow } from "@/lib/admin/queries";
+import type { AdminListRow } from "@/lib/admin/queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.faq" });
@@ -24,7 +24,7 @@ export default async function AdminFaqListPage({ params: { locale } }: { params:
         <h1 className="text-[24px] font-bold text-primary-dark">{tPage("title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">{tPage("description")}</p>
       </div>
-      <DataTable<AdminFaqRow>
+      <DataTable<AdminListRow<"content_faqs">>
         rows={rows}
         editBase="/admin/faq"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}

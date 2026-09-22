@@ -1,29 +1,12 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "./guard";
-import { revalidateContent, type ContentKind } from "@/lib/content/revalidate";
+import { requireManagerSession } from "./guard";
+import { actionErrorResult, actionFailed, actionOk, logDbError, type ActionResult } from "@/lib/admin/errors";
+import { CONTENT_REGISTRY, isContentTable } from "@/lib/admin/registry";
+import { revalidateContent } from "@/lib/content/revalidate";
 import type { Json } from "@/lib/supabase/database.types";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
-
-const RESTORABLE_TABLES = {
-  content_scripts: "scripts",
-  content_objections: "objections",
-  content_faqs: "faqs",
-  content_competitors: "competitors",
-  content_package_groups: "packages",
-  content_packages: "packages",
-  content_products: "products",
-  content_changelog: "changelog",
-  content_contacts: "contacts",
-  content_sops: "sops",
-} satisfies Record<string, ContentKind>;
-
-type RestorableTable = keyof typeof RESTORABLE_TABLES;
-
-function isRestorableTable(table: string): table is RestorableTable {
-  return Object.prototype.hasOwnProperty.call(RESTORABLE_TABLES, table);
-}
 
 function isJsonObject(value: Json): value is { [key: string]: Json | undefined } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,8 +28,9 @@ const SNAPSHOT_ONLY_COLUMNS = new Set(["id", "version", "created_at", "updated_a
 export async function restoreVersion(table: string, versionId: number): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
-    if (!isRestorableTable(table)) return { ok: false, error: "Noma'lum jadval" };
-    const kind = RESTORABLE_TABLES[table];
+    // The registry is the allow-list: only a table the admin CMS owns can be
+    // restored into, and its kind is the cache tag to clear afterwards.
+    if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
 
     const supabase = createClient();
     const { data: versionRow, error: versionError } = await supabase
@@ -55,12 +39,15 @@ export async function restoreVersion(table: string, versionId: number): Promise<
       .eq("id", versionId)
       .eq("table_name", table)
       .single();
-    if (versionError || !versionRow) return { ok: false, error: "Versiya topilmadi" };
+    if (versionError || !versionRow) {
+      if (versionError) logDbError("content_versions select", versionError);
+      return actionFailed("not_found");
+    }
 
     const snapshot = versionRow.snapshot;
-    if (!isJsonObject(snapshot)) return { ok: false, error: "Versiya ma'lumoti noto'g'ri" };
+    if (!isJsonObject(snapshot)) return actionFailed("validation", { field: "snapshot" });
     const rowId = snapshot.id;
-    if (typeof rowId !== "string") return { ok: false, error: "Versiya ma'lumoti noto'g'ri" };
+    if (typeof rowId !== "string") return actionFailed("validation", { field: "snapshot" });
 
     const payload: { [key: string]: Json | undefined } = { updated_by: session.email };
     for (const [key, value] of Object.entries(snapshot)) {
@@ -73,10 +60,13 @@ export async function restoreVersion(table: string, versionId: number): Promise<
       .from(table)
       .update(payload)
       .eq("id", rowId);
-    if (updateError) return { ok: false, error: updateError.message };
+    if (updateError) {
+      logDbError(`${table} restore`, updateError);
+      return actionFailed("unknown");
+    }
 
-    revalidateContent(kind);
-    return { ok: true };
+    revalidateContent(CONTENT_REGISTRY[table].kind);
+    return actionOk();
   } catch (e) {
     return actionErrorResult(e);
   }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { listSopRows, type AdminSopRow } from "@/lib/admin/queries";
-import { rowToSop } from "@/lib/content/db";
+import { listSopRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteSop, setSopStatus } from "@/lib/admin/actions/sops";
 import type { Locale } from "@/i18n/routing";
@@ -13,7 +12,7 @@ export async function generateMetadata({ params: { locale } }: { params: { local
 
 /** The list row plus its step count, already formatted — DataTable renders
  * every column as text from the row's own keys. */
-type SopListRow = AdminSopRow & { stepCount: string };
+type SopListRow = AdminListRow<"content_sops"> & { stepCount: string };
 
 export default async function AdminSopsListPage({ params: { locale } }: { params: { locale: Locale } }) {
   unstable_setRequestLocale(locale);
@@ -21,9 +20,12 @@ export default async function AdminSopsListPage({ params: { locale } }: { params
   const tEmpty = await getTranslations("emptyState.adminListNone");
   const type = tEmpty("types.sop");
 
+  // Counting the JSONB array is all this column needs, so the steps are not
+  // re-parsed through rowToSop here — a malformed column reads as 0, never
+  // throws, same contract as the content mappers.
   const rows: SopListRow[] = (await listSopRows()).map((row) => ({
     ...row,
-    stepCount: String(rowToSop(row).steps.length),
+    stepCount: String(Array.isArray(row.steps) ? row.steps.length : 0),
   }));
 
   return (

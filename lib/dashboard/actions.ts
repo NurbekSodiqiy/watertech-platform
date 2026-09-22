@@ -2,22 +2,15 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import {
-  requireManagerSession,
-  actionErrorResult,
-  gateBlockedResult,
-  type ActionResult,
-} from "@/lib/admin/actions/guard";
+import { requireManagerSession } from "@/lib/admin/actions/guard";
+import { actionErrorResult, actionFailed, actionOk, gateBlockedResult, type ActionResult } from "@/lib/admin/errors";
+import { isContentTable } from "@/lib/admin/registry";
 import { runPublishGate } from "@/lib/agents/publish-gate";
 import { updateWithVersion } from "@/lib/admin/actions/concurrency";
 import { revalidateContent } from "@/lib/content/revalidate";
-import { DASHBOARD_TABLE_KIND, type DashboardTableName } from "@/lib/dashboard/content-health";
+import { DASHBOARD_TABLE_KIND } from "@/lib/dashboard/content-health";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 import type { Json } from "@/lib/supabase/database.types";
-
-function isDashboardTable(table: string): table is DashboardTableName {
-  return Object.prototype.hasOwnProperty.call(DASHBOARD_TABLE_KIND, table);
-}
 
 async function writeAndRevalidate(
   table: string,
@@ -26,7 +19,7 @@ async function writeAndRevalidate(
   patch: { [key: string]: Json | undefined },
   session: { email: string }
 ): Promise<ActionResult> {
-  if (!isDashboardTable(table)) return { ok: false, error: "Noma'lum jadval" };
+  if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
   await updateWithVersion(
     createClient<DynamicTablesDatabase>(),
     table,
@@ -36,13 +29,13 @@ async function writeAndRevalidate(
   );
   revalidateContent(DASHBOARD_TABLE_KIND[table]);
   revalidatePath("/[locale]/dashboard/content", "page");
-  return { ok: true };
+  return actionOk();
 }
 
 export async function publishFromDashboard(table: string, id: string, expectedVersion: number): Promise<ActionResult> {
   try {
     const session = await requireManagerSession();
-    if (!isDashboardTable(table)) return { ok: false, error: "Noma'lum jadval" };
+    if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
     const gate = await runPublishGate({ table, id, actor: session.email });
     if (!gate.passed) return gateBlockedResult(gate);
     return await writeAndRevalidate(table, id, expectedVersion, { status: "published" }, session);

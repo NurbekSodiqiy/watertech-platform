@@ -5,14 +5,14 @@ import { Layers } from "lucide-react";
 import { listPackageRows, listPackageGroupRows } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deletePackage, setPackageStatus } from "@/lib/admin/actions/packages";
-import type { AdminPackageRow } from "@/lib/admin/queries";
+import type { AdminListRow } from "@/lib/admin/queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.packages" });
   return { title: t("title") };
 }
 
-interface PackageDisplayRow extends AdminPackageRow {
+interface PackageDisplayRow extends AdminListRow<"content_packages"> {
   group_title: string;
 }
 

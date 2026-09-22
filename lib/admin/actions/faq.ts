@@ -1,69 +1,26 @@
 "use server";
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
-import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
-import { revalidateContent } from "@/lib/content/revalidate";
-import { updateWithVersion } from "./concurrency";
-import { faqWriteSchema } from "@/lib/admin/schemas";
-import { faqToRow } from "@/lib/content/db";
-import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
+import { CONTENT_REGISTRY } from "@/lib/admin/registry";
+import { actionsFor } from "./deps";
+import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "./status";
 
+// Thin Server Action surface over the shared factory (./factory.ts). The
+// bodies these three used to carry — parse, gate, write, revalidate — are the
+// same for every content table and live in one place now; what stays here is
+// the export names the pages and the DataTable bind to, because a Server
+// Action reference must be an exported async function.
+
+const faq = actionsFor(CONTENT_REGISTRY.content_faqs);
+
 export async function upsertFaq(input: unknown): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    const parsed = faqWriteSchema.parse(input);
-    const supabase = createClient();
-    const row = { ...faqToRow(parsed), status: parsed.status, updated_by: session.email };
-    if (parsed.status === "published") {
-      const gate = await runPublishGateOnCandidate({ target: { table: "content_faqs", row }, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    if (parsed.version !== undefined) {
-      await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_faqs", parsed.id, row, parsed.version);
-    } else {
-      const { error } = await supabase.from("content_faqs").upsert(row);
-      if (error) return { ok: false, error: error.message };
-    }
-    revalidateContent("faqs");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+  return faq.save(input);
 }
 
-export async function deleteFaq(id: string): Promise<ActionResult> {
-  try {
-    await requireManagerSession();
-    const supabase = createClient();
-    const { error } = await supabase.from("content_faqs").delete().eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    revalidateContent("faqs");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+export async function deleteFaq(id: string, expectedVersion: number): Promise<ActionResult> {
+  return faq.remove(id, expectedVersion);
 }
 
 export async function setFaqStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    // Unpublishing never runs the gate — only a move to "published" does.
-    if (status === "published") {
-      const gate = await runPublishGate({ table: "content_faqs", id, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    await updateWithVersion(
-      createClient<DynamicTablesDatabase>(),
-      "content_faqs",
-      id,
-      { status, updated_by: session.email },
-      expectedVersion
-    );
-    revalidateContent("faqs");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+  return faq.setStatus(id, status, expectedVersion);
 }

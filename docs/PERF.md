@@ -185,6 +185,39 @@ leaving would otherwise be uploadable under the next account's JWT during the ti
 `stopUserStateSends()` is what closes that window. No route crossed 180 kB that was not already over it, and the
 set of over-budget routes is unchanged at the same six.
 
+## After 2026-09-22 (S06, content registry and typed action errors)
+
+Manager routes only — every operator route is byte-identical to the S05 figures above, because nothing
+in this change is reachable from the `(app)` layout and the new `admin.errors` / `admin.validation`
+namespaces are added to the admin and dashboard providers, not to `ROOT_CLIENT_NAMESPACES`.
+
+`hooks/useActionError.ts` (the code → copy mapping every admin write now goes through) and
+`lib/admin/validation.ts` are imported by DataTable, EntityForm, ScriptEditor, SopEditor, VersionsList,
+NotificationsInbox and the dashboard's QuickActionButton, so they land in the shared admin chunk rather
+than in each page. That is why several **page** JS figures fall while **First Load** rises by 1-2 kB:
+
+| Route | Before | After |
+|---|---:|---:|
+| `/admin/<section>` (all ten list pages) | 140 kB | 141 kB |
+| `/admin/<section>/[id]` (seven EntityForm editors) | 149 kB | 151 kB |
+| `/admin/scripts/[id]` | 174 kB | 175 kB |
+| `/admin/sops/[id]` | 165 kB | 167 kB |
+| `/admin/notifications` | 127 kB | 129 kB |
+| `/admin/versions/[table]/[id]` | 126 kB | 128 kB |
+| `/dashboard/content` | 137 kB | 139 kB |
+| `/admin`, `/dashboard`, `/dashboard/quality` | 100 / 117 / 117 kB | unchanged |
+
+`/admin/scripts/[id]` stays the largest manager route at 175 kB, still under the 180 kB budget; no route
+crossed a budget it was not already over, and the over-budget set is unchanged.
+
+**The RSC payload, not the bundle, is the point of this slice.** `lib/admin/queries.ts` used to `select("*")`
+for every list, so each list page serialized whole rows into its RSC payload for a table that renders two
+columns. `listRows(table)` now selects `id,status,version,updated_at,updated_by,sort_order` plus the registry
+entry's `listColumns`. `/admin/scripts` is the extreme case: its rows carried `stages` and `stages_ru`, the
+full stage tree of every script, to render a name. `tests/unit/admin/registry.test.ts` fails if either column
+ever reappears in a list projection. Full rows are still one call away (`listFullRows`) for the two callers
+that map them through `lib/content/db` — the publish gate's bundle and the script editor's link pickers.
+
 ## Budgets
 
 | Budget | Limit |

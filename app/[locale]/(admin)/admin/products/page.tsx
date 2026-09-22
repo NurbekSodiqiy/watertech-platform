@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { listProductRows } from "@/lib/admin/queries";
+import { listProductRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteProduct, setProductStatus } from "@/lib/admin/actions/products";
-import type { AdminProductRow } from "@/lib/admin/queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.products" });
@@ -27,7 +26,7 @@ export default async function AdminProductsListPage({ params: { locale } }: { pa
         <h1 className="text-[24px] font-bold text-primary-dark">{tPage("title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">{tPage("description")}</p>
       </div>
-      <DataTable<AdminProductRow>
+      <DataTable<AdminListRow<"content_products">>
         rows={rows}
         editBase="/admin/products"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}

@@ -10,6 +10,7 @@ import { formatRelative } from "@/lib/admin/format";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
+import { useActionError } from "@/hooks/useActionError";
 import type { ContentVersionRow } from "@/lib/admin/queries";
 
 /** Each row is a pre-edit snapshot (see content_versions in
@@ -21,6 +22,7 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
   const mounted = useMounted();
   const online = useOnline();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("toast");
   const tV = useTranslations("admin.versions");
   const tRel = useTranslations("admin.relativeTime");
@@ -40,8 +42,9 @@ export function VersionsList({ table, versions }: { table: string; versions: Con
       const result = await restoreVersion(table, versionId);
       setPendingId(null);
       if (!result.ok) {
-        setError(result.error);
-        toast({ kind: "error", title: result.error });
+        const { title } = describeError(result);
+        setError(title);
+        toast({ kind: "error", title });
         return;
       }
       toast({ kind: "success", title: t("restored") });

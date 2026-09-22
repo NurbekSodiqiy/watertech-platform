@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { listContactRows, type AdminContactRow } from "@/lib/admin/queries";
+import { listContactRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteContact, setContactStatus } from "@/lib/admin/actions/contacts";
 import type { Locale } from "@/i18n/routing";
@@ -24,7 +24,7 @@ export default async function AdminContactsListPage({ params: { locale } }: { pa
         <h1 className="text-[24px] font-bold text-primary-dark">{t("title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">{t("description")}</p>
       </div>
-      <DataTable<AdminContactRow>
+      <DataTable<AdminListRow<"content_contacts">>
         rows={rows}
         editBase="/admin/contacts"
         emptyState={{

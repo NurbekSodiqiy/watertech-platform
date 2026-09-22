@@ -18,7 +18,8 @@ import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
+import { useActionError } from "@/hooks/useActionError";
+import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import { scriptWriteSchema, type ScriptFormValues } from "@/lib/admin/schemas";
 import { upsertScript } from "@/lib/admin/actions/scripts";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
@@ -360,6 +361,7 @@ function StageFields({
 }: StageFieldsProps) {
   const t = useTranslations("admin.scriptEditor");
   const tShared = useTranslations("pages.admin.shared");
+  const tValidation = useTranslations("admin.validation");
   const {
     fields: turnFields,
     append: appendTurn,
@@ -371,7 +373,8 @@ function StageFields({
   const { field: idField } = useController({ control, name: `${stagesBase}.${stageIndex}.id` });
   const { field: objectionIdsField } = useController({ control, name: `${stagesBase}.${stageIndex}.objectionIds` });
 
-  const stageIdError = (stagesBase === "stages" ? errors.stages : errors.stagesRu)?.[stageIndex]?.id?.message;
+  const rawStageIdError = (stagesBase === "stages" ? errors.stages : errors.stagesRu)?.[stageIndex]?.id?.message;
+  const stageIdError = rawStageIdError === undefined ? undefined : validationText(tValidation, rawStageIdError);
 
   function toggleObjection(id: string) {
     const current = objectionIdsField.value ?? [];
@@ -539,7 +542,9 @@ export function ScriptEditor({
 }: ScriptEditorProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("toast");
+  const tValidation = useTranslations("admin.validation");
   const tEditor = useTranslations("admin.scriptEditor");
   const tShared = useTranslations("pages.admin.shared");
   const tForm = useTranslations("admin.form");
@@ -572,7 +577,9 @@ export function ScriptEditor({
     handleSubmit,
     formState: { errors },
   } = useForm<ScriptFormValues>({
-    resolver: zodResolver(scriptWriteSchema),
+    // Same error map the server parses with, so a field error reads the same
+    // whichever side rejected it (lib/admin/validation.ts).
+    resolver: zodResolver(scriptWriteSchema, { errorMap: adminErrorMap }),
     defaultValues,
   });
 
@@ -615,12 +622,12 @@ export function ScriptEditor({
           stagesRu: values.stagesRu ? cleanStages(values.stagesRu) : undefined,
         });
         if (!result.ok) {
-          const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
-          setError(result.error);
+          const { title, details, isConflict } = describeError(result);
+          setError(details.length > 0 ? `${title}: ${details.join(", ")}` : title);
           if (result.gate) setGateResult(result.gate);
           toast({
             kind: "error",
-            title: isConflict ? t("conflict") : result.error,
+            title: isConflict ? t("conflict") : title,
             action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
           });
           return;
@@ -665,7 +672,9 @@ export function ScriptEditor({
                 !isNew ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
               }`}
             />
-            {errors.id && <p className="text-[11px] text-status-outdated">{errors.id.message}</p>}
+            {errors.id?.message && (
+              <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.id.message)}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-status">
@@ -690,7 +699,9 @@ export function ScriptEditor({
               {...register("name")}
               className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
             />
-            {errors.name && <p className="text-[11px] text-status-outdated">{errors.name.message}</p>}
+            {errors.name?.message && (
+              <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.name.message)}</p>
+            )}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <label className="block text-[13px] font-medium text-primary-dark" htmlFor="script-cheat-sheet">

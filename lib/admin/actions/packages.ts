@@ -1,145 +1,40 @@
 "use server";
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, gateBlockedResult, type ActionResult } from "./guard";
-import { runPublishGate, runPublishGateOnCandidate } from "@/lib/agents/publish-gate";
-import { revalidateContent } from "@/lib/content/revalidate";
-import { updateWithVersion } from "./concurrency";
-import { packageGroupWriteSchema, packageWriteSchema } from "@/lib/admin/schemas";
-import { packageGroupToRow, packageToRow } from "@/lib/content/db";
-import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
+import { CONTENT_REGISTRY } from "@/lib/admin/registry";
+import { actionsFor } from "./deps";
+import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "./status";
 
-// === Package groups ==============================================================
+// Thin Server Action surface over the shared factory (./factory.ts). The
+// bodies these three used to carry — parse, gate, write, revalidate — are the
+// same for every content table and live in one place now; what stays here is
+// the export names the pages and the DataTable bind to, because a Server
+// Action reference must be an exported async function.
+
+const packageGroups = actionsFor(CONTENT_REGISTRY.content_package_groups);
 
 export async function upsertPackageGroup(input: unknown): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    const parsed = packageGroupWriteSchema.parse(input);
-    const supabase = createClient();
-    const row = { ...packageGroupToRow(parsed), status: parsed.status, updated_by: session.email };
-    if (parsed.status === "published") {
-      const gate = await runPublishGateOnCandidate({ target: { table: "content_package_groups", row }, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    if (parsed.version !== undefined) {
-      await updateWithVersion(
-        createClient<DynamicTablesDatabase>(),
-        "content_package_groups",
-        parsed.id,
-        row,
-        parsed.version
-      );
-    } else {
-      const { error } = await supabase.from("content_package_groups").upsert(row);
-      if (error) return { ok: false, error: error.message };
-    }
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+  return packageGroups.save(input);
 }
 
-export async function deletePackageGroup(id: string): Promise<ActionResult> {
-  try {
-    await requireManagerSession();
-    const supabase = createClient();
-    const { error } = await supabase.from("content_package_groups").delete().eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+export async function deletePackageGroup(id: string, expectedVersion: number): Promise<ActionResult> {
+  return packageGroups.remove(id, expectedVersion);
 }
 
-export async function setPackageGroupStatus(
-  id: string,
-  status: StatusValue,
-  expectedVersion: number
-): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    // Unpublishing never runs the gate — only a move to "published" does.
-    if (status === "published") {
-      const gate = await runPublishGate({ table: "content_package_groups", id, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    await updateWithVersion(
-      createClient<DynamicTablesDatabase>(),
-      "content_package_groups",
-      id,
-      { status, updated_by: session.email },
-      expectedVersion
-    );
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+export async function setPackageGroupStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
+  return packageGroups.setStatus(id, status, expectedVersion);
 }
 
-// === Packages =====================================================================
+const packages = actionsFor(CONTENT_REGISTRY.content_packages);
 
 export async function upsertPackage(input: unknown): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    const parsed = packageWriteSchema.parse(input);
-    const supabase = createClient();
-    const row = { ...packageToRow(parsed, parsed.groupId), status: parsed.status, updated_by: session.email };
-    if (parsed.status === "published") {
-      const gate = await runPublishGateOnCandidate({ target: { table: "content_packages", row }, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    if (parsed.version !== undefined) {
-      await updateWithVersion(createClient<DynamicTablesDatabase>(), "content_packages", parsed.id, row, parsed.version);
-    } else {
-      const { error } = await supabase.from("content_packages").upsert(row);
-      if (error) return { ok: false, error: error.message };
-    }
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+  return packages.save(input);
 }
 
-export async function deletePackage(id: string): Promise<ActionResult> {
-  try {
-    await requireManagerSession();
-    const supabase = createClient();
-    const { error } = await supabase.from("content_packages").delete().eq("id", id);
-    if (error) return { ok: false, error: error.message };
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+export async function deletePackage(id: string, expectedVersion: number): Promise<ActionResult> {
+  return packages.remove(id, expectedVersion);
 }
 
-export async function setPackageStatus(
-  id: string,
-  status: StatusValue,
-  expectedVersion: number
-): Promise<ActionResult> {
-  try {
-    const session = await requireManagerSession();
-    // Unpublishing never runs the gate — only a move to "published" does.
-    if (status === "published") {
-      const gate = await runPublishGate({ table: "content_packages", id, actor: session.email });
-      if (!gate.passed) return gateBlockedResult(gate);
-    }
-    await updateWithVersion(
-      createClient<DynamicTablesDatabase>(),
-      "content_packages",
-      id,
-      { status, updated_by: session.email },
-      expectedVersion
-    );
-    revalidateContent("packages");
-    return { ok: true };
-  } catch (e) {
-    return actionErrorResult(e);
-  }
+export async function setPackageStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
+  return packages.setStatus(id, status, expectedVersion);
 }

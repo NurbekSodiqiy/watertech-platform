@@ -1,13 +1,16 @@
-/** Shared between lib/admin/actions/concurrency.ts (throws it server-side)
- * and every client form/table that needs to recognize the message to show a
- * "Yangilash" action — split out of concurrency.ts because that file
- * `import`s "server-only" and would otherwise poison any client component
- * that imports this constant from it. */
-export const VERSION_CONFLICT_MESSAGE = "Bu yozuvni boshqa menejer o'zgartirgan. Sahifani yangilang.";
+import { AdminActionError } from "@/lib/admin/errors";
 
-export class VersionConflictError extends Error {
+/** Thrown by lib/admin/actions/concurrency.ts when an optimistic-concurrency
+ * write matched no row, i.e. another manager saved first. Split out of
+ * concurrency.ts because that file `import`s "server-only" and would otherwise
+ * poison any client component that needs to recognise the failure.
+ *
+ * It is an AdminActionError, so the action boundary turns it into
+ * `{ ok: false, code: "version_conflict" }` with no message comparison
+ * anywhere — the client matches on the code and shows `toast.conflict`. */
+export class VersionConflictError extends AdminActionError {
   constructor() {
-    super(VERSION_CONFLICT_MESSAGE);
+    super("version_conflict");
     this.name = "VersionConflictError";
   }
 }

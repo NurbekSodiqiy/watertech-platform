@@ -15,13 +15,16 @@ import {
   stageSchema,
 } from "@/lib/content/schemas";
 
+// Messages in this file are validation KEYS, not sentences: the same schema
+// is parsed on the server (inside a Server Action) and on the client
+// (zodResolver), and only the component knows which locale to read them in.
+// See lib/admin/validation.ts — every key used here lives in VALIDATION_KEYS
+// and in `admin.validation.*` in both message files.
+
 /** Content table ids are stable slugs — telemetry and script/objection cross
  * references key off them, so the admin UI enforces the same shape a
  * hand-written content id already follows. */
-export const idSchema = z
-  .string()
-  .min(1, "Majburiy")
-  .regex(/^[a-z0-9-]+$/, "Faqat kichik lotin harflari, raqamlar va tire (-)");
+export const idSchema = z.string().min(1, "required").regex(/^[a-z0-9-]+$/, "slug");
 
 export const statusSchema = z.enum(["draft", "published"]);
 
@@ -43,14 +46,14 @@ const csvArrayField = z.string().transform(csvToArray);
 const numberField = z
   .string()
   .transform((v) => Number(v))
-  .refine((v) => Number.isFinite(v), { message: "Raqam kiriting" });
+  .refine((v) => Number.isFinite(v), { message: "number" });
 
 /** Same as numberField, but "" -> null (an optional number input left
  * blank) instead of failing. */
 const optionalNumberField = z
   .string()
   .transform((v) => (v.trim() === "" ? null : Number(v)))
-  .refine((v) => v === null || Number.isFinite(v), { message: "Raqam kiriting" });
+  .refine((v) => v === null || Number.isFinite(v), { message: "number" });
 
 /** The row's last-known version, for optimistic concurrency
  * (lib/admin/actions/concurrency.ts) — undefined means "creating a new row,
@@ -79,7 +82,7 @@ function checkStageIdsUnique(stages: { id: string }[], path: "stages" | "stagesR
     if (seen.has(stage.id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Bosqich ID takrorlanmoqda",
+        message: "stageIdDuplicate",
         path: [path, index, "id"],
       });
     }
@@ -116,11 +119,11 @@ export const contactWriteSchema = contactSchema.extend({
  * sopSchema, which only describes what may be stored. SopEditor binds to this
  * schema directly (no *FormSchema): it has no transforms beyond trim, so the
  * form's input and output types are the same. */
-const sopStepWriteSchema = sopStepSchema.extend({ title: z.string().trim().min(1, "Majburiy") });
+const sopStepWriteSchema = sopStepSchema.extend({ title: z.string().trim().min(1, "required") });
 export const sopWriteSchema = sopSchema.extend({
   id: idSchema,
   status: statusSchema,
-  steps: z.array(sopStepWriteSchema).min(1, "Kamida bitta qadam kerak"),
+  steps: z.array(sopStepWriteSchema).min(1, "minSteps"),
   stepsRu: z.array(sopStepWriteSchema).optional(),
   version: versionField,
 });

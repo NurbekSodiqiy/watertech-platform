@@ -3,14 +3,7 @@ import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { History } from "lucide-react";
-import {
-  getScriptRow,
-  listObjectionRows,
-  listCompetitorRows,
-  listFaqRows,
-  listPackageGroupRows,
-  listPackageRows,
-} from "@/lib/admin/queries";
+import { getScriptRow, listFullRows } from "@/lib/admin/queries";
 import { rowToObjection, rowToCompetitor, rowToFaq, rowToPackageGroup, rowToScript } from "@/lib/content/db";
 import { ScriptEditor } from "@/components/admin/ScriptEditor";
 import type { ContentBundle } from "@/lib/content/loader";
@@ -37,11 +30,13 @@ export default async function AdminScriptEditPage({
 
   const [row, objectionRows, competitorRows, faqRows, packageGroupRows, packageRows] = await Promise.all([
     isNew ? Promise.resolve(null) : getScriptRow(params.id),
-    listObjectionRows(),
-    listCompetitorRows(),
-    listFaqRows(),
-    listPackageGroupRows(),
-    listPackageRows(),
+    // Whole rows, not the list projection: the link pickers and the live
+    // preview map them through lib/content/db's rowTo* mappers.
+    listFullRows("content_objections"),
+    listFullRows("content_competitors"),
+    listFullRows("content_faqs"),
+    listFullRows("content_package_groups"),
+    listFullRows("content_packages"),
   ]);
   if (!isNew && !row) notFound();
 

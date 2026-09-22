@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
-import { listPackageGroupRows } from "@/lib/admin/queries";
+import { listPackageGroupRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deletePackageGroup, setPackageGroupStatus } from "@/lib/admin/actions/packages";
-import type { AdminPackageGroupRow } from "@/lib/admin/queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.packageGroups" });
@@ -36,7 +35,7 @@ export default async function AdminPackageGroupsListPage({ params: { locale } }:
         <h1 className="mt-2 text-[24px] font-bold text-primary-dark">{tPage("title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">{tPage("description")}</p>
       </div>
-      <DataTable<AdminPackageGroupRow>
+      <DataTable<AdminListRow<"content_package_groups">>
         rows={rows}
         editBase="/admin/packages/groups"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}

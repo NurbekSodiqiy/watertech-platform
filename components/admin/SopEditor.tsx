@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
+import { useActionError } from "@/hooks/useActionError";
+import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import { sopWriteSchema, type SopFormValues } from "@/lib/admin/schemas";
 import { upsertSop } from "@/lib/admin/actions/sops";
 import type { Sop } from "@/lib/content/types";
@@ -31,9 +32,11 @@ interface StepsFieldsProps {
 
 function StepsFields({ control, register, errors, base }: StepsFieldsProps) {
   const t = useTranslations("pages.admin.sops");
+  const tValidation = useTranslations("admin.validation");
   const { fields, append, remove, swap } = useFieldArray({ control, name: base });
   const baseErrors = base === "steps" ? errors.steps : errors.stepsRu;
-  const listError = baseErrors?.message ?? baseErrors?.root?.message;
+  const rawListError = baseErrors?.message ?? baseErrors?.root?.message;
+  const listError = rawListError === undefined ? undefined : validationText(tValidation, rawListError);
 
   return (
     <div className="space-y-3">
@@ -55,7 +58,8 @@ function StepsFields({ control, register, errors, base }: StepsFieldsProps) {
       {fields.length === 0 && !listError && <p className="text-[12.5px] text-text-secondary">{t("steps.empty")}</p>}
 
       {fields.map((field, index) => {
-        const titleError = baseErrors?.[index]?.title?.message;
+        const rawTitleError = baseErrors?.[index]?.title?.message;
+        const titleError = rawTitleError === undefined ? undefined : validationText(tValidation, rawTitleError);
         return (
           <div key={field.id} className="space-y-2.5 rounded-xl border border-border bg-surface-alt/60 p-3">
             <div className="flex items-center gap-2">
@@ -128,7 +132,9 @@ interface SopEditorProps {
 export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("pages.admin.sops");
+  const tValidation = useTranslations("admin.validation");
   const tToast = useTranslations("toast");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
@@ -158,7 +164,7 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<SopFormValues>({
-    resolver: zodResolver(sopWriteSchema),
+    resolver: zodResolver(sopWriteSchema, { errorMap: adminErrorMap }),
     defaultValues,
   });
 
@@ -175,12 +181,12 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
       try {
         const result = await upsertSop(values);
         if (!result.ok) {
-          const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
-          setError(result.error);
+          const { title, details, isConflict } = describeError(result);
+          setError(details.length > 0 ? `${title}: ${details.join(", ")}` : title);
           if (result.gate) setGateResult(result.gate);
           toast({
             kind: "error",
-            title: isConflict ? tToast("conflict") : result.error,
+            title: isConflict ? tToast("conflict") : title,
             action: isConflict ? { label: tToast("refresh"), onClick: () => router.refresh() } : undefined,
           });
           return;
@@ -224,8 +230,8 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
               !isNew ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
             }`}
           />
-          {errors.id ? (
-            <p className="text-[11px] text-status-outdated">{errors.id.message}</p>
+          {errors.id?.message ? (
+            <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.id.message)}</p>
           ) : (
             <p className="text-[11px] text-text-secondary">{t("fields.idHint")}</p>
           )}
@@ -253,7 +259,9 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
             {...register("title")}
             className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
-          {errors.title && <p className="text-[11px] text-status-outdated">{errors.title.message}</p>}
+          {errors.title?.message && (
+            <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.title.message)}</p>
+          )}
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <label className="block text-[13px] font-medium text-primary-dark" htmlFor="sop-summary">

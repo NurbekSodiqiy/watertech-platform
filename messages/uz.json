@@ -1453,6 +1453,27 @@
     }
   },
   "admin": {
+    "errors": {
+      "unauthorized": "Ruxsat yo'q — bu amal uchun menejer huquqi kerak",
+      "validation": "Ma'lumotlar to'liq yoki to'g'ri emas",
+      "id_taken": "Bunday ID allaqachon mavjud — boshqasini tanlang",
+      "version_conflict": "Bu yozuvni boshqa menejer o'zgartirgan. Sahifani yangilang.",
+      "gate_blocked": "Nashr qorovuli to'xtatdi",
+      "not_found": "Yozuv topilmadi — u o'chirilgan bo'lishi mumkin",
+      "reference_in_use": "Bu yozuvga boshqa yozuvlar bog'langan — avval ularni o'zgartiring",
+      "unknown": "Kutilmagan xatolik — qaytadan urinib ko'ring"
+    },
+    "validation": {
+      "required": "Majburiy",
+      "invalid": "Noto'g'ri qiymat",
+      "slug": "Faqat kichik lotin harflari, raqamlar va tire (-)",
+      "number": "Raqam kiriting",
+      "minItems": "Kamida bitta element kerak",
+      "tooShort": "Juda qisqa",
+      "tooLong": "Juda uzun",
+      "stageIdDuplicate": "Bosqich ID takrorlanmoqda",
+      "minSteps": "Kamida bitta qadam kerak"
+    },
     "shell": {
       "title": "Kontent boshqaruvi",
       "monitoring": "Monitoring",

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { listObjectionRows } from "@/lib/admin/queries";
+import { listObjectionRows, type AdminListRow } from "@/lib/admin/queries";
 import { DataTable } from "@/components/admin/DataTable";
 import { deleteObjection, setObjectionStatus } from "@/lib/admin/actions/objections";
-import type { AdminObjectionRow } from "@/lib/admin/queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.objections" });
@@ -27,7 +26,7 @@ export default async function AdminObjectionsListPage({ params: { locale } }: { 
         <h1 className="text-[24px] font-bold text-primary-dark">{tPage("title")}</h1>
         <p className="mt-1 text-[13px] text-text-secondary">{tPage("description")}</p>
       </div>
-      <DataTable<AdminObjectionRow>
+      <DataTable<AdminListRow<"content_objections">>
         rows={rows}
         editBase="/admin/objections"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}

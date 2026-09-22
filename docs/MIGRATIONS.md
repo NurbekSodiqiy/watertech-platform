@@ -26,11 +26,12 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0012 | `content_sops.sql` | `content_sops` | 0002 |
 | 0013 | `baseline_and_audit_integrity.sql` | baseline for `allowed_users` + `telemetry_events`; `status` defaults to `'draft'`; `updated_by` stamped by the DB; delete snapshots; `content_versions` locked down | 0002, 0010–0012 |
 | 0014 | `role_gated_rls.sql` | `private.app_role/is_member/is_manager`; every policy role-gated and InitPlan-wrapped; the access-token hook refuses instead of stamping `'none'` | 0013 (and 0009, see below) |
+| 0015 | `reorder_rows.sql` | `public.reorder_content_rows(text, text[], int[])` — version-guarded, all-or-nothing `sort_order` write for a whole list | 0014 (`private.is_manager()`) |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014` goes last. Both it and `0013` abort with a clear message when an earlier file is missing, so the
+`0014` and then `0015` go last. Both it and `0013` abort with a clear message when an earlier file is missing, so the
 order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
@@ -57,7 +58,8 @@ statements into their own file and run them concurrently, outside a transaction.
    delete-snapshot triggers, `content_versions.op`, and the `content_versions` lockdown. Every
    statement in the file is idempotent, so the second pass re-applies the baseline harmlessly.
 4. **`0014`.** Once, after `0013`'s second pass.
-5. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+5. **`0015`.** After `0014` — it checks for `private.is_manager()` and aborts without it.
+6. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -71,6 +73,9 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
 - [ ] **0014** role-gated RLS + the refusing access-token hook — requires 0013 first. **P0**: until it is
       applied, any Google account that completes the OAuth flow with the public anon key can read every
       content table over PostgREST.
+- [ ] **0015** `reorder_content_rows` — requires 0014 first. Nothing calls it until the drag-and-drop
+      list UI lands in S12, so an unapplied 0015 breaks nothing today; `reorderRows()` would answer
+      `unknown` (the RPC is missing) if it were called.
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.

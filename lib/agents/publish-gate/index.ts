@@ -1,9 +1,11 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, createDynamicAdminClient } from "@/lib/supabase/admin";
 import { getContentBundleAdmin } from "@/lib/admin/queries";
 import { adminEditHref } from "@/lib/dashboard/content-health";
 import { revalidateNotificationViews } from "@/lib/notifications/revalidate";
 import type { NotificationInsert } from "@/lib/notifications/types";
+import { gateTargetFor } from "@/lib/admin/registry";
+import type { Tables } from "@/lib/supabase/typed";
 import { runChecks, targetTitle, toGateResult } from "./checks";
 import type { GateResult, GateTable, GateTarget } from "./types";
 
@@ -15,60 +17,21 @@ import type { GateResult, GateTable, GateTarget } from "./types";
 
 const MAX_TITLE_CHARS = 120;
 
+/** The row under test. One read for all ten tables instead of ten identical
+ * switch branches: the table name is a runtime value, so this goes through
+ * the column-agnostic client and restates the result as the content columns a
+ * check reads — the same shape lib/content/db.ts's *ToRow mappers produce,
+ * which is what lets runPublishGateOnCandidate gate a row that is not stored
+ * yet. `gateTargetFor` (lib/admin/registry.ts) is what pairs the two. */
 async function loadTarget(table: GateTable, id: string): Promise<GateTarget | null> {
-  const admin = createAdminClient();
-  switch (table) {
-    case "content_scripts": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_objections": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_faqs": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_competitors": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_package_groups": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_packages": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_products": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_changelog": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_contacts": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-    case "content_sops": {
-      const { data, error } = await admin.from(table).select("*").eq("id", id).maybeSingle();
-      if (error) throw new Error(`${table}: ${error.message}`);
-      return data && { table, row: data };
-    }
-  }
+  const { data, error } = await createDynamicAdminClient()
+    .from(table)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle()
+    .overrideTypes<Tables<GateTable>, { merge: false }>();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return data && gateTargetFor(table, data);
 }
 
 function truncate(text: string, max: number): string {

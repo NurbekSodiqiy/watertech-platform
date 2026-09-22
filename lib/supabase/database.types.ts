@@ -7,6 +7,7 @@
 // allowed_users (full_name, is_active, created_at, updated_at, updated_by) and
 // content_versions (op) added by hand from 0013 on 2026-09-22 — run
 // `npm run gen:types` once 0013 is applied to confirm them against the project.
+// reorder_content_rows added by hand from 0015 on 2026-09-22.
 //
 // allowed_users and telemetry_events were created by hand before
 // supabase/migrations existed; 0013_baseline_and_audit_integrity.sql is their
@@ -865,6 +866,10 @@ export type Database = {
       rate_limit_hit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
+      }
+      reorder_content_rows: {
+        Args: { p_table: string; p_ids: string[]; p_versions: number[] }
+        Returns: undefined
       }
     }
     Enums: {

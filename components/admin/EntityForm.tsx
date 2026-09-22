@@ -11,8 +11,9 @@ import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
-import type { ActionResult } from "@/lib/admin/actions/guard";
+import { useActionError } from "@/hooks/useActionError";
+import { adminErrorMap, validationText } from "@/lib/admin/validation";
+import type { ActionResult } from "@/lib/admin/errors";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
 export type EntityFieldDef<TIn extends FieldValues> = (
@@ -56,8 +57,10 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const describeError = useActionError();
   const t = useTranslations("toast");
   const tForm = useTranslations("admin.form");
+  const tValidation = useTranslations("admin.validation");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +94,10 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     // predates RHF's separate-output-type generic, so there's no type-safe
     // way for it to hand back TOut directly; schema.parse below redoes the
     // (already-validated) transform to get there instead.
-    resolver: zodResolver(schema, undefined, { raw: true }),
+    // The error map turns zod's own wording into the same validation keys the
+    // server sends back, so a field error reads the same whichever side
+    // rejected it — and reads Russian for a Russian manager.
+    resolver: zodResolver(schema, { errorMap: adminErrorMap }, { raw: true }),
     defaultValues,
   });
 
@@ -109,12 +115,12 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         const values = schema.parse(raw);
         const result = await onSubmit(values);
         if (!result.ok) {
-          const isConflict = result.error === VERSION_CONFLICT_MESSAGE;
-          setError(result.error);
+          const { title, details, isConflict } = describeError(result);
+          setError(details.length > 0 ? `${title}: ${details.join(", ")}` : title);
           if (result.gate) setGateResult(result.gate);
           toast({
             kind: "error",
-            title: isConflict ? t("conflict") : result.error,
+            title: isConflict ? t("conflict") : title,
             action: isConflict ? { label: t("refresh"), onClick: () => router.refresh() } : undefined,
           });
           return;
@@ -133,7 +139,8 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     if (field.kind === "hidden") return <input key={field.name} type="hidden" {...register(field.name)} />;
 
     const fieldError = errors[field.name as string];
-    const message = typeof fieldError?.message === "string" ? fieldError.message : undefined;
+    const raw = typeof fieldError?.message === "string" ? fieldError.message : undefined;
+    const message = raw === undefined ? undefined : validationText(tValidation, raw);
 
     return (
       <div key={field.name} className="space-y-1.5">

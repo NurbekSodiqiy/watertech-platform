@@ -1,0 +1,110 @@
+import { ZodError } from "zod";
+import type { GateResult } from "@/lib/agents/publish-gate/types";
+import { VALIDATION_DETAIL_LIMIT } from "@/lib/admin/validation";
+
+/** Why an admin write failed, as a code rather than a sentence. The client
+ * turns it into copy through `admin.errors.<code>` (messages/uz.json and
+ * messages/ru.json), which is what makes the Russian admin read Russian —
+ * a Server Action has no business picking the locale's wording.
+ *
+ * - `unauthorized`      — not a signed-in manager (requireManagerSession threw).
+ * - `validation`        — zod rejected the input; see `field` / `details`.
+ * - `id_taken`          — creating a row whose id already exists (Postgres 23505).
+ * - `version_conflict`  — someone saved first; the write matched no row.
+ * - `gate_blocked`      — the publish gate refused; `gate` carries its report.
+ * - `not_found`         — the row (or version snapshot) is gone.
+ * - `reference_in_use`  — another row still points at this one (delete guard, S07).
+ * - `unknown`           — anything else; the real cause is in the server log.
+ */
+export type AdminErrorCode =
+  | "unauthorized"
+  | "validation"
+  | "id_taken"
+  | "version_conflict"
+  | "gate_blocked"
+  | "not_found"
+  | "reference_in_use"
+  | "unknown";
+
+/** What every admin Server Action returns. There is deliberately no `message`
+ * field: a raw Postgres error tells an attacker the schema and tells a manager
+ * nothing, so it goes to console.error (see `logDbError`) and never to the
+ * browser.
+ *
+ * `field` is the input path the failure is about (`"stages.0.id"`), and
+ * `details` are validation keys (lib/admin/validation.ts) or literal values
+ * such as an unresolved content id — never text from the database. */
+export type ActionResult =
+  | { ok: true }
+  | { ok: false; code: AdminErrorCode; gate?: GateResult; field?: string; details?: string[] };
+
+/** The failing half of an ActionResult — what hooks/useActionError.ts turns
+ * into copy once `result.ok` has been checked. */
+export type ActionFailure = Extract<ActionResult, { ok: false }>;
+
+/** A failure a Server Action throws on its way out of a helper, so the helper
+ * doesn't have to thread an ActionResult back through every caller. Caught by
+ * `actionErrorResult` at the action boundary. */
+export class AdminActionError extends Error {
+  constructor(
+    readonly code: AdminErrorCode,
+    readonly field?: string,
+    readonly details?: string[]
+  ) {
+    // The message is for the server log only — the client reads `code`.
+    super(`admin action failed: ${code}`);
+    this.name = "AdminActionError";
+  }
+}
+
+export function actionOk(): ActionResult {
+  return { ok: true };
+}
+
+export function actionFailed(
+  code: AdminErrorCode,
+  extra?: { field?: string; details?: string[]; gate?: GateResult }
+): ActionResult {
+  return { ok: false, code, ...extra };
+}
+
+/** `gate` is set only when the publish gate blocked the write — the client
+ * shows its report in a dialog (components/admin/GateReportDialog.tsx). */
+export function gateBlockedResult(gate: GateResult): ActionResult {
+  return { ok: false, code: "gate_blocked", gate };
+}
+
+/** The one place a database error is allowed to be read. It is logged with the
+ * operation that produced it and collapsed into a code; the message, hint and
+ * details stay on the server. */
+export function logDbError(scope: string, error: { message: string; code?: string }): void {
+  console.error(`[admin] ${scope}:`, error.code ?? "", error.message);
+}
+
+/** Postgres unique-violation — a create whose id is already taken. */
+export const PG_UNIQUE_VIOLATION = "23505";
+/** Postgres foreign-key violation — a delete another table still references. */
+export const PG_FOREIGN_KEY_VIOLATION = "23503";
+
+function zodResult(error: ZodError): ActionResult {
+  const [first] = error.issues;
+  return {
+    ok: false,
+    code: "validation",
+    field: first && first.path.length > 0 ? first.path.join(".") : undefined,
+    details: [...new Set(error.issues.map((issue) => issue.message))].slice(0, VALIDATION_DETAIL_LIMIT),
+  };
+}
+
+/** Turns whatever an action body threw into a typed result. Anything that is
+ * not a recognised admin failure is logged and reported as `unknown`: the
+ * stack may name a table, a column or a constraint, and none of that belongs
+ * in a browser. */
+export function actionErrorResult(error: unknown): ActionResult {
+  if (error instanceof AdminActionError) {
+    return { ok: false, code: error.code, field: error.field, details: error.details };
+  }
+  if (error instanceof ZodError) return zodResult(error);
+  console.error("[admin] unhandled action error:", error);
+  return { ok: false, code: "unknown" };
+}

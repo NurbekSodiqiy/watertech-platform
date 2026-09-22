@@ -81,7 +81,14 @@ lib/
   telemetry/                       client.ts (queue), types.ts, aggregate.ts (server)
   search/                          index.ts (lazy Fuse), normalize.ts
   security/                        rate-limit.ts, csp.ts
-  admin/                           CMS domain logic
+  admin/                           CMS domain logic. registry.ts is the single description of the
+                                   10 content tables (schema, row mapper, list columns, admin path,
+                                   cache tag); errors.ts the AdminErrorCode/ActionResult contract;
+                                   validation.ts the zod error map + message keys; queries.ts the
+                                   generic listRows/listFullRows/getRow; actions/factory.ts the
+                                   create/update/remove/setStatus builder and actions/deps.ts what
+                                   binds it to a real request. actions/*.ts are thin "use server"
+                                   wrappers only — never a second copy of a write body.
   copilot/                         copilot prompt/response logic
   agents/                         copilot agent orchestration
   notifications/                  publish-gate / stale-content notifications inbox
@@ -244,6 +251,15 @@ explicit strings (Tailwind must see full class names — never build class names
   `claims.app_metadata.role`, (3) validate body with zod, (4) cap sizes, (5) return typed JSON errors
   (`{ error: string }`) with proper status — in that order, always.
 - Never trust client-supplied identity (email, role) in any payload.
+- Admin Server Actions return an `AdminErrorCode`, never a sentence and never a database message
+  (`lib/admin/errors.ts`: `ActionResult = { ok: true } | { ok: false; code; gate?; field?; details? }`).
+  A Postgres error is read once, logged with `logDbError`, and collapsed into a code — its message,
+  hint and constraint names stay on the server. The client turns the code into copy through
+  `hooks/useActionError.ts` and `admin.errors.<code>`; a new code needs both message files (§13).
+- A content write goes through `contentActions()` (`lib/admin/actions/factory.ts`) and its registry
+  entry, with the RLS-scoped session client — never the service role. Creating uses `.insert()` so a
+  taken id fails as `id_taken` instead of overwriting a live row; updating and deleting are guarded on
+  the row's `version`. Do not hand-write a new upsert/delete body for a content table.
 - Every new table: RLS enabled, policies written in the migration, `updated_at`/`updated_by` columns.
 - No `dangerouslySetInnerHTML` with content that can come from the database. Render structured data.
 - Any new `<script>` needs the CSP nonce (`headers().get("x-nonce")` in the server component that renders it).

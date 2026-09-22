@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { VersionConflictError, updateWithVersion } from "@/lib/admin/actions/concurrency";
-import { VERSION_CONFLICT_MESSAGE } from "@/lib/admin/version-conflict";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 
 // The query builder is the real supabase-js one; only the network is mocked.
@@ -53,7 +52,8 @@ describe("updateWithVersion", () => {
 
     const update = updateWithVersion(supabase, "content_faqs", "faq-kafolat", { answer: "Eskirgan javob" }, 2);
     await expect(update).rejects.toBeInstanceOf(VersionConflictError);
-    await expect(update).rejects.toThrow(VERSION_CONFLICT_MESSAGE);
+    // The client matches on the code, never on the message (lib/admin/errors.ts).
+    await expect(update).rejects.toMatchObject({ code: "version_conflict" });
   });
 
   it("rethrows a database error as a plain Error, not a version conflict", async () => {

@@ -16,9 +16,13 @@ type Area = "operator" | "admin" | "dashboard";
 const ROOT = path.resolve(__dirname, "../../..");
 const SOURCE_DIRS = ["components", "hooks", "lib", "app"];
 
-/** Flat components/ files that only the manager area mounts, so they read the dashboard
- * provider, not the root one (ManagerMonitoringHeader is used by dashboard/layout.tsx only). */
-const DASHBOARD_ONLY_FILES = new Set(["components/ManagerMonitoringHeader.tsx"]);
+/** Files whose path does not say which provider mounts them. ManagerMonitoringHeader is
+ * used by dashboard/layout.tsx only; useActionError is the admin CMS's error copy, shared
+ * with the dashboard's QuickActionButton — no operator page mounts either. */
+const AREA_BY_FILE = new Map<string, Area>([
+  ["components/ManagerMonitoringHeader.tsx", "dashboard"],
+  ["hooks/useActionError.ts", "admin"],
+]);
 
 function listSources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -43,12 +47,10 @@ function isClientFile(source: string): boolean {
 }
 
 function areaOf(file: string): Area {
+  const pinned = AREA_BY_FILE.get(file);
+  if (pinned) return pinned;
   if (file.startsWith("components/admin/") || file.includes("(admin)")) return "admin";
-  if (
-    file.startsWith("components/dashboard/") ||
-    file.startsWith("app/[locale]/dashboard/") ||
-    DASHBOARD_ONLY_FILES.has(file)
-  ) {
+  if (file.startsWith("components/dashboard/") || file.startsWith("app/[locale]/dashboard/")) {
     return "dashboard";
   }
   return "operator";

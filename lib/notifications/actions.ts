@@ -2,7 +2,8 @@
 import "server-only";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession, actionErrorResult, type ActionResult } from "@/lib/admin/actions/guard";
+import { requireManagerSession } from "@/lib/admin/actions/guard";
+import { actionErrorResult, actionFailed, actionOk, logDbError, type ActionResult } from "@/lib/admin/errors";
 import { revalidateNotificationViews } from "@/lib/notifications/revalidate";
 
 const notificationIdSchema = z.number().int().positive();
@@ -15,17 +16,20 @@ export async function markRead(id: number): Promise<ActionResult> {
   try {
     await requireManagerSession();
     const parsed = notificationIdSchema.safeParse(id);
-    if (!parsed.success) return { ok: false, error: "Noto'g'ri bildirishnoma ID" };
+    if (!parsed.success) return actionFailed("validation", { field: "id" });
 
     const { error } = await createClient()
       .from("admin_notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("id", parsed.data)
       .is("read_at", null);
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      logDbError("admin_notifications markRead", error);
+      return actionFailed("unknown");
+    }
 
     revalidateNotificationViews();
-    return { ok: true };
+    return actionOk();
   } catch (e) {
     return actionErrorResult(e);
   }
@@ -38,10 +42,13 @@ export async function markAllRead(): Promise<ActionResult> {
       .from("admin_notifications")
       .update({ read_at: new Date().toISOString() })
       .is("read_at", null);
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      logDbError("admin_notifications markAllRead", error);
+      return actionFailed("unknown");
+    }
 
     revalidateNotificationViews();
-    return { ok: true };
+    return actionOk();
   } catch (e) {
     return actionErrorResult(e);
   }

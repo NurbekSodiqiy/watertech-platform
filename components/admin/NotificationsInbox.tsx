@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
+import { useActionError } from "@/hooks/useActionError";
 import { formatRelative } from "@/lib/admin/format";
 import { markAllRead, markRead } from "@/lib/notifications/actions";
 import type { NotificationRow, NotificationSeverity } from "@/lib/notifications/types";
@@ -102,6 +103,7 @@ export function NotificationsInbox({ rows }: { rows: NotificationRow[] }) {
   const mounted = useMounted();
   const online = useOnline();
   const { toast } = useToast();
+  const describeError = useActionError();
   const tToast = useTranslations("toast");
   const tN = useTranslations("admin.notifications");
   const tEmpty = useTranslations("emptyState.notificationsNone");
@@ -130,14 +132,14 @@ export function NotificationsInbox({ rows }: { rows: NotificationRow[] }) {
         const result = await action();
         setPendingId(null);
         if (!result.ok) {
-          toast({ kind: "error", title: result.error });
+          toast({ kind: "error", title: describeError(result).title });
           return;
         }
         if (successTitle) toast({ kind: "success", title: successTitle });
         router.refresh();
       });
     },
-    [online, router, toast, tToast]
+    [describeError, online, router, toast, tToast]
   );
 
   const handleMarkRead = useCallback((id: number) => runAction(id, () => markRead(id)), [runAction]);

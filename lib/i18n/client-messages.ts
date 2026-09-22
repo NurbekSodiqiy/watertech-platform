@@ -40,8 +40,14 @@ export const ROOT_CLIENT_NAMESPACES = [
 export const ADMIN_CLIENT_NAMESPACES = ["admin", "pages.admin"] as const;
 
 /** Added on top of the root list by app/[locale]/dashboard/layout.tsx. `admin.gate` is for
- * GateReportDialog, which the dashboard's QuickActionButton shares with the admin editors. */
-export const DASHBOARD_CLIENT_NAMESPACES = ["dashboard", "admin.gate"] as const;
+ * GateReportDialog and `admin.errors` / `admin.validation` for useActionError, which the
+ * dashboard's QuickActionButton shares with the admin editors. */
+export const DASHBOARD_CLIENT_NAMESPACES = [
+  "dashboard",
+  "admin.gate",
+  "admin.errors",
+  "admin.validation",
+] as const;
 
 /** Copies the listed paths out of `messages`, keeping their nesting. Unknown paths are skipped. */
 export function pickMessages(
