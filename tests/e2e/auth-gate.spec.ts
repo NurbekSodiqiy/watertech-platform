@@ -11,6 +11,15 @@ const GATED_ROUTES: { path: string; login: RegExp; locale: keyof typeof LOGIN_BU
   { path: "/admin", login: /\/login$/, locale: "uz" },
   { path: "/dashboard/content", login: /\/login$/, locale: "uz" },
   { path: "/ru/", login: /\/ru\/login$/, locale: "ru" },
+  // Regression for the matcher bug where a bare `products/` exclusion
+  // shadowed these routes for the default locale — no next-intl rewrite and
+  // no auth gate, so they 404'd instead of redirecting to /login.
+  { path: "/products/comparisons", login: /\/login$/, locale: "uz" },
+  { path: "/products/roadmap", login: /\/login$/, locale: "uz" },
+  { path: "/products/technical-docs", login: /\/login$/, locale: "uz" },
+  { path: "/ru/products/comparisons", login: /\/ru\/login$/, locale: "ru" },
+  { path: "/ru/products/roadmap", login: /\/ru\/login$/, locale: "ru" },
+  { path: "/ru/products/technical-docs", login: /\/ru\/login$/, locale: "ru" },
 ];
 
 test.describe("auth gate without a session", () => {

@@ -149,8 +149,21 @@ export async function middleware(request: NextRequest) {
 // /monitoring is the Sentry tunnel (next.config.js tunnelRoute): a rewrite
 // Sentry adds that forwards the browser SDK's error envelopes to the ingest
 // host. A locale rewrite or an auth redirect on it would swallow the reports.
+// The `(?:/|$)` boundary keeps that exclusion to exactly /monitoring and
+// /monitoring/*, not every path that merely starts with "monitoring".
+// No `products/` or `fonts/` prefix exclusion: catalog images under
+// public/products/*.jpg are already excluded by the file-extension
+// alternative below, and app/fonts/InterVariable.woff2 is loaded through
+// next/font (bundled at build time), never served from a /fonts/ URL — a
+// prefix exclusion here only shadowed the real pages at /products/comparisons,
+// /products/roadmap and /products/technical-docs, bypassing both the
+// next-intl rewrite and the auth gate for the default locale.
+// This literal is duplicated as MIDDLEWARE_MATCHER in
+// lib/security/middleware-matcher.ts (Next.js statically analyses this
+// export, so it must stay a string literal here) — keep both in sync;
+// tests/unit/security/middleware-matcher-parity.test.ts enforces it.
 export const config = {
   matcher: [
-    "/((?!api/|auth/callback|monitoring|_next/static|_next/image|favicon.ico|products/|fonts/|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
+    "/((?!api/|auth/callback|monitoring(?:/|$)|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
   ],
 };
