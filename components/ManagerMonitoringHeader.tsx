@@ -1,13 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
-import { useRouter } from "@/i18n/routing";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { signOutAndRedirect } from "@/lib/auth/sign-out";
+import { useSessionUser } from "@/hooks/useSessionUser";
+import { signOutAndPurge } from "@/lib/auth/sign-out";
 
 // Independent header for the manager-only monitoring area — deliberately
 // not TopBar/AvatarMenu (those are design-locked, AGENTS.md), so this is a
@@ -20,10 +20,11 @@ export function ManagerMonitoringHeader({
   notificationsSlot?: ReactNode;
 }) {
   const t = useTranslations("dashboard");
-  const router = useRouter();
+  const locale = useLocale();
+  const { user } = useSessionUser();
 
   async function handleSignOut() {
-    await signOutAndRedirect(router);
+    await signOutAndPurge({ locale, email: user?.email });
   }
 
   return (

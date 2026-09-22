@@ -61,3 +61,81 @@ export function isSearchIndex(pathname: string): boolean {
 export function isNextStaticAsset(pathname: string): boolean {
   return pathname.startsWith("/_next/static/");
 }
+
+/** Same-origin API responses that must reach the network every time. A
+ * cached copy of one is a copy of one operator's data, served back to
+ * whoever uses the browser next — /api/search-index is the single exception,
+ * being public per-locale content that is identical for every account.
+ *
+ * This takes precedence over Serwist's own defaultCache rule, which would
+ * otherwise put every same-origin GET under /api/ into the "apis" cache. */
+export function isNetworkOnlyApi(pathname: string): boolean {
+  return pathname.startsWith("/api/") && !isSearchIndex(pathname);
+}
+
+/* -------------------------------------------------------------------------
+ * Cache names
+ *
+ * Signing out has to leave the browser with nothing readable of the account
+ * that just left, which means naming every runtime cache exactly — the
+ * worker deletes by an allow-list, never by a pattern, so the precache
+ * (whose name carries a build-specific suffix) can never be caught by it.
+ * ---------------------------------------------------------------------- */
+
+/** Runtime caches app/sw.ts defines itself and that hold knowledge-base
+ * content or session-derived responses. */
+const APP_PURGED_CACHES = ["sales-process-pages", "search-index"] as const;
+
+/** Serwist defaultCache names that can hold a document, an RSC payload or an
+ * API response — everything an operator could read back without a session:
+ *
+ * - `pages`, `pages-rsc`, `pages-rsc-prefetch` — HTML and RSC payloads of
+ *   every app route the operator visited or prefetched;
+ * - `apis` — same-origin GETs under /api/ cached by older builds, before
+ *   `isNetworkOnlyApi` took that route away from it;
+ * - `cross-origin` — every non-same-origin GET, which includes the Supabase
+ *   REST reads that carry this operator's own `user_state` rows;
+ * - `others` — the same-origin catch-all, documents included;
+ * - `next-data`, `static-data-assets` — JSON/XML/CSV responses, which is
+ *   what content data arrives as.
+ */
+const SERWIST_PURGED_CACHES = [
+  "apis",
+  "cross-origin",
+  "next-data",
+  "others",
+  "pages",
+  "pages-rsc",
+  "pages-rsc-prefetch",
+  "static-data-assets",
+] as const;
+
+/** Every cache a sign-out deletes. */
+export const PURGED_CACHE_NAMES: readonly string[] = [...APP_PURGED_CACHES, ...SERWIST_PURGED_CACHES];
+
+/** Build output and catalog images: content-hashed or public, identical for
+ * every operator, and expensive to re-download on a slow connection. They
+ * survive a sign-out, as does the precache — which is not listed here
+ * because its name is generated, and the worker keeps whatever is not on the
+ * purge list. */
+export const KEPT_CACHE_NAMES: readonly string[] = [
+  "next-static-assets",
+  "product-images",
+  "google-fonts-stylesheets",
+  "google-fonts-webfonts",
+  "next-image",
+  "next-static-js-assets",
+  "static-audio-assets",
+  "static-font-assets",
+  "static-image-assets",
+  "static-js-assets",
+  "static-style-assets",
+  "static-video-assets",
+];
+
+/** Exact match only: a cache whose name is not on the purge list stays,
+ * which is what keeps `serwist-precache-v2-<scope>` out of reach of a
+ * prefix or substring rule. */
+export function isPurgeableCacheName(cacheName: string): boolean {
+  return PURGED_CACHE_NAMES.includes(cacheName);
+}

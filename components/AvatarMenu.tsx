@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/routing";
+import { useLocale, useTranslations } from "next-intl";
 import { useSessionUser } from "@/hooks/useSessionUser";
-import { signOutAndRedirect } from "@/lib/auth/sign-out";
+import { signOutAndPurge } from "@/lib/auth/sign-out";
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -19,7 +18,7 @@ function getInitials(name: string) {
 // faqat "Chiqish" ishlaydi, boshqalari real funksiyaga ega bo'lmagani
 // sabab avval olib tashlangan edi.
 export function AvatarMenu() {
-  const router = useRouter();
+  const locale = useLocale();
   const { user } = useSessionUser();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,7 +46,7 @@ export function AvatarMenu() {
   }, [open]);
 
   async function handleSignOut() {
-    await signOutAndRedirect(router);
+    await signOutAndPurge({ locale, email: user?.email });
   }
 
   return (

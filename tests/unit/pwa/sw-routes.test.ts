@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   appPath,
+  isNetworkOnlyApi,
   isNeverCached,
   isNextStaticAsset,
   isOptimizedProductImage,
   isProductImagePath,
+  isPurgeableCacheName,
   isSalesProcessPath,
   isSearchIndex,
+  KEPT_CACHE_NAMES,
+  PURGED_CACHE_NAMES,
 } from "@/lib/pwa/sw-routes";
 
 describe("appPath", () => {
@@ -112,5 +116,56 @@ describe("other rules", () => {
   it("matches hashed build output", () => {
     expect(isNextStaticAsset("/_next/static/chunks/main.js")).toBe(true);
     expect(isNextStaticAsset("/_next/image")).toBe(false);
+  });
+});
+
+describe("isNetworkOnlyApi", () => {
+  it.each(["/api/events", "/api/copilot", "/api/content-refs", "/api/cron/content-scan"])(
+    "keeps %s off every cache",
+    (path) => {
+      expect(isNetworkOnlyApi(path)).toBe(true);
+    }
+  );
+
+  it("exempts the search index, which is public per-locale content", () => {
+    expect(isNetworkOnlyApi("/api/search-index")).toBe(false);
+  });
+
+  it("does not claim anything outside /api/", () => {
+    expect(isNetworkOnlyApi("/products")).toBe(false);
+    expect(isNetworkOnlyApi("/apidocs")).toBe(false);
+    expect(isNetworkOnlyApi("/_next/static/chunks/main.js")).toBe(false);
+  });
+});
+
+describe("purgeable cache names", () => {
+  it("purges the app's own content caches", () => {
+    expect(isPurgeableCacheName("sales-process-pages")).toBe(true);
+    expect(isPurgeableCacheName("search-index")).toBe(true);
+  });
+
+  it("purges every Serwist cache that can hold a document, an RSC payload or an API response", () => {
+    for (const name of ["pages", "pages-rsc", "pages-rsc-prefetch", "apis", "others", "next-data", "static-data-assets", "cross-origin"]) {
+      expect(isPurgeableCacheName(name), name).toBe(true);
+    }
+  });
+
+  it("keeps the build assets and the catalog images", () => {
+    for (const name of KEPT_CACHE_NAMES) {
+      expect(isPurgeableCacheName(name), name).toBe(false);
+    }
+    expect(isPurgeableCacheName("next-static-assets")).toBe(false);
+    expect(isPurgeableCacheName("product-images")).toBe(false);
+  });
+
+  it("never matches the precache, whose name carries a build-specific suffix", () => {
+    expect(isPurgeableCacheName("serwist-precache-v2-http://localhost:3000/")).toBe(false);
+    expect(isPurgeableCacheName("pages-something-else")).toBe(false);
+    expect(isPurgeableCacheName("")).toBe(false);
+  });
+
+  it("keeps the two lists disjoint, so no cache is both purged and kept", () => {
+    expect(PURGED_CACHE_NAMES.filter((name) => KEPT_CACHE_NAMES.includes(name))).toEqual([]);
+    expect(new Set(PURGED_CACHE_NAMES).size).toBe(PURGED_CACHE_NAMES.length);
   });
 });

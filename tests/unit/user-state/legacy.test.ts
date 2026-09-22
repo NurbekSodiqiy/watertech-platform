@@ -3,6 +3,8 @@ import {
   importLegacyDaily,
   importLegacyOnboarding,
   importLegacyScriptsPosition,
+  isLegacyComponentStorageKey,
+  legacyBelongsTo,
   LEGACY_DAILY_CALLCOUNT_PREFIX,
   LEGACY_DAILY_CHECKLIST_PREFIX,
   LEGACY_ONBOARDING_BY_INDEX_KEY,
@@ -101,5 +103,41 @@ describe("importLegacyScriptsPosition", () => {
   it("produces something the key's schema accepts", () => {
     const read = reader({ [LEGACY_SCRIPT_KEY]: "lead-orqali-tushgan", [LEGACY_STAGE_KEY]: "stage-2" });
     expect(scriptsPositionKey.schema.safeParse(scriptsPositionKey.importLegacy?.(read)).success).toBe(true);
+  });
+});
+
+describe("legacyBelongsTo", () => {
+  const OWNER = "0123456789abcdef";
+
+  it("adopts only when the marker is exactly this owner", () => {
+    expect(legacyBelongsTo(OWNER, OWNER)).toBe(true);
+  });
+
+  it("refuses another operator's marker", () => {
+    expect(legacyBelongsTo("fedcba9876543210", OWNER)).toBe(false);
+  });
+
+  it("refuses an absent marker — the upgrade case, where nothing proves whose the data is", () => {
+    expect(legacyBelongsTo(null, OWNER)).toBe(false);
+    expect(legacyBelongsTo(undefined, OWNER)).toBe(false);
+    expect(legacyBelongsTo("", OWNER)).toBe(false);
+  });
+});
+
+describe("isLegacyComponentStorageKey", () => {
+  it("covers every pre-user_state key the migrated components wrote", () => {
+    expect(isLegacyComponentStorageKey(LEGACY_ONBOARDING_KEY)).toBe(true);
+    expect(isLegacyComponentStorageKey(LEGACY_ONBOARDING_BY_INDEX_KEY)).toBe(true);
+    expect(isLegacyComponentStorageKey(LEGACY_SCRIPT_KEY)).toBe(true);
+    expect(isLegacyComponentStorageKey(LEGACY_STAGE_KEY)).toBe(true);
+    expect(isLegacyComponentStorageKey(`${LEGACY_DAILY_CHECKLIST_PREFIX}2026-09-22`)).toBe(true);
+    expect(isLegacyComponentStorageKey(`${LEGACY_DAILY_CALLCOUNT_PREFIX}2026-09-22`)).toBe(true);
+  });
+
+  it("leaves unrelated keys alone", () => {
+    expect(isLegacyComponentStorageKey("watertech-theme")).toBe(false);
+    expect(isLegacyComponentStorageKey("wt-session-id")).toBe(false);
+    // A bare prefix with no day is not a row of anyone's.
+    expect(isLegacyComponentStorageKey(LEGACY_DAILY_CHECKLIST_PREFIX)).toBe(false);
   });
 });

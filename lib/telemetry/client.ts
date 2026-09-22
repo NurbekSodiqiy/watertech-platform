@@ -1,8 +1,15 @@
+import { ownerBufferKey } from "@/lib/user-state/owner";
 import type { TelemetryEvent, TelemetryEventType } from "./types";
 
 const ENDPOINT = "/api/events";
 const SESSION_KEY = "wt-session-id";
-const BUFFER_KEY = "wt-events-buffer";
+
+/** Base of the localStorage buffer key. The buffer itself always lives under
+ * `<BUFFER_KEY>:<ownerId>`: the server files every event against the session
+ * that posts it, so a buffer left behind by the last operator would be
+ * inserted as the next one. lib/auth/purge.ts clears both this base key and
+ * the owner's own. */
+export const BUFFER_KEY = "wt-events-buffer";
 const MAX_BUFFER = 200;
 const MAX_META_BYTES = 500;
 const FLUSH_INTERVAL_MS = 20000;
@@ -17,6 +24,11 @@ let flushInFlight = false;
 let lastActivity = Date.now();
 let isIdle = false;
 let sessionId: string | null = null;
+/** Owner of everything in `queue`, and the namespace the buffer is persisted
+ * under. Null until SessionProvider names one (or after a purge): events then
+ * stay in memory only, so nothing outlives the page under an unknown
+ * account. */
+let bufferOwner: string | null = null;
 
 function getSessionId(): string {
   if (sessionId) return sessionId;
@@ -50,8 +62,9 @@ function persistBuffer() {
   cancelScheduledPersist();
   // Newest MAX_BUFFER events win — oldest are dropped first when full.
   if (queue.length > MAX_BUFFER) queue = queue.slice(queue.length - MAX_BUFFER);
+  if (!bufferOwner) return; // Unknown owner — in-memory only, never persisted.
   try {
-    localStorage.setItem(BUFFER_KEY, JSON.stringify(queue));
+    localStorage.setItem(ownerBufferKey(BUFFER_KEY, bufferOwner), JSON.stringify(queue));
   } catch {
     // storage full/unavailable — events still live in the in-memory queue
     // for this tab, just won't survive a reload
@@ -199,13 +212,6 @@ function ensureInitialized() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 
-  try {
-    const saved = localStorage.getItem(BUFFER_KEY);
-    if (saved) queue = JSON.parse(saved);
-  } catch {
-    // corrupt or unavailable buffer — start empty
-  }
-
   const activityOpts: AddEventListenerOptions = { passive: true };
   (["mousemove", "mousedown", "keydown", "click", "scroll", "touchstart"] as const).forEach((evt) =>
     window.addEventListener(evt, markActivity, activityOpts)
@@ -226,6 +232,90 @@ function ensureInitialized() {
     flushViaBeacon();
     persistBuffer();
   });
+}
+
+/** Names the operator this page's events belong to. Called by
+ * SessionProvider on load and on every auth change, so a shared browser can
+ * never carry one account's buffered events into the next one's session:
+ * a different owner drops the in-memory queue first, then restores only that
+ * owner's own buffer. The un-namespaced buffer from before namespacing is
+ * deleted rather than restored — nothing proves who wrote it. */
+export function setTelemetryOwner(ownerId: string | null): void {
+  if (bufferOwner === ownerId) return;
+
+  cancelScheduledPersist();
+  // Events queued before any owner was known were produced by this page load,
+  // under the session that is only now being named — they are this owner's
+  // and are kept. A change between two known accounts is the opposite case:
+  // everything queued belongs to the one that is leaving, and goes, along
+  // with the telemetry session id that tied those events together.
+  if (bufferOwner !== null) {
+    queue = [];
+    resetSessionId();
+  }
+  bufferOwner = ownerId;
+  if (typeof window === "undefined") return;
+
+  try {
+    // Never restored: the un-namespaced buffer predates namespacing, so
+    // nothing proves whose events it holds.
+    localStorage.removeItem(BUFFER_KEY);
+    if (!ownerId) return;
+    const saved = localStorage.getItem(ownerBufferKey(BUFFER_KEY, ownerId));
+    if (!saved) return;
+    const parsed: unknown = JSON.parse(saved);
+    // The restored buffer is older than anything queued in this page load.
+    if (Array.isArray(parsed)) queue = [...(parsed as TelemetryEvent[]), ...queue];
+  } catch {
+    // corrupt or unavailable buffer — start with what is in memory
+  } finally {
+    // Whatever was queued before the owner was known has had nowhere to be
+    // persisted until now; give it a namespace to survive a reload in.
+    if (queue.length > 0) schedulePersist();
+  }
+}
+
+function resetSessionId(): void {
+  sessionId = null;
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // sessionStorage unavailable — the in-memory id is already cleared.
+  }
+}
+
+/** Drops what is buffered in memory and stops anything further being
+ * persisted or sent, synchronously. First step of a purge: `flush()` posts
+ * with whatever session cookie the browser holds, so an event queued under
+ * the account that is leaving must not still be in `queue` once the next one
+ * signs in. */
+export function stopTelemetryBuffering(): void {
+  cancelScheduledPersist();
+  queue = [];
+  bufferOwner = null;
+  resetSessionId();
+}
+
+/** Removes the buffers themselves, after stopTelemetryBuffering() has already
+ * emptied the queue. `ownerId` null clears every account's buffer — the
+ * fail-closed direction when the signing-out account is unknown. */
+export function purgeTelemetryBuffer(ownerId: string | null): void {
+  stopTelemetryBuffering();
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.removeItem(BUFFER_KEY);
+    if (ownerId) {
+      localStorage.removeItem(ownerBufferKey(BUFFER_KEY, ownerId));
+      return;
+    }
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${BUFFER_KEY}:`)) localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage unavailable — the in-memory queue is already gone.
+  }
 }
 
 /** Queues a telemetry event (in memory + localStorage) for the next flush.

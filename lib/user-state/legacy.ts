@@ -4,13 +4,31 @@
  * data; what it produces is then merged like any other local value, with an
  * unknown age, so a server row always wins (see lib/user-state/merge.ts).
  *
- * The old keys are read, never deleted: if this import is ever found to be
- * wrong, the original data is still there to import again.
+ * None of these keys names the account that wrote it, and neither did the
+ * first generation of `wt-us:` cache keys — on a shared office PC that makes
+ * every one of them unattributable. `wt-us-owner` is the only evidence
+ * there is: the store writes it whenever it adopts an owner, so a marker
+ * equal to the current owner id means the un-namespaced data is this
+ * operator's own. Anything else, including the upgrade case where there is
+ * no marker at all, means the data is deleted unread — never imported and
+ * never uploaded, because an upload would file another operator's pins and
+ * progress under this account (see `legacyBelongsTo`).
  *
  * Every importer takes the reader as an argument instead of touching
  * localStorage directly — that is what makes them testable, and it keeps a
  * browser API out of a module that pages import transitively. */
 export type LegacyReader = (key: string) => string | null;
+
+/** Names the owner of every un-namespaced entry in this browser. Written by
+ * lib/user-state/store.ts on each owner change, read here. */
+export const LEGACY_OWNER_MARKER_KEY = "wt-us-owner";
+
+/** Whether the un-namespaced entries may be read at all. An absent marker is
+ * not a match: nothing proves who wrote them, so they are treated as another
+ * operator's and dropped. */
+export function legacyBelongsTo(marker: string | null | undefined, ownerId: string): boolean {
+  return !!marker && marker === ownerId;
+}
 
 export const LEGACY_ONBOARDING_KEY = "onboarding_checklist_v2";
 export const LEGACY_ONBOARDING_BY_INDEX_KEY = "onboarding_checklist";
@@ -68,4 +86,21 @@ export function importLegacyScriptsPosition(read: LegacyReader): unknown | null 
   const scriptId = read(LEGACY_SCRIPT_KEY);
   if (!scriptId) return null;
   return { scriptId, stageId: read(LEGACY_STAGE_KEY) || null };
+}
+
+const LEGACY_DAILY_PREFIXES = [LEGACY_DAILY_CHECKLIST_PREFIX, LEGACY_DAILY_CALLCOUNT_PREFIX];
+const LEGACY_EXACT_KEYS = [
+  LEGACY_ONBOARDING_KEY,
+  LEGACY_ONBOARDING_BY_INDEX_KEY,
+  LEGACY_SCRIPT_KEY,
+  LEGACY_STAGE_KEY,
+];
+
+/** True for one of the pre-user_state component keys — the exact four above
+ * and the two per-day families, whose suffix is the day the row belongs to.
+ * Used to sweep them out when the marker says they are not this operator's
+ * (lib/user-state/owner.ts). */
+export function isLegacyComponentStorageKey(storageKey: string): boolean {
+  if (LEGACY_EXACT_KEYS.includes(storageKey)) return true;
+  return LEGACY_DAILY_PREFIXES.some((prefix) => storageKey.startsWith(prefix) && storageKey.length > prefix.length);
 }

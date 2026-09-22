@@ -1,11 +1,14 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, RuntimeCaching, SerwistGlobalConfig } from "serwist";
+import { isPurgeRequest, USER_CACHES_PURGED, type UserCachesPurgedMessage } from "@/lib/pwa/sw-messages";
 import {
+  isNetworkOnlyApi,
   isNeverCached,
   isNextStaticAsset,
   isOptimizedProductImage,
   isProductImagePath,
+  isPurgeableCacheName,
   isSalesProcessPath,
   isSearchIndex,
 } from "@/lib/pwa/sw-routes";
@@ -61,6 +64,13 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
+    // Everything else under /api/ is session-bound: it goes to the network
+    // every time, so nothing of one operator's is left for the next. Ahead of
+    // defaultCache, whose own /api/ rule would cache these in "apis".
+    matcher: ({ sameOrigin, url }) => sameOrigin && isNetworkOnlyApi(url.pathname),
+    handler: new NetworkOnly(),
+  },
+  {
     // Build output is content-hashed, so it can be served from cache without
     // revalidating — a new build simply requests new filenames.
     matcher: ({ sameOrigin, url }) => sameOrigin && isNextStaticAsset(url.pathname),
@@ -102,3 +112,38 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+/** Deletes every runtime cache that can hold a document, an RSC payload or an
+ * API response (lib/pwa/sw-routes.ts lists them by name). Signing out must
+ * leave the browser with nothing of the knowledge base readable offline
+ * without a session; the precache, the build assets and the catalog images
+ * are public and identical for every operator, so they stay. */
+async function purgeUserCaches(): Promise<string[]> {
+  const names = (await caches.keys()).filter(isPurgeableCacheName);
+  const deleted = await Promise.all(names.map((name) => caches.delete(name)));
+  return names.filter((_, index) => deleted[index]);
+}
+
+/** Answers on the port the page opened, falling back to the client itself so
+ * a caller that sent no port is not left waiting for its timeout. */
+function ack(event: ExtendableMessageEvent, message: UserCachesPurgedMessage) {
+  const port = event.ports[0];
+  if (port) {
+    port.postMessage(message);
+    return;
+  }
+  const source = event.source;
+  if (source && "postMessage" in source) (source as Client).postMessage(message);
+}
+
+self.addEventListener("message", (event) => {
+  if (!isPurgeRequest(event.data)) return;
+  event.waitUntil(
+    purgeUserCaches().then(
+      (deleted) => ack(event, { type: USER_CACHES_PURGED, deleted }),
+      // The page is signing out either way: report an empty purge rather
+      // than leaving it to time out.
+      () => ack(event, { type: USER_CACHES_PURGED, deleted: [] })
+    )
+  );
+});

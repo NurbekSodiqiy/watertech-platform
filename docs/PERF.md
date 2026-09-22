@@ -159,6 +159,32 @@ Measured payload, same 49 pages: scripts **249 / 252 / 281 kB**, HTML **58 / 78 
 **~32 kB smaller (uncompressed)** from message scoping; home goes 269 to 259 kB and scripts 280 to 265 kB of script
 gzip from the fuse and Call Mode changes. Wire size depends on compression and was not measured.
 
+## After 2026-09-22 (S05, owner namespacing and sign-out purge)
+
+`components/providers/SessionProvider.tsx` now tells the client-side stores whose data they hold, so the `(app)`,
+`(admin)` and `dashboard` layouts reach `lib/user-state/store.ts` (and through it `keys/merge/queue/prune/owner`)
+from the layout chunk rather than only from the pages that call `useUserState`. Cost: **+1 to +3 kB First Load JS
+on every operator route**, `+2 kB` on `/admin/scripts/[id]`.
+
+| Route | Before | After |
+|---|---:|---:|
+| `/` | 226 kB | 229 kB |
+| `/products` | 231 kB | 234 kB |
+| `/sales-process/scripts` | 235 kB | 238 kB |
+| `/sales-process/battle-cards/[slug]` | 223 kB | 225 kB |
+| `/changelog` | 212 kB | 214 kB |
+| `/company/onboarding` | 248 kB | 249 kB |
+| `/faq`, `/standards/kpi-system`, `/standards/motivation-bonus` | 139-140 kB | 141-142 kB |
+| `/admin/scripts/[id]` | 172 kB | 174 kB |
+| every other operator route | 125-143 kB | 127-144 kB |
+
+**Why it was not deferred to a dynamic import.** The purge has to stop uploads *synchronously* on the auth event:
+`supabase.auth.onAuthStateChange` fires in every tab, and the pending `user_state` queue of the account that is
+leaving would otherwise be uploadable under the next account's JWT during the tick an `await import(...)` costs
+(the server takes the row's identity from the JWT, never from the payload). A statically linked
+`stopUserStateSends()` is what closes that window. No route crossed 180 kB that was not already over it, and the
+set of over-budget routes is unchanged at the same six.
+
 ## Budgets
 
 | Budget | Limit |
@@ -167,28 +193,28 @@ gzip from the fuse and Call Mode changes. Wire size depends on compression and w
 | Client message payload | only allow-listed namespaces (`lib/i18n/client-messages.ts`), enforced by vitest |
 | Modules mounted only after an interaction | `next/dynamic` when >= ~4 kB parsed or when they pull a dependency into first load |
 
-### Routes over 180 kB after S16 (6 of 36 operator routes; baseline: 6)
+### Routes over 180 kB after S05 (6 of 36 operator routes; baseline: 6)
 
-| Route | Baseline | After |
-|---|---:|---:|
-| `/company/onboarding` | 248 kB | 248 kB |
-| `/sales-process/scripts` | 248 kB | 235 kB |
-| `/products` | 231 kB | 231 kB |
-| `/` | 237 kB | 226 kB |
-| `/sales-process/battle-cards/[slug]` | 223 kB | 223 kB |
-| `/changelog` | 212 kB | 212 kB |
+| Route | Baseline | After S16 | After S05 |
+|---|---:|---:|---:|
+| `/company/onboarding` | 248 kB | 248 kB | 249 kB |
+| `/sales-process/scripts` | 248 kB | 235 kB | 238 kB |
+| `/products` | 231 kB | 231 kB | 234 kB |
+| `/` | 237 kB | 226 kB | 229 kB |
+| `/sales-process/battle-cards/[slug]` | 223 kB | 223 kB | 225 kB |
+| `/changelog` | 212 kB | 212 kB | 214 kB |
 
 **Why.** All six import the per-user state store (`useUserState`: pins, favourites, onboarding progress, scripts
 position, changelog read receipts), and `lib/user-state/store.ts` imports `lib/supabase/client` statically. That
 brings the Supabase browser client into the page's first-load JS: `auth-js` 14.0 kB + `supabase-js` with
 storage/postgrest/realtime 53.2 kB + `zod` 12.7 kB, all gzip, about 80 kB. `/company/onboarding` (248 kB) and
-`/sales-process/scripts` (235 kB) add their own page code on top. `/login` (200 kB, public) needs the client to
-start OAuth.
+`/sales-process/scripts` (238 kB) add their own page code on top. `/login` (200 kB, public) needs the client to
+start OAuth. S05 added 1-3 kB to each by putting that same store on the layout path (see above).
 
 ## Open items
 
-1. **The Supabase browser client is imported statically in three places**: `components/providers/SessionProvider.tsx`,
-   `lib/user-state/store.ts` and `lib/auth/sign-out.ts`. Each only uses it inside an effect or an async function, so a
+1. **The Supabase browser client is imported statically in four places**: `components/providers/SessionProvider.tsx`,
+   `lib/user-state/store.ts`, `lib/auth/sign-out.ts` and `lib/auth/purge.ts` (through the store). Each only uses it inside an effect or an async function, so a
    dynamic `import("@/lib/supabase/client")` would take about 67 kB gzip (auth-js + supabase-js; zod stays if anything
    else uses it) out of the scripts every operator page needs before it can hydrate. It is the largest remaining item and
    the only one that would bring the six routes above under budget. Not done in S16: it changes when the session resolves

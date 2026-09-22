@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Link } from "@/i18n/routing";
-import { usePathname, useRouter } from "@/i18n/routing";
+import { usePathname } from "@/i18n/routing";
 import {
   AlertCircle,
   Boxes,
@@ -17,10 +17,11 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { signOutAndRedirect } from "@/lib/auth/sign-out";
+import { useSessionUser } from "@/hooks/useSessionUser";
+import { signOutAndPurge } from "@/lib/auth/sign-out";
 
 interface AdminNavEntry {
   path: string;
@@ -52,7 +53,8 @@ export function AdminShell({
   notificationsSlot?: ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const locale = useLocale();
+  const { user } = useSessionUser();
   const tChangelog = useTranslations("pages.admin.changelog");
   const tContacts = useTranslations("pages.admin.contacts");
   const tSops = useTranslations("pages.admin.sops");
@@ -66,7 +68,7 @@ export function AdminShell({
   ];
 
   async function handleSignOut() {
-    await signOutAndRedirect(router);
+    await signOutAndPurge({ locale, email: user?.email });
   }
 
   return (
