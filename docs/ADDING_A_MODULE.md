@@ -73,9 +73,13 @@ for you is the database, the content mappers, the pages, and the entry itself.
         toRow: guideToRow,
         listColumns: ["title", "category"],   // what the list view shows; keep big JSONB out
         titleColumn: "title",
-        // listOrder    — only when `sort_order` is not the right order (see content_changelog)
-        // sortScope    — only when rows are ordered inside a parent (see content_packages)
-        // referenceCheck / referencedBy — only for ids with no DB-level foreign key
+        // listOrder       — only when `sort_order` is not the right order (see content_changelog)
+        // sortScopeColumn — only when rows are ordered inside a parent (see content_packages)
+        // referenceCheck  — ids this row points at, with no DB-level foreign key
+        // referencedBy    — rows that point at THIS one, for the delete guard: mode "block"
+        //                   (the delete is refused and the dialog offers "move to draft") or
+        //                   mode "cascade" (the database deletes them too, so the manager
+        //                   confirms once, by name and count)
       }),
       ```
 
@@ -86,7 +90,9 @@ for you is the database, the content mappers, the pages, and the entry itself.
       ```ts
       const guides = actionsFor(CONTENT_REGISTRY.content_guides);
       export async function upsertGuide(input: unknown) { return guides.save(input); }
-      export async function deleteGuide(id: string, expectedVersion: number) { return guides.remove(id, expectedVersion); }
+      export async function deleteGuide(id: string, expectedVersion: number, options?: RemoveOptions) {
+        return guides.remove(id, expectedVersion, options);
+      }
       export async function setGuideStatus(id: string, status: StatusValue, expectedVersion: number) {
         return guides.setStatus(id, status, expectedVersion);
       }
@@ -99,7 +105,9 @@ for you is the database, the content mappers, the pages, and the entry itself.
       `listGuideRows() → listRows("content_guides")` and `getGuideRow(id) → getRow("content_guides", id)`
       plus `withStatus`. Add a `toAdminGuide` narrowing helper only if the table has CHECK-constrained
       columns beyond `status`. Add `"content_guides"` to `OverviewTable` for the overview card.
-- [ ] `lib/admin/actions/versions.ts` needs nothing — it reads the registry.
+- [ ] `lib/admin/actions/versions.ts` and `/admin/trash` need nothing — both read the registry
+      (the trash list resolves a deleted row's title through the entry's `titleColumn`, and a restore
+      re-inserts it through the entry's own create path as a draft).
 - [ ] Pages under `app/[locale]/(admin)/admin/guides/`:
   - `page.tsx` — `DataTable<AdminListRow<"content_guides">>` list; pass `deleteGuide` and `setGuideStatus`
     straight through.
@@ -144,7 +152,8 @@ for you is the database, the content mappers, the pages, and the entry itself.
 - [ ] `tests/unit/admin/registry.test.ts` covers the new entry automatically (completeness, real column
       names, `adminEditHref` agreement) — run it and make sure it passes rather than adding a copy.
 - [ ] Add a factory case to `tests/unit/admin/factory.test.ts` only for behaviour that is specific to this
-      table (a `sortScope`, a `referenceCheck`); the shared paths are already covered.
+      table (a `sortScopeColumn`, a `referenceCheck`); the shared paths are already covered. A new
+      `referencedBy` belongs in `tests/unit/admin/references.test.ts` instead.
 
 ## 9. Done
 

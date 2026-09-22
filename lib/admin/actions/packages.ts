@@ -2,6 +2,7 @@
 import "server-only";
 import { CONTENT_REGISTRY } from "@/lib/admin/registry";
 import { actionsFor } from "./deps";
+import type { RemoveOptions } from "./factory";
 import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "./status";
 
@@ -17,8 +18,12 @@ export async function upsertPackageGroup(input: unknown): Promise<ActionResult> 
   return packageGroups.save(input);
 }
 
-export async function deletePackageGroup(id: string, expectedVersion: number): Promise<ActionResult> {
-  return packageGroups.remove(id, expectedVersion);
+export async function deletePackageGroup(
+  id: string,
+  expectedVersion: number,
+  options?: RemoveOptions
+): Promise<ActionResult> {
+  return packageGroups.remove(id, expectedVersion, options);
 }
 
 export async function setPackageGroupStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
@@ -31,8 +36,12 @@ export async function upsertPackage(input: unknown): Promise<ActionResult> {
   return packages.save(input);
 }
 
-export async function deletePackage(id: string, expectedVersion: number): Promise<ActionResult> {
-  return packages.remove(id, expectedVersion);
+export async function deletePackage(
+  id: string,
+  expectedVersion: number,
+  options?: RemoveOptions
+): Promise<ActionResult> {
+  return packages.remove(id, expectedVersion, options);
 }
 
 export async function setPackageStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {

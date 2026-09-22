@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft } from "lucide-react";
-import { listVersions } from "@/lib/admin/queries";
+import { getRow, listVersions } from "@/lib/admin/queries";
+import { isContentTable } from "@/lib/admin/registry";
+import { isSnapshotRow, type SnapshotRow } from "@/lib/admin/snapshot";
 import { VersionsList } from "@/components/admin/VersionsList";
 
 // The table's display name is the `admin.versions.tables.<table>` message.
@@ -34,7 +36,15 @@ export default async function AdminVersionsPage({
 
   const t = await getTranslations("admin.versions");
   const info = TABLE_INFO[params.table];
-  const versions = await listVersions(params.table, params.id);
+  // The live row is the right-hand side of every diff and carries the version
+  // a restore is guarded on. Null when the row is deleted — its delete
+  // snapshot then restores it as a draft, same as /admin/trash.
+  const [versions, live] = await Promise.all([
+    listVersions(params.table, params.id),
+    isContentTable(params.table) ? getRow(params.table, params.id) : Promise.resolve(null),
+  ]);
+  const currentRow: SnapshotRow | null = isSnapshotRow(live) ? live : null;
+  const currentVersion = typeof currentRow?.version === "number" ? currentRow.version : null;
 
   return (
     <div className="space-y-6">
@@ -50,7 +60,12 @@ export default async function AdminVersionsPage({
           {t("historyTitle", { table: info ? t(`tables.${params.table}`) : params.table, id: params.id })}
         </h1>
       </div>
-      <VersionsList table={params.table} versions={versions} />
+      <VersionsList
+        table={params.table}
+        versions={versions}
+        currentRow={currentRow}
+        currentVersion={currentVersion}
+      />
     </div>
   );
 }

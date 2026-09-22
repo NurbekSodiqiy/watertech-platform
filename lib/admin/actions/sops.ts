@@ -2,6 +2,7 @@
 import "server-only";
 import { CONTENT_REGISTRY } from "@/lib/admin/registry";
 import { actionsFor } from "./deps";
+import type { RemoveOptions } from "./factory";
 import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "./status";
 
@@ -17,8 +18,12 @@ export async function upsertSop(input: unknown): Promise<ActionResult> {
   return sops.save(input);
 }
 
-export async function deleteSop(id: string, expectedVersion: number): Promise<ActionResult> {
-  return sops.remove(id, expectedVersion);
+export async function deleteSop(
+  id: string,
+  expectedVersion: number,
+  options?: RemoveOptions
+): Promise<ActionResult> {
+  return sops.remove(id, expectedVersion, options);
 }
 
 export async function setSopStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {

@@ -310,10 +310,13 @@ describe("contentActions.remove", () => {
     expect(result).toEqual({ ok: false, code: "not_found" });
   });
 
+  // The database's own last word, for a table whose entry has no
+  // referencedBy guard (or a row that gained a reference after the guard ran).
+  // The guard itself is tests/unit/admin/references.test.ts.
   it("maps a foreign-key violation to reference_in_use", async () => {
     const { deps } = testDeps(() => pgError("23503", "violates foreign key constraint"));
 
-    const result = await contentActions(CONTENT_REGISTRY.content_package_groups, deps).remove("grp-boshlangich", 1);
+    const result = await contentActions(CONTENT_REGISTRY.content_faqs, deps).remove("faq-kafolat", 1);
 
     expect(result).toEqual({ ok: false, code: "reference_in_use" });
   });

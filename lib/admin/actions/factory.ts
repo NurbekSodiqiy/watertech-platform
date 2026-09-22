@@ -10,6 +10,7 @@ import {
   actionOk,
   gateBlockedResult,
   logDbError,
+  referenceInUseResult,
   PG_FOREIGN_KEY_VIOLATION,
   PG_UNIQUE_VIOLATION,
   type ActionResult,
@@ -17,6 +18,7 @@ import {
 import { adminErrorMap } from "@/lib/admin/validation";
 import type { Json } from "@/lib/supabase/database.types";
 import {
+  CONTENT_REGISTRY,
   gateTargetFor,
   type AdminDbClient,
   type ContentColumn,
@@ -24,6 +26,7 @@ import {
   type ContentRow,
   type ContentWrite,
 } from "@/lib/admin/registry";
+import { contentColumns, type SnapshotRow } from "@/lib/admin/snapshot";
 import { idSchema, statusSchema } from "@/lib/admin/schemas";
 import { updateWithVersion } from "./concurrency";
 import type { ManagerSession } from "./guard";
@@ -52,14 +55,29 @@ export interface ContentActionDeps {
   revalidate: (kind: ContentKind) => void;
 }
 
+export interface RemoveOptions {
+  /** The manager has seen the cascade warning (the packages a group takes
+   * with it) and asked for the delete anyway. Never set for a `block`
+   * reference: those have no confirmation, only "fix the other rows first"
+   * or "unpublish this one". */
+  confirmCascade?: boolean;
+}
+
 export interface ContentActions {
   /** Create when the payload carries no version, update when it does — what
    * an edit form submits, from /admin/<x>/new or /admin/<x>/<id>. */
   save: (input: unknown) => Promise<ActionResult>;
   create: (input: unknown) => Promise<ActionResult>;
   update: (input: unknown) => Promise<ActionResult>;
-  remove: (id: string, expectedVersion: number) => Promise<ActionResult>;
+  remove: (id: string, expectedVersion: number, options?: RemoveOptions) => Promise<ActionResult>;
   setStatus: (id: string, status: StatusValue, expectedVersion: number) => Promise<ActionResult>;
+  /** Re-inserts a deleted row from its content_versions snapshot, always as a
+   * draft (/admin/trash). Takes the create path below — same sort_order
+   * placement, same id_taken guard — but no write schema: a snapshot is a row
+   * this database wrote itself, in this table's own column shape, not a form
+   * payload. What it may not do is come back published, which is why `status`
+   * is forced here and not read from the snapshot. */
+  restoreDeleted: (snapshot: SnapshotRow) => Promise<ActionResult>;
 }
 
 type DynamicRow = { [column: string]: Json | undefined };
@@ -124,6 +142,41 @@ export function contentActions<
     return gate.passed ? null : gate;
   }
 
+  /** Where the row's `sort_order` is counted from: its own scope (a package's
+   * group) or the whole table. Read off the row being written, so a create
+   * and a restore-from-trash place a row the same way. */
+  function sortScopeOf(payload: DynamicRow): { column: string; value: string } | null {
+    const column = entry.sortScopeColumn;
+    if (!column) return null;
+    const value = payload[column];
+    return typeof value === "string" ? { column, value } : null;
+  }
+
+  /** The insert both create() and restoreDeleted() end in: place the row at
+   * the end of its scope, stamp the actor, and let a taken id fail as
+   * id_taken. `.insert()`, not `.upsert()`: an id that already exists belongs
+   * to a live row some other manager owns, and silently overwriting it is
+   * exactly what the version check on the update path exists to prevent. */
+  async function insertRow(
+    supabase: AdminDbClient,
+    row: ContentRow<T> | SnapshotRow,
+    status: StatusValue,
+    actor: string
+  ): Promise<ActionResult> {
+    const payload: DynamicRow = { ...row, status, updated_by: actor };
+    payload.sort_order = await nextSortOrder(supabase, table, sortScopeOf(payload));
+
+    const { error } = await supabase.from(table).insert(payload);
+    if (error) {
+      logDbError(`${table} insert`, error);
+      if (error.code === PG_UNIQUE_VIOLATION) return actionFailed("id_taken", { field: "id" });
+      return actionFailed("unknown");
+    }
+
+    deps.revalidate(kind);
+    return actionOk();
+  }
+
   async function create(input: unknown): Promise<ActionResult> {
     try {
       const session = await deps.requireSession();
@@ -133,27 +186,23 @@ export function contentActions<
       const blocked = await gateCandidate(row, parsed.status, session.email);
       if (blocked) return gateBlockedResult(blocked);
 
-      const scope = entry.sortScope ? entry.sortScope(parsed) : null;
-      const sortOrder = await nextSortOrder(supabase, table, scope);
+      return await insertRow(supabase, row, parsed.status, session.email);
+    } catch (e) {
+      return actionErrorResult(e);
+    }
+  }
 
-      // .insert(), not .upsert(): an id that already exists belongs to a live
-      // row some other manager owns, and silently overwriting it is exactly
-      // what the version check on the update path exists to prevent.
-      const payload: DynamicRow = {
-        ...row,
-        status: parsed.status,
-        sort_order: sortOrder,
-        updated_by: session.email,
-      };
-      const { error } = await supabase.from(table).insert(payload);
-      if (error) {
-        logDbError(`${table} insert`, error);
-        if (error.code === PG_UNIQUE_VIOLATION) return actionFailed("id_taken", { field: "id" });
-        return actionFailed("unknown");
-      }
+  async function restoreDeleted(snapshot: SnapshotRow): Promise<ActionResult> {
+    try {
+      const session = await deps.requireSession();
+      const id = snapshot.id;
+      if (typeof id !== "string") return actionFailed("validation", { field: "snapshot" });
 
-      deps.revalidate(kind);
-      return actionOk();
+      // Content columns plus the id; status is "draft" whatever the snapshot
+      // said, so a row that was published when it was deleted comes back
+      // invisible to operators and goes through the publish gate again.
+      const row: DynamicRow = { ...contentColumns(snapshot), id };
+      return await insertRow(deps.client(), row, "draft", session.email);
     } catch (e) {
       return actionErrorResult(e);
     }
@@ -186,15 +235,30 @@ export function contentActions<
     return version === undefined ? create(input) : update(input);
   }
 
-  async function remove(id: string, expectedVersion: number): Promise<ActionResult> {
+  async function remove(id: string, expectedVersion: number, options?: RemoveOptions): Promise<ActionResult> {
     try {
       await deps.requireSession();
       const ref = rowRefSchema.parse({ id, expectedVersion }, { errorMap: adminErrorMap });
       const supabase = deps.client();
 
-      // Version-guarded like every other write: a delete is the one edit that
-      // cannot be undone from the UI, so it must not land on a row that
-      // changed after the manager last looked at it.
+      // What still points at this row. A `block` use is a dangling id waiting
+      // to happen (an objection id inside a script's stage tree, a script id
+      // inside an objection's script_ids — neither has a foreign key), so the
+      // delete is refused and the dialog offers unpublishing instead. A
+      // `cascade` use is rows the database removes with this one, which the
+      // manager confirms once, by name and count.
+      if (entry.referencedBy) {
+        const uses = await entry.referencedBy(ref.id, supabase);
+        const blocking = uses.filter((use) => use.mode === "block");
+        if (blocking.length > 0) return referenceInUseResult(blocking);
+        const cascading = uses.filter((use) => use.mode === "cascade");
+        if (cascading.length > 0 && !options?.confirmCascade) return referenceInUseResult(cascading);
+      }
+
+      // Version-guarded like every other write: /admin/trash can bring the row
+      // back as a draft, but not the edit someone made in the meantime, so the
+      // delete must not land on a row that changed after the manager last
+      // looked at it.
       const { data, error } = await supabase
         .from(table)
         .delete()
@@ -245,7 +309,32 @@ export function contentActions<
     }
   }
 
-  return { save, create, update, remove, setStatus };
+  return { save, create, update, remove, setStatus, restoreDeleted };
+}
+
+/** `contentActions` for a table whose name is only known at runtime — the
+ * trash page restores whatever table the snapshot came from. Written out per
+ * table for the same reason GATE_TARGETS in lib/admin/registry.ts is:
+ * `CONTENT_REGISTRY[table]` for a union `table` is a union of entries, and
+ * TypeScript cannot prove one inhabits `ContentEntry<T, TWrite, TColumns>`
+ * with its three parameters correlated. */
+const CONTENT_ACTIONS: {
+  [T in DashboardTableName]: (deps: ContentActionDeps) => ContentActions;
+} = {
+  content_scripts: (deps) => contentActions(CONTENT_REGISTRY.content_scripts, deps),
+  content_objections: (deps) => contentActions(CONTENT_REGISTRY.content_objections, deps),
+  content_faqs: (deps) => contentActions(CONTENT_REGISTRY.content_faqs, deps),
+  content_competitors: (deps) => contentActions(CONTENT_REGISTRY.content_competitors, deps),
+  content_package_groups: (deps) => contentActions(CONTENT_REGISTRY.content_package_groups, deps),
+  content_packages: (deps) => contentActions(CONTENT_REGISTRY.content_packages, deps),
+  content_products: (deps) => contentActions(CONTENT_REGISTRY.content_products, deps),
+  content_changelog: (deps) => contentActions(CONTENT_REGISTRY.content_changelog, deps),
+  content_contacts: (deps) => contentActions(CONTENT_REGISTRY.content_contacts, deps),
+  content_sops: (deps) => contentActions(CONTENT_REGISTRY.content_sops, deps),
+};
+
+export function contentActionsFor(table: DashboardTableName, deps: ContentActionDeps): ContentActions {
+  return CONTENT_ACTIONS[table](deps);
 }
 
 async function rowExists(supabase: AdminDbClient, table: string, id: string): Promise<boolean> {

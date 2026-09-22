@@ -14,7 +14,8 @@ import { useMounted } from "@/hooks/useMounted";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
 import { useActionError } from "@/hooks/useActionError";
-import type { ActionResult } from "@/lib/admin/errors";
+import type { ActionResult, ReferenceSummary } from "@/lib/admin/errors";
+import type { RemoveOptions } from "@/lib/admin/actions/factory";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
@@ -30,6 +31,13 @@ export interface AdminColumn<T> {
   key: keyof T & string;
   label: string;
   sortable?: boolean;
+}
+
+/** A row as a write identifies it: the id, and the version every write is
+ * guarded on. */
+interface RowRef {
+  id: string;
+  version: number;
 }
 
 /** Dense CRUD table for one admin section — DatabaseTemplate's look
@@ -63,8 +71,10 @@ export function DataTable<T extends AdminRow>({
    * empty (no records created yet, not just filtered down to nothing). */
   emptyState?: DataTableEmptyState;
   /** Version-guarded like every other write — the row the manager saw is the
-   * row that gets deleted, or nothing is. */
-  onDelete: (id: string, expectedVersion: number) => Promise<ActionResult>;
+   * row that gets deleted, or nothing is. Answers `reference_in_use` when
+   * other rows point at this one; `options.confirmCascade` is the second
+   * confirmation for a delete the database cascades (a package group). */
+  onDelete: (id: string, expectedVersion: number, options?: RemoveOptions) => Promise<ActionResult>;
   onToggleStatus: (id: string, next: StatusValue, expectedVersion: number) => Promise<ActionResult>;
 }) {
   const router = useRouter();
@@ -84,6 +94,9 @@ export function DataTable<T extends AdminRow>({
   // The row awaiting delete confirmation, with the version the delete is
   // guarded on — not just its id.
   const [confirmRow, setConfirmRow] = useState<{ id: string; version: number } | null>(null);
+  // A delete the reference guard answered: the rows that point at this one
+  // (or the children it would cascade to) and the row they are about.
+  const [refused, setRefused] = useState<{ row: RowRef; references: ReferenceSummary[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -101,16 +114,32 @@ export function DataTable<T extends AdminRow>({
     return out;
   }, [rows, query, sort]);
 
+  /** The refused delete as the dialog reads it: every referencing table's
+   * titles in one list, and whether the database would cascade (a package
+   * group's packages) or the reference simply blocks. */
+  const refusal = useMemo(() => {
+    const references = refused?.references ?? [];
+    return {
+      cascade: references.some((reference) => reference.mode === "cascade"),
+      titles: references.flatMap((reference) => reference.titles),
+      count: references.reduce((total, reference) => total + reference.count, 0),
+    };
+  }, [refused]);
+
   function toggleSort(key: keyof T & string) {
     setSort((prev) => (prev?.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
   }
 
-  function handleToggleStatus(row: T) {
-    if (!online) {
-      toast({ kind: "error", title: t("offline") });
-      return;
-    }
-    const next: StatusValue = row.status === "published" ? "draft" : "published";
+  /** Offline is the one failure that never reaches a Server Action — saying
+   * so beats a fetch error the manager has to interpret. */
+  function guardOnline(): boolean {
+    if (online) return true;
+    toast({ kind: "error", title: t("offline") });
+    return false;
+  }
+
+  function applyStatus(row: RowRef, next: StatusValue) {
+    if (!guardOnline()) return;
     setPendingId(row.id);
     setError(null);
     startTransition(async () => {
@@ -127,27 +156,36 @@ export function DataTable<T extends AdminRow>({
         });
         return;
       }
+      setRefused(null);
       toast({ kind: "success", title: next === "published" ? t("published") : t("unpublished") });
       router.refresh();
     });
   }
 
-  function handleDelete() {
-    if (!confirmRow) return;
-    if (!online) {
-      toast({ kind: "error", title: t("offline") });
-      return;
-    }
-    const { id, version } = confirmRow;
-    setPendingId(id);
+  function handleToggleStatus(row: T) {
+    applyStatus(row, row.status === "published" ? "draft" : "published");
+  }
+
+  /** One delete attempt. A `reference_in_use` answer is not an error the
+   * manager can only read: it carries the rows involved, so it opens the
+   * second dialog instead of a toast — "move to draft" for a reference that
+   * blocks, "delete anyway" for one the database cascades. */
+  function runDelete(row: RowRef, options?: RemoveOptions) {
+    if (!guardOnline()) return;
+    setPendingId(row.id);
     setError(null);
     startTransition(async () => {
-      const result = await onDelete(id, version);
+      const result = await onDelete(row.id, row.version, options);
       setPendingId(null);
       setConfirmRow(null);
       if (!result.ok) {
         const { title, isConflict } = describeError(result);
+        if (result.code === "reference_in_use" && result.references && result.references.length > 0) {
+          setRefused({ row, references: result.references });
+          return;
+        }
         setError(title);
+        setRefused(null);
         toast({
           kind: "error",
           title,
@@ -155,6 +193,7 @@ export function DataTable<T extends AdminRow>({
         });
         return;
       }
+      setRefused(null);
       toast({ kind: "success", title: t("deleted") });
       router.refresh();
     });
@@ -294,8 +333,38 @@ export function DataTable<T extends AdminRow>({
         title={tTable("deleteTitle")}
         description={tTable("deleteDescription")}
         pending={pending && pendingId === confirmRow?.id}
-        onConfirm={handleDelete}
+        onConfirm={() => confirmRow && runDelete(confirmRow)}
         onCancel={() => setConfirmRow(null)}
+      />
+
+      <ConfirmDialog
+        open={refused !== null}
+        title={refusal.cascade ? tTable("cascadeTitle") : tTable("blockedTitle")}
+        description={
+          refusal.cascade
+            ? tTable("cascadeDescription", { count: refusal.count })
+            : tTable("blockedDescription", { count: refusal.count })
+        }
+        items={refusal.titles}
+        itemsMore={
+          refusal.count > refusal.titles.length
+            ? tTable("referencesMore", { count: refusal.count - refusal.titles.length })
+            : undefined
+        }
+        confirmLabel={refusal.cascade ? tTable("deleteAnyway") : tTable("setDraft")}
+        tone={refusal.cascade ? "danger" : "primary"}
+        secondary={
+          refusal.cascade && refused
+            ? { label: tTable("setDraft"), onClick: () => applyStatus(refused.row, "draft") }
+            : undefined
+        }
+        pending={pending && pendingId === refused?.row.id}
+        onConfirm={() => {
+          if (!refused) return;
+          if (refusal.cascade) runDelete(refused.row, { confirmCascade: true });
+          else applyStatus(refused.row, "draft");
+        }}
+        onCancel={() => setRefused(null)}
       />
 
       <GateReportDialog

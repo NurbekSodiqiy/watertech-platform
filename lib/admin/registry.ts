@@ -4,6 +4,7 @@ import type { DynamicTablesDatabase, Tables } from "@/lib/supabase/typed";
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
 import type { ContentKind } from "@/lib/content/revalidate";
 import type { GateTarget } from "@/lib/agents/publish-gate/types";
+import type { ReferenceMode } from "@/lib/admin/errors";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import { stagesSchema } from "@/lib/content/schemas";
 import {
@@ -74,11 +75,30 @@ export interface ReferenceIssue {
   details: string[];
 }
 
-/** Rows in another table that point at this one. Read by the delete guard in
- * S07; nothing in S06 calls it. */
+/** Rows elsewhere that point at this one, as the delete guard in
+ * lib/admin/actions/factory.ts reports them. `titles` (not ids) because the
+ * manager reading the confirm dialog knows "Lead orqali tushgan", not
+ * "scr-lead-orqali-tushgan"; it is capped at REFERENCE_TITLE_LIMIT, so
+ * `count` is what the copy says "and 3 more" from. */
 export interface ReferenceUse {
   table: DashboardTableName;
-  ids: string[];
+  mode: ReferenceMode;
+  titles: string[];
+  count: number;
+}
+
+/** Titles carried back to the browser per referencing table. A guard that
+ * finds fifty scripts does not need to name all fifty — the dialog says how
+ * many there are and lists the first few. */
+export const REFERENCE_TITLE_LIMIT = 6;
+
+function referenceUse(
+  table: DashboardTableName,
+  mode: ReferenceMode,
+  titles: string[]
+): ReferenceUse[] {
+  if (titles.length === 0) return [];
+  return [{ table, mode, titles: titles.slice(0, REFERENCE_TITLE_LIMIT), count: titles.length }];
 }
 
 export interface ListOrder {
@@ -109,18 +129,24 @@ export interface ContentEntry<
   /** Column that names a row in a notification, a gate report or a log line. */
   readonly titleColumn: ContentColumn<T>;
   readonly listOrder?: readonly ListOrder[];
-  /** New rows are appended after the last row of the same scope — packages
-   * are ordered inside their group, everything else table-wide. */
-  readonly sortScope?: (parsed: TWrite) => { column: ContentColumn<T>; value: string };
+  /** Column a row's `sort_order` is scoped by: a new (or restored) package is
+   * appended after the last package of its own group, everything else after
+   * the last row of the table. Read off the mapped row, so the create path
+   * and the trash restore path resolve it the same way. */
+  readonly sortScopeColumn?: ContentColumn<T>;
   /** Ids this row points at that have no foreign key to enforce them. */
   readonly referenceCheck?: (parsed: TWrite, supabase: AdminDbClient) => Promise<ReferenceIssue | null>;
-  /** Rows elsewhere that point at this one (S07's delete guard). */
+  /** Rows elsewhere that point at this one — the delete guard in
+   * lib/admin/actions/factory.ts. `mode: "block"` means the reference has no
+   * foreign key behind it, so deleting would leave a dangling id and the
+   * delete is refused; `mode: "cascade"` means the database deletes those
+   * rows along with this one and the manager has to confirm that first. */
   readonly referencedBy?: (id: string, supabase: AdminDbClient) => Promise<ReferenceUse[]>;
 }
 
-/** Identity function that pins one entry's three type parameters, so
- * `toRow`, `sortScope` and `referenceCheck` are checked against the schema's
- * own parsed type and `listColumns` keeps its literal member types. */
+/** Identity function that pins one entry's three type parameters, so `toRow`
+ * and `referenceCheck` are checked against the schema's own parsed type and
+ * `listColumns` keeps its literal member types. */
 function defineEntry<
   T extends DashboardTableName,
   TWrite extends ContentWrite,
@@ -140,11 +166,15 @@ interface ContentEntryShape<T extends DashboardTableName> {
   listOrder?: readonly ListOrder[];
 }
 
-async function objectionIdsInUse(supabase: AdminDbClient, objectionId: string): Promise<string[]> {
+/** Scripts whose stage tree (either locale) handles this objection. There is
+ * no foreign key behind `stages[].objectionIds` — it is an id inside JSONB —
+ * so the ids are matched here, on every script a manager can see, draft or
+ * published. The names are what the delete dialog lists. */
+async function scriptsUsingObjection(supabase: AdminDbClient, objectionId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("content_scripts")
-    .select("id,stages,stages_ru")
-    .overrideTypes<{ id: string; stages: unknown; stages_ru: unknown }[], { merge: false }>();
+    .select("id,name,stages,stages_ru")
+    .overrideTypes<{ id: string; name: string; stages: unknown; stages_ru: unknown }[], { merge: false }>();
   if (error) throw new Error(error.message);
   return data
     .filter((row) =>
@@ -153,7 +183,7 @@ async function objectionIdsInUse(supabase: AdminDbClient, objectionId: string): 
         return parsed.success && parsed.data.some((stage) => stage.objectionIds.includes(objectionId));
       })
     )
-    .map((row) => row.id);
+    .map((row) => row.name);
 }
 
 export const CONTENT_REGISTRY = {
@@ -198,6 +228,18 @@ export const CONTENT_REGISTRY = {
       ];
       return unknown.length > 0 ? { field: "stages", details: unknown } : null;
     },
+    // The other half of the objection <-> script pair: an objection's
+    // script_ids column names the scripts it belongs to, again with no
+    // foreign key, so deleting a script would leave those ids dangling.
+    referencedBy: async (id, supabase) => {
+      const { data, error } = await supabase
+        .from("content_objections")
+        .select("id,label")
+        .contains("script_ids", [id])
+        .overrideTypes<{ id: string; label: string }[], { merge: false }>();
+      if (error) throw new Error(error.message);
+      return referenceUse("content_objections", "block", data.map((row) => row.label));
+    },
   }),
 
   content_objections: defineEntry({
@@ -208,10 +250,8 @@ export const CONTENT_REGISTRY = {
     toRow: objectionToRow,
     listColumns: ["label"],
     titleColumn: "label",
-    referencedBy: async (id, supabase) => {
-      const ids = await objectionIdsInUse(supabase, id);
-      return ids.length > 0 ? [{ table: "content_scripts", ids }] : [];
-    },
+    referencedBy: async (id, supabase) =>
+      referenceUse("content_scripts", "block", await scriptsUsingObjection(supabase, id)),
   }),
 
   content_faqs: defineEntry({
@@ -242,14 +282,17 @@ export const CONTENT_REGISTRY = {
     toRow: packageGroupToRow,
     listColumns: ["title", "subtitle"],
     titleColumn: "title",
+    // `group_id … on delete cascade` (0002_content_tables.sql): deleting a
+    // group takes its packages with it, so this is a confirmation the manager
+    // has to give, not a refusal.
     referencedBy: async (id, supabase) => {
       const { data, error } = await supabase
         .from("content_packages")
-        .select("id")
+        .select("id,name")
         .eq("group_id", id)
-        .overrideTypes<{ id: string }[], { merge: false }>();
+        .overrideTypes<{ id: string; name: string }[], { merge: false }>();
       if (error) throw new Error(error.message);
-      return data.length > 0 ? [{ table: "content_packages", ids: data.map((row) => row.id) }] : [];
+      return referenceUse("content_packages", "cascade", data.map((row) => row.name));
     },
   }),
 
@@ -263,7 +306,7 @@ export const CONTENT_REGISTRY = {
     titleColumn: "name",
     // A package's order is its position inside its group, so a new one goes
     // after the last package of that group, not after the whole table.
-    sortScope: (parsed) => ({ column: "group_id", value: parsed.groupId }),
+    sortScopeColumn: "group_id",
   }),
 
   content_products: defineEntry({

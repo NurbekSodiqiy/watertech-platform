@@ -19,6 +19,7 @@ import {
   BellOff,
   Newspaper,
   Phone,
+  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -62,6 +63,7 @@ export const EMPTY_STATES = {
   notificationsNone: { key: "notificationsNone", icon: BellOff, ctaKind: "clear-filters" },
   adminListNone: { key: "adminListNone", icon: Inbox, ctaKind: "create" },
   versionsNone: { key: "versionsNone", icon: History, ctaKind: "retry" },
+  trashNone: { key: "trashNone", icon: Trash2, ctaKind: "retry" },
   offline: { key: "offline", icon: WifiOff, ctaKind: "retry" },
   notFound: { key: "notFound", icon: FileQuestion, ctaKind: "home" },
 } as const satisfies Record<string, EmptyStateCatalogEntry>;

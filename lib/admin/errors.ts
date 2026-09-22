@@ -26,6 +26,24 @@ export type AdminErrorCode =
   | "reference_in_use"
   | "unknown";
 
+/** Why a delete was refused or needs confirming. `block`: live rows point at
+ * this one through an id with no foreign key behind it, so deleting would
+ * leave them dangling. `cascade`: the database deletes those rows along with
+ * this one, which the manager confirms explicitly (see `ContentActions.remove`). */
+export type ReferenceMode = "block" | "cascade";
+
+/** The rows behind a `reference_in_use`, per referencing table — what the
+ * delete dialog names. `titles` is capped by the guard that produced it
+ * (REFERENCE_TITLE_LIMIT in lib/admin/registry.ts); `count` is how many there
+ * really are. Row titles are content a manager wrote, never database error
+ * text. */
+export interface ReferenceSummary {
+  table: string;
+  mode: ReferenceMode;
+  titles: string[];
+  count: number;
+}
+
 /** What every admin Server Action returns. There is deliberately no `message`
  * field: a raw Postgres error tells an attacker the schema and tells a manager
  * nothing, so it goes to console.error (see `logDbError`) and never to the
@@ -33,10 +51,19 @@ export type AdminErrorCode =
  *
  * `field` is the input path the failure is about (`"stages.0.id"`), and
  * `details` are validation keys (lib/admin/validation.ts) or literal values
- * such as an unresolved content id — never text from the database. */
+ * such as an unresolved content id — never text from the database.
+ * `references` is the structured form of a `reference_in_use` (`details`
+ * carries the same titles flattened, for the generic error line). */
 export type ActionResult =
   | { ok: true }
-  | { ok: false; code: AdminErrorCode; gate?: GateResult; field?: string; details?: string[] };
+  | {
+      ok: false;
+      code: AdminErrorCode;
+      gate?: GateResult;
+      field?: string;
+      details?: string[];
+      references?: ReferenceSummary[];
+    };
 
 /** The failing half of an ActionResult — what hooks/useActionError.ts turns
  * into copy once `result.ok` has been checked. */
@@ -63,9 +90,21 @@ export function actionOk(): ActionResult {
 
 export function actionFailed(
   code: AdminErrorCode,
-  extra?: { field?: string; details?: string[]; gate?: GateResult }
+  extra?: { field?: string; details?: string[]; gate?: GateResult; references?: ReferenceSummary[] }
 ): ActionResult {
   return { ok: false, code, ...extra };
+}
+
+/** A delete the reference guard stopped. The titles are flattened into
+ * `details` as well, so a caller that only renders the generic error line
+ * still names the rows involved. */
+export function referenceInUseResult(references: ReferenceSummary[]): ActionResult {
+  return {
+    ok: false,
+    code: "reference_in_use",
+    details: references.flatMap((reference) => reference.titles),
+    references,
+  };
 }
 
 /** `gate` is set only when the publish gate blocked the write — the client

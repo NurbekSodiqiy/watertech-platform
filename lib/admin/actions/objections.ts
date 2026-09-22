@@ -2,6 +2,7 @@
 import "server-only";
 import { CONTENT_REGISTRY } from "@/lib/admin/registry";
 import { actionsFor } from "./deps";
+import type { RemoveOptions } from "./factory";
 import type { ActionResult } from "@/lib/admin/errors";
 import type { StatusValue } from "./status";
 
@@ -17,8 +18,12 @@ export async function upsertObjection(input: unknown): Promise<ActionResult> {
   return objections.save(input);
 }
 
-export async function deleteObjection(id: string, expectedVersion: number): Promise<ActionResult> {
-  return objections.remove(id, expectedVersion);
+export async function deleteObjection(
+  id: string,
+  expectedVersion: number,
+  options?: RemoveOptions
+): Promise<ActionResult> {
+  return objections.remove(id, expectedVersion, options);
 }
 
 export async function setObjectionStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {

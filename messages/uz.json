@@ -259,6 +259,10 @@
       "title": "Versiyalar tarixi yo'q",
       "reason": "Hali o'zgarish bo'lmagan"
     },
+    "trashNone": {
+      "title": "Savat bo'sh",
+      "reason": "O'chirilgan yozuvlar yo'q"
+    },
     "filterNoMatch": {
       "title": "Mos qator topilmadi",
       "reason": "Filtrlarni tozalab ko'ring yoki qidiruvni o'zgartiring",
@@ -682,6 +686,24 @@
           "statusDraft": "Qoralama",
           "statusPublished": "Nashr etilgan"
         }
+      },
+      "trash": {
+        "nav": "Savat",
+        "title": "Savat — o'chirilgan yozuvlar",
+        "description": "O'chirilgan yozuvlar tarixi. Tiklangan yozuv qoralama sifatida qaytadi — nashr qilishdan oldin tekshiring.",
+        "columns": {
+          "table": "Jadval",
+          "title": "Nomi",
+          "deletedBy": "Kim o'chirgan",
+          "deletedAt": "Qachon",
+          "action": "Amal"
+        },
+        "restore": "Tiklash (qoralama sifatida)",
+        "restoring": "Tiklanmoqda…",
+        "restored": "Yozuv qoralama sifatida tiklandi",
+        "newer": "Yangiroq",
+        "older": "Eskiroq",
+        "page": "{page}-sahifa"
       },
       "shared": {
         "versions": "Versiyalar tarixi",
@@ -1491,7 +1513,14 @@
       "publish": "Nashr",
       "delete": "O'chirish",
       "deleteTitle": "Yozuvni o'chirish",
-      "deleteDescription": "Bu amalni ortga qaytarib bo'lmaydi. Yozuv butunlay o'chiriladi."
+      "deleteDescription": "Yozuv o'chiriladi. Uni «Savat» bo'limidan qoralama sifatida tiklash mumkin.",
+      "blockedTitle": "O'chirib bo'lmaydi",
+      "blockedDescription": "Bu yozuvga {count} ta boshqa yozuv bog'langan. Avval ularni tahrirlang yoki bu yozuvni qoralamaga o'tkazing.",
+      "cascadeTitle": "Guruh bilan paketlar ham o'chadi",
+      "cascadeDescription": "Bu guruhda {count} ta paket bor — guruh o'chirilsa, ular ham o'chiriladi.",
+      "setDraft": "Qoralamaga o'tkazish",
+      "deleteAnyway": "Baribir o'chirish",
+      "referencesMore": "va yana {count} ta"
     },
     "confirm": {
       "delete": "O'chirish",
@@ -1515,9 +1544,23 @@
     "versions": {
       "date": "Sana",
       "author": "Muallif",
+      "change": "O'zgarish",
+      "opUpdate": "Tahrir",
+      "opDelete": "O'chirilgan",
       "action": "Amal",
       "restoring": "Tiklanmoqda…",
       "restore": "Tiklash",
+      "diff": "Farqlar",
+      "noChanges": "Bu versiya hozirgi yozuv bilan bir xil",
+      "diffLegend": "«−» — bu versiyada bor, hozir yo'q. «+» — hozir bor, bu versiyada yo'q.",
+      "diffLegendDeleted": "Yozuv hozir mavjud emas — quyida faqat versiya mazmuni ko'rsatilgan.",
+      "skippedLines": "… {count} ta o'zgarmagan qator",
+      "snapshotUnreadable": "Versiya mazmunini o'qib bo'lmadi",
+      "itemStatus": {
+        "added": "Qo'shilgan",
+        "removed": "O'chirilgan",
+        "changed": "O'zgargan"
+      },
       "back": "Ortga",
       "historyTitle": "Versiyalar tarixi — {table} ({id})",
       "metadata": "Versiyalar",

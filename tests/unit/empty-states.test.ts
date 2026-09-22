@@ -35,7 +35,7 @@ function copyPath(key: EmptyStateKey, field: CopyField): string[] {
 }
 
 /** "All clear" states rendered with no action button (ContentHealthPanel,
- * QualityPanel, VersionsList). Kept explicit so adding a CTA to one of them —
+ * QualityPanel, VersionsList, the trash page). Kept explicit so adding a CTA to one of them —
  * in either locale — is a deliberate change to this list. */
 const NO_CTA: ReadonlySet<EmptyStateKey> = new Set([
   "dashboardNoDrafts",
@@ -44,6 +44,7 @@ const NO_CTA: ReadonlySet<EmptyStateKey> = new Set([
   "dashboardNoFeedback",
   "dashboardNoOperators",
   "versionsNone",
+  "trashNone",
 ]);
 
 const keys = Object.keys(EMPTY_STATES).filter((key): key is EmptyStateKey => key in EMPTY_STATES);

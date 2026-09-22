@@ -14,7 +14,8 @@ import { changelogReadKey } from "@/lib/user-state/keys";
 import { aggregateChangelogReads, type ChangelogReadCounts } from "@/lib/user-state/changelog";
 import type { ContentBundle } from "@/lib/content/loader";
 import { statusSchema } from "@/lib/admin/schemas";
-import { CONTENT_REGISTRY, DEFAULT_LIST_ORDER, type ListColumnOf } from "@/lib/admin/registry";
+import { CONTENT_REGISTRY, DEFAULT_LIST_ORDER, isContentTable, type ListColumnOf } from "@/lib/admin/registry";
+import { isSnapshotRow, snapshotText } from "@/lib/admin/snapshot";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
 import type {
@@ -32,6 +33,7 @@ import type {
 import type { Competitor } from "@/lib/content/types";
 import type { Product } from "@/lib/content/products";
 import type { DynamicTablesDatabase, Tables } from "@/lib/supabase/typed";
+import type { Json } from "@/lib/supabase/database.types";
 
 // Reads with the RLS-scoped session client (not the cached admin loader in
 // lib/content/loader.ts) so a manager's own "select all" policy returns
@@ -403,4 +405,117 @@ export async function listVersions(table: string, rowId: string): Promise<Conten
     .order("created_at", { ascending: false });
   if (error) throw new Error(`content_versions: ${error.message}`);
   return data;
+}
+
+// === Trash ========================================================================
+// A deleted row leaves exactly one trace: the snapshot the BEFORE DELETE
+// trigger wrote (op = 'delete', 0013_baseline_and_audit_integrity.sql). The
+// trash page is that set minus every row that exists again — a row deleted and
+// restored is not in the bin any more, and neither is a package whose group was
+// deleted and re-created with the same id.
+
+/** One restorable row: the newest delete snapshot for a (table, id) pair. */
+export interface TrashEntry {
+  versionId: number;
+  table: DashboardTableName;
+  rowId: string;
+  /** The row's own title column at the moment it was deleted, or its id. */
+  title: string;
+  deletedBy: string | null;
+  deletedAt: string;
+}
+
+export interface TrashPage {
+  entries: TrashEntry[];
+  /** Offset of the window that was scanned, and its size — the page links. */
+  offset: number;
+  pageSize: number;
+  /** The scan filled its window, so there may be older snapshots after it. */
+  hasMore: boolean;
+}
+
+interface DeleteSnapshotRow {
+  id: number;
+  table_name: string;
+  row_id: string;
+  snapshot: Json;
+  actor: string | null;
+  created_at: string;
+}
+
+/** Ids of `table` that exist right now, out of the ones asked about. One
+ * `in` query per table in the window (at most ten), not one per row. */
+async function liveIds(table: DashboardTableName, ids: string[]): Promise<ReadonlySet<string>> {
+  const { data, error } = await dynamicClient()
+    .from(table)
+    .select("id")
+    .in("id", ids)
+    .overrideTypes<{ id: string }[], { merge: false }>();
+  if (error) throw new Error(`${table}: ${error.message}`);
+  return new Set(data.map((row) => row.id));
+}
+
+/**
+ * Deleted rows that can still be restored, newest first.
+ *
+ * Paginated with `.range()` over the delete snapshots themselves: a window is
+ * read, collapsed to one entry per (table, row) — ordering by `id` descending
+ * means the first one seen is the newest — and then the rows that exist again
+ * are dropped. A page can therefore come back shorter than `pageSize`;
+ * `hasMore` says whether the scan hit the end of the window, which is what the
+ * "older" link follows.
+ */
+export async function listTrash({ offset = 0, pageSize = 25 } = {}): Promise<TrashPage> {
+  const { data, error } = await createClient()
+    .from("content_versions")
+    .select("id,table_name,row_id,snapshot,actor,created_at")
+    .eq("op", "delete")
+    .order("id", { ascending: false })
+    .range(offset, offset + pageSize - 1)
+    .overrideTypes<DeleteSnapshotRow[], { merge: false }>();
+  if (error) throw new Error(`content_versions: ${error.message}`);
+
+  const newest = new Map<string, DeleteSnapshotRow>();
+  for (const row of data) {
+    if (!isContentTable(row.table_name)) continue;
+    const key = `${row.table_name}:${row.row_id}`;
+    if (!newest.has(key)) newest.set(key, row);
+  }
+
+  const candidates = [...newest.values()];
+  const byTable = new Map<DashboardTableName, string[]>();
+  for (const row of candidates) {
+    if (!isContentTable(row.table_name)) continue;
+    const ids = byTable.get(row.table_name) ?? [];
+    ids.push(row.row_id);
+    byTable.set(row.table_name, ids);
+  }
+  const alive = new Map<DashboardTableName, ReadonlySet<string>>(
+    await Promise.all(
+      [...byTable].map(async ([table, ids]): Promise<[DashboardTableName, ReadonlySet<string>]> => [
+        table,
+        await liveIds(table, ids),
+      ])
+    )
+  );
+
+  const entries: TrashEntry[] = [];
+  for (const row of candidates) {
+    if (!isContentTable(row.table_name)) continue;
+    const table = row.table_name;
+    if (alive.get(table)?.has(row.row_id)) continue;
+    const snapshot = isSnapshotRow(row.snapshot) ? row.snapshot : {};
+    entries.push({
+      versionId: row.id,
+      table,
+      rowId: row.row_id,
+      // Only the title leaves the server: the snapshot itself can be a
+      // script's whole stage tree, and the list renders one line per row.
+      title: snapshotText(snapshot, CONTENT_REGISTRY[table].titleColumn) ?? row.row_id,
+      deletedBy: row.actor,
+      deletedAt: row.created_at,
+    });
+  }
+
+  return { entries, offset, pageSize, hasMore: data.length === pageSize };
 }
