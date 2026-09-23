@@ -35,6 +35,7 @@ export default async function AdminChangelogListPage({ params: { locale } }: { p
       <DataTable<ChangelogListRow>
         rows={rows}
         editBase="/admin/changelog"
+        table="content_changelog"
         emptyState={{
           stateKey: "adminListNone",
           title: tEmpty("title", { type }),

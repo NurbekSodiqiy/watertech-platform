@@ -27,6 +27,7 @@ export default async function AdminContactsListPage({ params: { locale } }: { pa
       <DataTable<AdminListRow<"content_contacts">>
         rows={rows}
         editBase="/admin/contacts"
+        table="content_contacts"
         emptyState={{
           stateKey: "adminListNone",
           title: tEmpty("title", { type }),

@@ -14,7 +14,13 @@ export async function generateMetadata({ params: { locale } }: { params: { local
   return { title: t("editTitle") };
 }
 
-export default async function AdminChangelogEditPage({ params }: { params: { locale: Locale; id: string } }) {
+export default async function AdminChangelogEditPage({
+  params,
+  searchParams,
+}: {
+  params: { locale: Locale; id: string };
+  searchParams: { from?: string };
+}) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
   const t = await getTranslations("pages.admin.changelog");
@@ -22,6 +28,9 @@ export default async function AdminChangelogEditPage({ params }: { params: { loc
   const isNew = params.id === "new";
   const row = isNew ? null : await getChangelogRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/changelog/new?from=<id> — the DataTable duplicate action; prefills
+  // from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getChangelogRow(searchParams.from) : null;
 
   const fields: EntityFieldDef<ChangelogFormInput>[] = [
     { kind: "text", name: "id", label: t("fields.id"), placeholder: t("fields.idPlaceholder"), readOnly: !isNew },
@@ -62,17 +71,29 @@ export default async function AdminChangelogEditPage({ params }: { params: { loc
         bodyRu: row.body_ru ?? "",
         version: String(row.version),
       }
-    : {
-        id: "",
-        publishedOn: "",
-        title: "",
-        body: "",
-        linkedPath: "",
-        approvedBy: "",
-        status: "draft",
-        titleRu: "",
-        bodyRu: "",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          publishedOn: source.published_on,
+          title: source.title,
+          body: source.body,
+          linkedPath: source.linked_path ?? "",
+          approvedBy: source.approved_by,
+          status: "draft",
+          titleRu: source.title_ru ?? "",
+          bodyRu: source.body_ru ?? "",
+        }
+      : {
+          id: "",
+          publishedOn: "",
+          title: "",
+          body: "",
+          linkedPath: "",
+          approvedBy: "",
+          status: "draft",
+          titleRu: "",
+          bodyRu: "",
+        };
 
   return (
     <div className="space-y-6">

@@ -109,8 +109,10 @@ function buildFields(
 
 export default async function AdminProductEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -122,6 +124,13 @@ export default async function AdminProductEditPage({
   const isNew = params.id === "new";
   const row = isNew ? null : await getProductRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/products/new?from=<id> — the DataTable duplicate action; prefills
+  // every plain field from that row's own full data (never the list
+  // projection), including the legacy `filename` (products can share a
+  // static photo). The uploaded photo (`image_path`) never copies — it's a
+  // ManagedColumn outside the write schema, and `buildFields` below only
+  // attaches a `currentSrc`/`rowId` for an existing `row`, never a duplicate.
+  const source = isNew && searchParams.from ? await getProductRow(searchParams.from) : null;
 
   const defaultValues: ProductFormInput = row
     ? {
@@ -136,17 +145,29 @@ export default async function AdminProductEditPage({
         status: row.status,
         version: String(row.version),
       }
-    : {
-        id: "",
-        filename: "",
-        name_ru: "",
-        name_uz: "",
-        sizes: "",
-        line: "ppr",
-        category: "truba",
-        material: "",
-        status: "draft",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          filename: source.filename ?? "",
+          name_ru: source.name_ru,
+          name_uz: source.name_uz ?? "",
+          sizes: source.sizes.join(", "),
+          line: source.line,
+          category: source.category,
+          material: source.material ?? "",
+          status: "draft",
+        }
+      : {
+          id: "",
+          filename: "",
+          name_ru: "",
+          name_uz: "",
+          sizes: "",
+          line: "ppr",
+          category: "truba",
+          material: "",
+          status: "draft",
+        };
 
   return (
     <div className="space-y-6">

@@ -27,6 +27,8 @@ export function ProductEditorForm({
       onSubmit={upsertProduct}
       backHref="/admin/products"
       editAfterCreate
+      titleField="name_ru"
+      table="content_products"
     />
   );
 }

@@ -1586,19 +1586,63 @@
       "cascadeDescription": "Bu guruhda {count} ta paket bor — guruh o'chirilsa, ular ham o'chiriladi.",
       "setDraft": "Qoralamaga o'tkazish",
       "deleteAnyway": "Baribir o'chirish",
-      "referencesMore": "va yana {count} ta"
+      "referencesMore": "va yana {count} ta",
+      "statusTabsLabel": "Holat bo'yicha filtr",
+      "statusTabs": {
+        "all": "Barchasi",
+        "published": "Nashr etilgan",
+        "draft": "Qoralama"
+      },
+      "reorderMode": "Tartiblash",
+      "reorderHint": "Qatorlarni sudrab yoki ↑↓ tugmalari bilan tartiblang.",
+      "cancelOrder": "Bekor qilish",
+      "saveOrder": "Tartibni saqlash",
+      "savingOrder": "Saqlanmoqda…",
+      "orderSaved": "Tartib saqlandi",
+      "moveUp": "Yuqoriga siljitish",
+      "moveDown": "Pastga siljitish",
+      "duplicate": "Nusxalash",
+      "selectAllOnPage": "Sahifadagi barchasini tanlash",
+      "selectRow": "{title} — tanlash",
+      "rowsPerPage": "Sahifada:",
+      "previousPage": "Oldingi sahifa",
+      "nextPage": "Keyingi sahifa",
+      "pageOf": "{page} / {total}",
+      "bulkSelected": "{count} ta tanlangan",
+      "bulkPublish": "Nashr qilish",
+      "bulkDraft": "Qoralamaga o'tkazish",
+      "bulkDelete": "O'chirish",
+      "bulkDeleteTitle": "Tanlangan yozuvlarni o'chirish",
+      "bulkDeleteDescription": "{count} ta yozuv o'chiriladi. Ularni «Savat» bo'limidan qoralama sifatida tiklash mumkin.",
+      "bulkResultTitle": "Amal natijasi",
+      "bulkResultClose": "Yopish",
+      "bulkViewGate": "Sababini ko'rish"
     },
     "confirm": {
       "delete": "O'chirish",
       "cancel": "Bekor qilish",
-      "working": "Bajarilmoqda…"
+      "working": "Bajarilmoqda…",
+      "leaveUnsavedTitle": "Saqlanmagan o'zgarishlar bor",
+      "leaveUnsavedDescription": "Bu sahifadan chiqsangiz, saqlanmagan o'zgarishlar yo'qoladi.",
+      "leaveAnyway": "Saqlamasdan chiqish"
     },
     "form": {
       "save": "Saqlash",
       "saving": "Saqlanmoqda…",
       "cancel": "Bekor qilish",
       "saved": "Saqlandi",
-      "ruSection": "Ruscha (ixtiyoriy)"
+      "ruSection": "Ruscha (ixtiyoriy)",
+      "preview": "To'liq ko'rinish",
+      "idHint": {
+        "checking": "Tekshirilmoqda…",
+        "available": "Bu id bo'sh",
+        "taken": "Bu id band — boshqasini tanlang"
+      }
+    },
+    "preview": {
+      "badge": "Qoralama ko'rinishi",
+      "close": "Yopish",
+      "stageFallback": "#{index}"
     },
     "gate": {
       "counts": "{errors} ta xato · {warnings} ta ogohlantirish",

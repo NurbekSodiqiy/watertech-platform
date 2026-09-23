@@ -23,6 +23,8 @@ export function PackageGroupEditorForm({
       fields={fields}
       onSubmit={upsertPackageGroup}
       backHref="/admin/packages/groups"
+      titleField="title"
+      table="content_package_groups"
     />
   );
 }

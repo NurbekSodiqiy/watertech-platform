@@ -14,7 +14,13 @@ export async function generateMetadata({ params: { locale } }: { params: { local
   return { title: t("editTitle") };
 }
 
-export default async function AdminContactEditPage({ params }: { params: { locale: Locale; id: string } }) {
+export default async function AdminContactEditPage({
+  params,
+  searchParams,
+}: {
+  params: { locale: Locale; id: string };
+  searchParams: { from?: string };
+}) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
   const t = await getTranslations("pages.admin.contacts");
@@ -22,6 +28,9 @@ export default async function AdminContactEditPage({ params }: { params: { local
   const isNew = params.id === "new";
   const row = isNew ? null : await getContactRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/contacts/new?from=<id> — the DataTable duplicate action; prefills
+  // from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getContactRow(searchParams.from) : null;
 
   const fields: EntityFieldDef<ContactFormInput>[] = [
     { kind: "text", name: "id", label: t("fields.id"), placeholder: t("fields.idPlaceholder"), readOnly: !isNew },
@@ -57,17 +66,29 @@ export default async function AdminContactEditPage({ params }: { params: { local
         topicRu: row.topic_ru ?? "",
         version: String(row.version),
       }
-    : {
-        id: "",
-        name: "",
-        role: "",
-        topic: "",
-        phone: "",
-        messenger: "",
-        status: "draft",
-        roleRu: "",
-        topicRu: "",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          name: source.name,
+          role: source.role,
+          topic: source.topic,
+          phone: source.phone,
+          messenger: source.messenger,
+          status: "draft",
+          roleRu: source.role_ru ?? "",
+          topicRu: source.topic_ru ?? "",
+        }
+      : {
+          id: "",
+          name: "",
+          role: "",
+          topic: "",
+          phone: "",
+          messenger: "",
+          status: "draft",
+          roleRu: "",
+          topicRu: "",
+        };
 
   return (
     <div className="space-y-6">

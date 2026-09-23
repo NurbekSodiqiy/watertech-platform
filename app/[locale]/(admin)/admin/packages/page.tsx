@@ -50,6 +50,7 @@ export default async function AdminPackagesListPage({ params: { locale } }: { pa
       <DataTable<PackageDisplayRow>
         rows={rows}
         editBase="/admin/packages"
+        table="content_packages"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name", label: tShared("nameLabel"), sortable: true },

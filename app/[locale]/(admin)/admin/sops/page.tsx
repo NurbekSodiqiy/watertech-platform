@@ -37,6 +37,7 @@ export default async function AdminSopsListPage({ params: { locale } }: { params
       <DataTable<SopListRow>
         rows={rows}
         editBase="/admin/sops"
+        table="content_sops"
         emptyState={{
           stateKey: "adminListNone",
           title: tEmpty("title", { type }),

@@ -23,6 +23,8 @@ export function ContactEditorForm({
       fields={fields}
       onSubmit={upsertContact}
       backHref="/admin/contacts"
+      titleField="name"
+      table="content_contacts"
     />
   );
 }

@@ -14,7 +14,13 @@ export async function generateMetadata({ params: { locale } }: { params: { local
   return { title: t("editTitle") };
 }
 
-export default async function AdminSopEditPage({ params }: { params: { locale: Locale; id: string } }) {
+export default async function AdminSopEditPage({
+  params,
+  searchParams,
+}: {
+  params: { locale: Locale; id: string };
+  searchParams: { from?: string };
+}) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
   const t = await getTranslations("pages.admin.sops");
@@ -22,9 +28,17 @@ export default async function AdminSopEditPage({ params }: { params: { locale: L
   const isNew = params.id === "new";
   const row = isNew ? null : await getSopRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/sops/new?from=<id> — the DataTable duplicate action; prefills from
+  // that row's own full data, never the list projection.
+  const sourceRow = isNew && searchParams.from ? await getSopRow(searchParams.from) : null;
 
-  // A new SOP starts with one empty step so the form is not just a blank list.
-  const sop: Sop = row ? rowToSop(row) : { id: "", title: "", summary: "", steps: [{ title: "", body: "" }] };
+  // A brand-new SOP (no source to duplicate) starts with one empty step so
+  // the form is not just a blank list.
+  const sop: Sop = row
+    ? rowToSop(row)
+    : sourceRow
+      ? { ...rowToSop(sourceRow), id: `${sourceRow.id}-nusxa` }
+      : { id: "", title: "", summary: "", steps: [{ title: "", body: "" }] };
 
   return (
     <div className="space-y-6">

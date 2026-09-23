@@ -23,6 +23,8 @@ export function CompetitorEditorForm({
       fields={fields}
       onSubmit={upsertCompetitor}
       backHref="/admin/competitors"
+      titleField="name"
+      table="content_competitors"
     />
   );
 }

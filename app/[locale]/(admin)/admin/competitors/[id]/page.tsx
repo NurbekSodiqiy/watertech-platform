@@ -54,8 +54,10 @@ function buildFields(isNew: boolean, t: AdminTranslate, tShared: AdminTranslate)
 
 export default async function AdminCompetitorEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -67,6 +69,9 @@ export default async function AdminCompetitorEditPage({
   const isNew = params.id === "new";
   const row = isNew ? null : await getCompetitorRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/competitors/new?from=<id> — the DataTable duplicate action;
+  // prefills from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getCompetitorRow(searchParams.from) : null;
 
   const defaultValues: CompetitorFormInput = row
     ? {
@@ -88,24 +93,43 @@ export default async function AdminCompetitorEditPage({
         status: row.status,
         version: String(row.version),
       }
-    : {
-        id: "",
-        name: "",
-        assortment: "",
-        baseDiscount: "",
-        volumeDiscount: "",
-        retroBonus: "",
-        maxDiscount: "",
-        paymentTerms: "",
-        paymentMethod: "",
-        deliveryTime: "",
-        logistics: "",
-        dealerCoverage: "",
-        certificates: "",
-        marketingOffers: "",
-        threatLevel: "Ma'lumot yo'q",
-        status: "draft",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          name: source.name,
+          assortment: source.assortment ?? "",
+          baseDiscount: source.base_discount ?? "",
+          volumeDiscount: source.volume_discount ?? "",
+          retroBonus: source.retro_bonus ?? "",
+          maxDiscount: source.max_discount ?? "",
+          paymentTerms: source.payment_terms ?? "",
+          paymentMethod: source.payment_method ?? "",
+          deliveryTime: source.delivery_time ?? "",
+          logistics: source.logistics ?? "",
+          dealerCoverage: source.dealer_coverage ?? "",
+          certificates: source.certificates ?? "",
+          marketingOffers: source.marketing_offers ?? "",
+          threatLevel: source.threat_level,
+          status: "draft",
+        }
+      : {
+          id: "",
+          name: "",
+          assortment: "",
+          baseDiscount: "",
+          volumeDiscount: "",
+          retroBonus: "",
+          maxDiscount: "",
+          paymentTerms: "",
+          paymentMethod: "",
+          deliveryTime: "",
+          logistics: "",
+          dealerCoverage: "",
+          certificates: "",
+          marketingOffers: "",
+          threatLevel: "Ma'lumot yo'q",
+          status: "draft",
+        };
 
   return (
     <div className="space-y-6">

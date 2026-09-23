@@ -29,6 +29,7 @@ export default async function AdminObjectionsListPage({ params: { locale } }: { 
       <DataTable<AdminListRow<"content_objections">>
         rows={rows}
         editBase="/admin/objections"
+        table="content_objections"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[{ key: "label", label: tShared("nameLabel"), sortable: true }]}
         onDelete={deleteObjection}

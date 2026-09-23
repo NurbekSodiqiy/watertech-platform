@@ -29,6 +29,7 @@ export default async function AdminScriptsListPage({ params: { locale } }: { par
       <DataTable<AdminListRow<"content_scripts">>
         rows={rows}
         editBase="/admin/scripts"
+        table="content_scripts"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[{ key: "name", label: tShared("nameLabel"), sortable: true }]}
         onDelete={deleteScript}

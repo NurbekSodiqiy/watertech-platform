@@ -1,4 +1,5 @@
 "use server";
+"use server";
 import "server-only";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -37,7 +38,9 @@ const SQLSTATE = { badArguments: "WT400", notManager: "WT403", conflict: "WT409"
  * ending up half-sorted when a second manager saved one of its rows.
  *
  * SECURITY INVOKER, so the manager's own RLS update policy is still what
- * authorises each write. The drag-and-drop UI that calls this arrives in S12.
+ * authorises each write. Called directly from DataTable's reorder mode (S12)
+ * — table-generic already (validated against `isContentTable`), so there is
+ * no per-table wrapper the way create/update/delete/setStatus each get.
  */
 export async function reorderRows(
   table: string,

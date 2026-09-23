@@ -43,8 +43,10 @@ function buildFields(isNew: boolean, t: AdminTranslate, tShared: AdminTranslate)
 
 export default async function AdminObjectionEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -56,6 +58,9 @@ export default async function AdminObjectionEditPage({
   const isNew = params.id === "new";
   const row = isNew ? null : await getObjectionRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/objections/new?from=<id> — the DataTable duplicate action; prefills
+  // from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getObjectionRow(searchParams.from) : null;
 
   const defaultValues: ObjectionFormInput = row
     ? {
@@ -75,22 +80,39 @@ export default async function AdminObjectionEditPage({
         followUpRu: row.follow_up_ru ?? "",
         version: String(row.version),
       }
-    : {
-        id: "",
-        label: "",
-        keywords: "",
-        clientSays: "",
-        realMeaning: "",
-        response: "",
-        followUp: "",
-        scriptIds: "",
-        status: "draft",
-        labelRu: "",
-        clientSaysRu: "",
-        realMeaningRu: "",
-        responseRu: "",
-        followUpRu: "",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          label: source.label,
+          keywords: source.keywords.join(", "),
+          clientSays: source.client_says,
+          realMeaning: source.real_meaning,
+          response: source.response,
+          followUp: source.follow_up ?? "",
+          scriptIds: source.script_ids.join(", "),
+          status: "draft",
+          labelRu: source.label_ru ?? "",
+          clientSaysRu: source.client_says_ru ?? "",
+          realMeaningRu: source.real_meaning_ru ?? "",
+          responseRu: source.response_ru ?? "",
+          followUpRu: source.follow_up_ru ?? "",
+        }
+      : {
+          id: "",
+          label: "",
+          keywords: "",
+          clientSays: "",
+          realMeaning: "",
+          response: "",
+          followUp: "",
+          scriptIds: "",
+          status: "draft",
+          labelRu: "",
+          clientSaysRu: "",
+          realMeaningRu: "",
+          responseRu: "",
+          followUpRu: "",
+        };
 
   return (
     <div className="space-y-6">

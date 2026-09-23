@@ -1,7 +1,8 @@
 "use client";
 
 import { forwardRef, useEffect, useMemo, useRef, useState, useTransition, type TextareaHTMLAttributes } from "react";
-import { useRouter } from "@/i18n/routing";
+import dynamic from "next/dynamic";
+import { useRouter, Link } from "@/i18n/routing";
 import {
   useForm,
   useFieldArray,
@@ -16,12 +17,16 @@ import { CheckCircle2, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react
 import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { useActionError } from "@/hooks/useActionError";
 import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import { scriptWriteSchema, type ScriptFormValues } from "@/lib/admin/schemas";
 import { upsertScript } from "@/lib/admin/actions/scripts";
+import { checkContentIdAvailable } from "@/lib/admin/actions/slug";
+import { toSlug } from "@/lib/admin/slug";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ScriptsContentProvider } from "@/components/scripts/ScriptsContentContext";
 import { ClientNameProvider } from "@/components/ClientNameContext";
@@ -29,12 +34,12 @@ import type { Competitor, Faq, Objection, PackageGroup, Script, ScriptTurnLink }
 import type { ContentBundle } from "@/lib/content/loader";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+/** How long a manager pauses typing before the id-availability hint fires. */
+const ID_CHECK_DEBOUNCE_MS = 400;
+
+// The "full preview" drawer is only mounted behind its own toggle — loaded on
+// demand (CLAUDE.md §4), same pattern EntityForm's ImageUploadField uses.
+const DraftPreview = dynamic(() => import("@/components/admin/DraftPreview").then((m) => m.DraftPreview));
 
 // Values are stored data; the visible labels are `admin.scriptEditor.speakers.<value>`.
 const SPEAKER_VALUES: ("operator" | "mijoz" | "note")[] = ["operator", "mijoz", "note"];
@@ -432,7 +437,7 @@ function StageFields({
             ref={labelField.ref}
             onChange={(e) => {
               labelField.onChange(e);
-              if (!idField.value) idField.onChange(slugify(e.target.value));
+              if (!idField.value) idField.onChange(toSlug(e.target.value));
             }}
             className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-[13px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light"
           />
@@ -544,6 +549,7 @@ export function ScriptEditor({
   const { toast } = useToast();
   const describeError = useActionError();
   const t = useTranslations("toast");
+  const tConfirm = useTranslations("admin.confirm");
   const tValidation = useTranslations("admin.validation");
   const tEditor = useTranslations("admin.scriptEditor");
   const tShared = useTranslations("pages.admin.shared");
@@ -575,7 +581,8 @@ export function ScriptEditor({
     control,
     register,
     handleSubmit,
-    formState: { errors },
+    setValue,
+    formState: { errors, isDirty },
   } = useForm<ScriptFormValues>({
     // Same error map the server parses with, so a field error reads the same
     // whichever side rejected it (lib/admin/validation.ts).
@@ -604,6 +611,51 @@ export function ScriptEditor({
   }, [stageFields.length, selectedStage]);
 
   const previewTurns = watchedStages?.[selectedStage]?.turns ?? [];
+
+  // === Id autofill + availability hint (new rows only; same pattern as
+  // EntityForm.tsx, hand-wired here since this is a bespoke form) ====================
+  const watchedName = useWatch({ control, name: "name" });
+  const watchedId = useWatch({ control, name: "id" });
+  const autoSlugRef = useRef("");
+  useEffect(() => {
+    if (!isNew) return;
+    const currentId = watchedId ?? "";
+    if (currentId !== "" && currentId !== autoSlugRef.current) return;
+    const nextSlug = toSlug(watchedName ?? "");
+    if (nextSlug === currentId) return;
+    autoSlugRef.current = nextSlug;
+    setValue("id", nextSlug, { shouldDirty: nextSlug !== "" });
+  }, [watchedName, watchedId, isNew, setValue]);
+
+  const [idHint, setIdHint] = useState<"checking" | "available" | "taken" | null>(null);
+  useEffect(() => {
+    if (!isNew) {
+      setIdHint(null);
+      return;
+    }
+    const id = watchedId ?? "";
+    if (!/^[a-z0-9-]+$/.test(id)) {
+      setIdHint(null);
+      return;
+    }
+    setIdHint("checking");
+    const timer = setTimeout(() => {
+      void checkContentIdAvailable("content_scripts", id).then((result) => {
+        setIdHint(result.available ? "available" : "taken");
+      });
+    }, ID_CHECK_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [watchedId, isNew]);
+
+  // === Full preview drawer =============================================================
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const watchedCheatSheet = useWatch({ control, name: "cheatSheet" });
+
+  // === Unsaved-changes guard + Ctrl/Cmd+S ==============================================
+  const { blocked, confirmLeave, cancelLeave } = useUnsavedChangesGuard({
+    isDirty,
+    onSave: () => void handleSubmit(submit)(),
+  });
 
   function submit(values: ScriptFormValues) {
     if (inFlightRef.current) return;
@@ -674,6 +726,11 @@ export function ScriptEditor({
             />
             {errors.id?.message && (
               <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.id.message)}</p>
+            )}
+            {isNew && idHint && (
+              <p className={`text-[11px] ${idHint === "taken" ? "text-status-outdated" : "text-text-secondary"}`}>
+                {tForm(`idHint.${idHint}`)}
+              </p>
             )}
           </div>
           <div className="space-y-1.5">
@@ -825,11 +882,17 @@ export function ScriptEditor({
           </SubmitButton>
           <button
             type="button"
-            onClick={() => router.push("/admin/scripts")}
+            onClick={() => setPreviewOpen(true)}
+            className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
+          >
+            {tForm("preview")}
+          </button>
+          <Link
+            href="/admin/scripts"
             className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
             {tForm("cancel")}
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -845,6 +908,30 @@ export function ScriptEditor({
           </ClientNameProvider>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={blocked}
+        title={tConfirm("leaveUnsavedTitle")}
+        description={tConfirm("leaveUnsavedDescription")}
+        confirmLabel={tConfirm("leaveAnyway")}
+        tone="primary"
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+      />
+
+      <DraftPreview
+        kind="script"
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={watchedName || watchedId || script.id}
+        script={{
+          id: watchedId ?? "",
+          name: watchedName ?? "",
+          cheatSheet: watchedCheatSheet ?? "",
+          stages: watchedStages ?? [],
+        }}
+        bundle={previewBundle}
+      />
 
       <GateReportDialog result={gateResult} onClose={() => setGateResult(null)} />
     </form>

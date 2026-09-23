@@ -1,22 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "@/i18n/routing";
-import { useForm, type DefaultValues, type FieldValues, type Path } from "react-hook-form";
+import { useRouter, Link } from "@/i18n/routing";
+import {
+  useForm,
+  useWatch,
+  type DefaultValues,
+  type FieldValues,
+  type Path,
+  type PathValue,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ZodType, ZodTypeDef } from "zod";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { useActionError } from "@/hooks/useActionError";
 import { adminErrorMap, validationText } from "@/lib/admin/validation";
+import { toSlug } from "@/lib/admin/slug";
+import { checkContentIdAvailable } from "@/lib/admin/actions/slug";
 import type { ActionResult } from "@/lib/admin/errors";
 import type { ImageUploadResult } from "@/lib/admin/product-image";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
+import type { DashboardTableName } from "@/lib/dashboard/content-health";
 
 // Only the product editor has an image field, so the picker is a chunk of its
 // own rather than part of every admin form. Server-rendered (the current
@@ -28,6 +40,11 @@ const ImageUploadField = dynamic(
 
 /** Every entity form binds the row version to a hidden input of this name. */
 const VERSION_FIELD = "version";
+/** Every content write schema's id field (lib/admin/schemas.ts's `ContentWrite`) —
+ * what id-autofill (`titleField`) and the availability hint (`table`) below bind to. */
+const ID_FIELD = "id";
+/** How long a manager pauses typing before the id-availability hint fires. */
+const ID_CHECK_DEBOUNCE_MS = 400;
 
 export type EntityFieldDef<TIn extends FieldValues> = (
   | { kind: "text"; name: Path<TIn>; label: string; placeholder?: string; readOnly?: boolean; hint?: string }
@@ -77,6 +94,9 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   onSubmit,
   backHref,
   editAfterCreate = false,
+  titleField,
+  table,
+  renderPreview,
 }: {
   schema: ZodType<TOut, ZodTypeDef, TIn>;
   defaultValues: DefaultValues<TIn>;
@@ -86,8 +106,22 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   /** After a create, open the new row's editor (`${backHref}/${id}`) instead
    * of the list — for forms with parts that need a saved row, like a photo. */
   editAfterCreate?: boolean;
+  /** Which field drives the id field's autofill on a new row — the id field
+   * fills in with `toSlug(watch(titleField))` (lib/admin/slug.ts) until the
+   * manager edits it by hand. Ignored once the id field is `readOnly`
+   * (editing an existing row). */
+  titleField?: Path<TIn>;
+  /** Enables the id-autofill's debounced availability hint — which table to
+   * check the candidate id against (lib/admin/actions/slug.ts). */
+  table?: DashboardTableName;
+  /** A read-only "as the operator sees it" drawer, behind a preview toggle
+   * next to Save — only the modules DraftPreview supports (objections, FAQ)
+   * pass this; every other EntityForm-based module renders unchanged. Called
+   * with the form's live (unvalidated) values and the drawer's open state. */
+  renderPreview?: (values: TIn, open: boolean, onClose: () => void) => ReactNode;
 }) {
   const router = useRouter();
+  const tConfirm = useTranslations("admin.confirm");
   const { toast } = useToast();
   const describeError = useActionError();
   const t = useTranslations("toast");
@@ -125,7 +159,9 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     register,
     handleSubmit,
     getValues,
-    formState: { errors },
+    setValue,
+    control,
+    formState: { errors, isDirty },
   } = useForm<TIn>({
     // raw: true — zodResolver still runs `schema` for validation (so field
     // errors surface below), but hands handleSubmit the untransformed input
@@ -148,6 +184,65 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     const parsed = typeof loaded === "string" && loaded !== "" ? Number(loaded) : NaN;
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
   }
+
+  // === Id autofill + availability hint (new rows only) ================================
+  // The id field is only ever editable while creating — every page passes
+  // `readOnly: !isNew` for it — so that flag is what tells autofill/the
+  // availability check apart from an existing row's read-only id.
+  const idFieldDef = fields.find(
+    (f): f is Extract<EntityFieldDef<TIn>, { kind: "text" }> => f.kind === "text" && f.name === (ID_FIELD as Path<TIn>)
+  );
+  const isCreatingRow = idFieldDef !== undefined && !idFieldDef.readOnly;
+
+  const watchedId = useWatch({ control, name: ID_FIELD as Path<TIn> }) as unknown;
+  // Watching "id" itself when no `titleField` was given is harmless (the
+  // value is simply never read below) and keeps this an unconditional hook call.
+  const watchedTitleRaw = useWatch({ control, name: (titleField ?? (ID_FIELD as Path<TIn>)) as Path<TIn> });
+  const watchedTitle = titleField && typeof watchedTitleRaw === "string" ? watchedTitleRaw : undefined;
+
+  // The last slug this effect itself wrote — while the id field still holds
+  // exactly that value, the manager hasn't diverged from the autofill yet, so
+  // typing further in the title field is still allowed to keep overwriting it.
+  const autoSlugRef = useRef("");
+  useEffect(() => {
+    if (!titleField || !isCreatingRow || watchedTitle === undefined) return;
+    const currentId = typeof watchedId === "string" ? watchedId : "";
+    if (currentId !== "" && currentId !== autoSlugRef.current) return;
+    const nextSlug = toSlug(watchedTitle);
+    if (nextSlug === currentId) return;
+    autoSlugRef.current = nextSlug;
+    setValue(ID_FIELD as Path<TIn>, nextSlug as PathValue<TIn, Path<TIn>>, { shouldDirty: nextSlug !== "" });
+  }, [watchedTitle, titleField, isCreatingRow, watchedId, setValue]);
+
+  const [idHint, setIdHint] = useState<"checking" | "available" | "taken" | null>(null);
+  useEffect(() => {
+    if (!table || !isCreatingRow) {
+      setIdHint(null);
+      return;
+    }
+    const id = typeof watchedId === "string" ? watchedId : "";
+    if (!/^[a-z0-9-]+$/.test(id)) {
+      setIdHint(null);
+      return;
+    }
+    setIdHint("checking");
+    const timer = setTimeout(() => {
+      void checkContentIdAvailable(table, id).then((result) => {
+        setIdHint(result.available ? "available" : "taken");
+      });
+    }, ID_CHECK_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [watchedId, table, isCreatingRow]);
+
+  // === Preview drawer ==================================================================
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const watchedValues = useWatch({ control }) as TIn;
+
+  // === Unsaved-changes guard + Ctrl/Cmd+S ==============================================
+  const { blocked, confirmLeave, cancelLeave } = useUnsavedChangesGuard({
+    isDirty,
+    onSave: () => void handleSubmit(submit)(),
+  });
 
   function submit(raw: TIn) {
     if (inFlightRef.current || imageBusy) return;
@@ -244,6 +339,13 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
               }`}
             />
             {field.hint && <p className="text-[11px] text-text-secondary">{field.hint}</p>}
+            {field.name === (ID_FIELD as Path<TIn>) && table && idHint && (
+              <p
+                className={`text-[11px] ${idHint === "taken" ? "text-status-outdated" : "text-text-secondary"}`}
+              >
+                {tForm(`idHint.${idHint}`)}
+              </p>
+            )}
           </>
         )}
 
@@ -330,16 +432,36 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         <SubmitButton pending={pending} disabled={imageBusy} offlineBlocked={!online} pendingLabel={tForm("saving")}>
           {tForm("save")}
         </SubmitButton>
-        <button
-          type="button"
-          onClick={() => router.push(backHref)}
+        {renderPreview && (
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
+          >
+            {tForm("preview")}
+          </button>
+        )}
+        <Link
+          href={backHref}
           className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
         >
           {tForm("cancel")}
-        </button>
+        </Link>
       </div>
 
       <GateReportDialog result={gateResult} onClose={() => setGateResult(null)} />
+
+      <ConfirmDialog
+        open={blocked}
+        title={tConfirm("leaveUnsavedTitle")}
+        description={tConfirm("leaveUnsavedDescription")}
+        confirmLabel={tConfirm("leaveAnyway")}
+        tone="primary"
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+      />
+
+      {renderPreview?.(watchedValues, previewOpen, () => setPreviewOpen(false))}
     </form>
   );
 }

@@ -23,6 +23,8 @@ export function ChangelogEditorForm({
       fields={fields}
       onSubmit={upsertChangelog}
       backHref="/admin/changelog"
+      titleField="title"
+      table="content_changelog"
     />
   );
 }

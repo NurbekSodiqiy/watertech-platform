@@ -1586,19 +1586,63 @@
       "cascadeDescription": "В этой группе пакетов: {count} — при удалении группы они тоже будут удалены.",
       "setDraft": "Перевести в черновик",
       "deleteAnyway": "Всё равно удалить",
-      "referencesMore": "и ещё {count}"
+      "referencesMore": "и ещё {count}",
+      "statusTabsLabel": "Фильтр по статусу",
+      "statusTabs": {
+        "all": "Все",
+        "published": "Опубликовано",
+        "draft": "Черновик"
+      },
+      "reorderMode": "Сортировка",
+      "reorderHint": "Перетаскивайте строки или используйте ↑↓.",
+      "cancelOrder": "Отмена",
+      "saveOrder": "Сохранить порядок",
+      "savingOrder": "Сохранение…",
+      "orderSaved": "Порядок сохранён",
+      "moveUp": "Переместить вверх",
+      "moveDown": "Переместить вниз",
+      "duplicate": "Дублировать",
+      "selectAllOnPage": "Выбрать все на странице",
+      "selectRow": "Выбрать «{title}»",
+      "rowsPerPage": "На странице:",
+      "previousPage": "Предыдущая страница",
+      "nextPage": "Следующая страница",
+      "pageOf": "{page} из {total}",
+      "bulkSelected": "Выбрано: {count}",
+      "bulkPublish": "Опубликовать",
+      "bulkDraft": "В черновик",
+      "bulkDelete": "Удалить",
+      "bulkDeleteTitle": "Удаление выбранных записей",
+      "bulkDeleteDescription": "Будет удалено записей: {count}. Их можно восстановить черновиком в разделе «Корзина».",
+      "bulkResultTitle": "Результат действия",
+      "bulkResultClose": "Закрыть",
+      "bulkViewGate": "Причина"
     },
     "confirm": {
       "delete": "Удалить",
       "cancel": "Отмена",
-      "working": "Выполняется…"
+      "working": "Выполняется…",
+      "leaveUnsavedTitle": "Есть несохранённые изменения",
+      "leaveUnsavedDescription": "Если уйти со страницы, несохранённые изменения будут потеряны.",
+      "leaveAnyway": "Уйти без сохранения"
     },
     "form": {
       "save": "Сохранить",
       "saving": "Сохранение…",
       "cancel": "Отмена",
       "saved": "Сохранено",
-      "ruSection": "На русском (необязательно)"
+      "ruSection": "На русском (необязательно)",
+      "preview": "Полный просмотр",
+      "idHint": {
+        "checking": "Проверка…",
+        "available": "Этот id свободен",
+        "taken": "Этот id занят — выберите другой"
+      }
+    },
+    "preview": {
+      "badge": "Просмотр черновика",
+      "close": "Закрыть",
+      "stageFallback": "#{index}"
     },
     "gate": {
       "counts": "Ошибок: {errors} · предупреждений: {warnings}",

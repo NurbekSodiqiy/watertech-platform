@@ -16,8 +16,10 @@ export async function generateMetadata({ params: { locale } }: { params: { local
 
 export default async function AdminScriptEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -39,6 +41,9 @@ export default async function AdminScriptEditPage({
     listFullRows("content_packages"),
   ]);
   if (!isNew && !row) notFound();
+  // /admin/scripts/new?from=<id> — the DataTable duplicate action; prefills
+  // from that row's own full data, never the list projection.
+  const sourceRow = isNew && searchParams.from ? await getScriptRow(searchParams.from) : null;
 
   const objections = objectionRows.map(rowToObjection);
   const competitors = competitorRows.map(rowToCompetitor);
@@ -50,7 +55,11 @@ export default async function AdminScriptEditPage({
     )
   );
 
-  const script: Script = row ? rowToScript(row) : { id: "", name: "", cheatSheet: "", stages: [] };
+  const script: Script = row
+    ? rowToScript(row)
+    : sourceRow
+      ? { ...rowToScript(sourceRow), id: `${sourceRow.id}-nusxa` }
+      : { id: "", name: "", cheatSheet: "", stages: [] };
 
   // Uncached, RLS-scoped bundle (draft rows included) so the live preview
   // resolves link chips against what a manager is actually editing right

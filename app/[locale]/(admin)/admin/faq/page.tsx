@@ -27,6 +27,7 @@ export default async function AdminFaqListPage({ params: { locale } }: { params:
       <DataTable<AdminListRow<"content_faqs">>
         rows={rows}
         editBase="/admin/faq"
+        table="content_faqs"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "question", label: tPage("columns.question"), sortable: true },

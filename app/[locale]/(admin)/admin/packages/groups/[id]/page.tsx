@@ -35,8 +35,10 @@ function buildFields(isNew: boolean, t: AdminTranslate, tShared: AdminTranslate)
 
 export default async function AdminPackageGroupEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -48,6 +50,9 @@ export default async function AdminPackageGroupEditPage({
   const isNew = params.id === "new";
   const row = isNew ? null : await getPackageGroupRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/packages/groups/new?from=<id> — the DataTable duplicate action;
+  // prefills from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getPackageGroupRow(searchParams.from) : null;
 
   const defaultValues: PackageGroupFormInput = row
     ? {
@@ -59,7 +64,16 @@ export default async function AdminPackageGroupEditPage({
         subtitleRu: row.subtitle_ru ?? "",
         version: String(row.version),
       }
-    : { id: "", title: "", subtitle: "", status: "draft", titleRu: "", subtitleRu: "" };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          title: source.title,
+          subtitle: source.subtitle,
+          status: "draft",
+          titleRu: source.title_ru ?? "",
+          subtitleRu: source.subtitle_ru ?? "",
+        }
+      : { id: "", title: "", subtitle: "", status: "draft", titleRu: "", subtitleRu: "" };
 
   return (
     <div className="space-y-6">

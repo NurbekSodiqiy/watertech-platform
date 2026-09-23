@@ -29,6 +29,7 @@ export default async function AdminProductsListPage({ params: { locale } }: { pa
       <DataTable<AdminListRow<"content_products">>
         rows={rows}
         editBase="/admin/products"
+        table="content_products"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name_ru", label: tShared("nameLabel"), sortable: true },

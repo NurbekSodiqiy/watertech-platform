@@ -29,6 +29,7 @@ export default async function AdminCompetitorsListPage({ params: { locale } }: {
       <DataTable<AdminListRow<"content_competitors">>
         rows={rows}
         editBase="/admin/competitors"
+        table="content_competitors"
         emptyState={{ stateKey: "adminListNone", title: t("title", { type }), reason: t("reason"), ctaLabel: t("cta", { type }) }}
         columns={[
           { key: "name", label: tShared("nameLabel"), sortable: true },

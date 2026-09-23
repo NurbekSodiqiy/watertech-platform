@@ -23,6 +23,8 @@ export function PackageEditorForm({
       fields={fields}
       onSubmit={upsertPackage}
       backHref="/admin/packages"
+      titleField="name"
+      table="content_packages"
     />
   );
 }

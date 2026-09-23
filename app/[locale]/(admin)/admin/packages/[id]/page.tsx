@@ -51,8 +51,10 @@ function buildFields(
 
 export default async function AdminPackageEditPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; id: string };
+  searchParams: { from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -67,6 +69,9 @@ export default async function AdminPackageEditPage({
     listPackageGroupRows(),
   ]);
   if (!isNew && !row) notFound();
+  // /admin/packages/new?from=<id> — the DataTable duplicate action; prefills
+  // from that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getPackageRow(searchParams.from) : null;
 
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.title }));
 
@@ -92,26 +97,47 @@ export default async function AdminPackageEditPage({
         deliveryTimeRu: row.delivery_time_ru ?? "",
         version: String(row.version),
       }
-    : {
-        id: "",
-        groupId: groups[0]?.id ?? "",
-        name: "",
-        isFeatured: false,
-        orderVolume: "",
-        paymentTerms: "",
-        estimatedDiscount: "",
-        discountPct: "0",
-        advancePct: "",
-        logistics: "",
-        deliveryTime: "",
-        status: "draft",
-        nameRu: "",
-        orderVolumeRu: "",
-        paymentTermsRu: "",
-        estimatedDiscountRu: "",
-        logisticsRu: "",
-        deliveryTimeRu: "",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          groupId: source.group_id,
+          name: source.name,
+          isFeatured: source.is_featured,
+          orderVolume: source.order_volume,
+          paymentTerms: source.payment_terms,
+          estimatedDiscount: source.estimated_discount,
+          discountPct: String(source.discount_pct),
+          advancePct: source.advance_pct === null ? "" : String(source.advance_pct),
+          logistics: source.logistics,
+          deliveryTime: source.delivery_time,
+          status: "draft",
+          nameRu: source.name_ru ?? "",
+          orderVolumeRu: source.order_volume_ru ?? "",
+          paymentTermsRu: source.payment_terms_ru ?? "",
+          estimatedDiscountRu: source.estimated_discount_ru ?? "",
+          logisticsRu: source.logistics_ru ?? "",
+          deliveryTimeRu: source.delivery_time_ru ?? "",
+        }
+      : {
+          id: "",
+          groupId: groups[0]?.id ?? "",
+          name: "",
+          isFeatured: false,
+          orderVolume: "",
+          paymentTerms: "",
+          estimatedDiscount: "",
+          discountPct: "0",
+          advancePct: "",
+          logistics: "",
+          deliveryTime: "",
+          status: "draft",
+          nameRu: "",
+          orderVolumeRu: "",
+          paymentTermsRu: "",
+          estimatedDiscountRu: "",
+          logisticsRu: "",
+          deliveryTimeRu: "",
+        };
 
   return (
     <div className="space-y-6">

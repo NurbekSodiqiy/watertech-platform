@@ -39,7 +39,7 @@ export default async function AdminFaqEditPage({
   searchParams,
 }: {
   params: { locale: string; id: string };
-  searchParams: { question?: string };
+  searchParams: { question?: string; from?: string };
 }) {
   const { locale } = params;
   unstable_setRequestLocale(locale);
@@ -51,6 +51,9 @@ export default async function AdminFaqEditPage({
   const isNew = params.id === "new";
   const row = isNew ? null : await getFaqRow(params.id);
   if (!isNew && !row) notFound();
+  // /admin/faq/new?from=<id> — the DataTable duplicate action; prefills from
+  // that row's own full data, never the list projection.
+  const source = isNew && searchParams.from ? await getFaqRow(searchParams.from) : null;
 
   const defaultValues: FaqFormInput = row
     ? {
@@ -63,18 +66,28 @@ export default async function AdminFaqEditPage({
         answerRu: row.answer_ru ?? "",
         version: String(row.version),
       }
-    : {
-        id: "",
-        category: "",
-        // Prefilled from the Sifat tab's "FAQ yaratish" quick action
-        // (/admin/faq/new?question=…) — a zero-result search query the
-        // manager is turning straight into a new FAQ entry.
-        question: searchParams.question ?? "",
-        answer: "",
-        status: "draft",
-        questionRu: "",
-        answerRu: "",
-      };
+    : source
+      ? {
+          id: `${source.id}-nusxa`,
+          category: source.category,
+          question: source.question,
+          answer: source.answer,
+          status: "draft",
+          questionRu: source.question_ru ?? "",
+          answerRu: source.answer_ru ?? "",
+        }
+      : {
+          id: "",
+          category: "",
+          // Prefilled from the Sifat tab's "FAQ yaratish" quick action
+          // (/admin/faq/new?question=…) — a zero-result search query the
+          // manager is turning straight into a new FAQ entry.
+          question: searchParams.question ?? "",
+          answer: "",
+          status: "draft",
+          questionRu: "",
+          answerRu: "",
+        };
 
   return (
     <div className="space-y-6">

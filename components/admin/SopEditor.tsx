@@ -1,21 +1,34 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "@/i18n/routing";
-import { useForm, useFieldArray, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import { useEffect, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { useRouter, Link } from "@/i18n/routing";
+import { useForm, useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { useOnline } from "@/hooks/useOnline";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { useActionError } from "@/hooks/useActionError";
 import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import { sopWriteSchema, type SopFormValues } from "@/lib/admin/schemas";
 import { upsertSop } from "@/lib/admin/actions/sops";
+import { checkContentIdAvailable } from "@/lib/admin/actions/slug";
+import { toSlug } from "@/lib/admin/slug";
 import type { Sop } from "@/lib/content/types";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
+
+/** How long a manager pauses typing before the id-availability hint fires. */
+const ID_CHECK_DEBOUNCE_MS = 400;
+
+// Only mounted behind the preview toggle, and pulls in ScriptTurnList/ScriptTurns
+// on top of itself — loaded on demand (CLAUDE.md §4), same pattern
+// EntityForm's own ImageUploadField uses.
+const DraftPreview = dynamic(() => import("@/components/admin/DraftPreview").then((m) => m.DraftPreview));
 
 /** stepsRu mirrors steps field for field, so the step list below is
  * parameterized over which of the two arrays it is bound to — same trick as
@@ -136,6 +149,8 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
   const t = useTranslations("pages.admin.sops");
   const tValidation = useTranslations("admin.validation");
   const tToast = useTranslations("toast");
+  const tConfirm = useTranslations("admin.confirm");
+  const tForm = useTranslations("admin.form");
   const online = useOnline();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -162,10 +177,55 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
     control,
     register,
     handleSubmit,
-    formState: { errors },
+    setValue,
+    formState: { errors, isDirty },
   } = useForm<SopFormValues>({
     resolver: zodResolver(sopWriteSchema, { errorMap: adminErrorMap }),
     defaultValues,
+  });
+
+  // === Id autofill + availability hint (new rows only; same pattern as
+  // EntityForm.tsx, hand-wired here since this is a bespoke form) ====================
+  const watchedTitle = useWatch({ control, name: "title" });
+  const watchedId = useWatch({ control, name: "id" });
+  const watchedSummary = useWatch({ control, name: "summary" });
+  const watchedSteps = useWatch({ control, name: "steps" });
+  const autoSlugRef = useRef("");
+  useEffect(() => {
+    if (!isNew) return;
+    const currentId = watchedId ?? "";
+    if (currentId !== "" && currentId !== autoSlugRef.current) return;
+    const nextSlug = toSlug(watchedTitle ?? "");
+    if (nextSlug === currentId) return;
+    autoSlugRef.current = nextSlug;
+    setValue("id", nextSlug, { shouldDirty: nextSlug !== "" });
+  }, [watchedTitle, watchedId, isNew, setValue]);
+
+  const [idHint, setIdHint] = useState<"checking" | "available" | "taken" | null>(null);
+  useEffect(() => {
+    if (!isNew) {
+      setIdHint(null);
+      return;
+    }
+    const id = watchedId ?? "";
+    if (!/^[a-z0-9-]+$/.test(id)) {
+      setIdHint(null);
+      return;
+    }
+    setIdHint("checking");
+    const timer = setTimeout(() => {
+      void checkContentIdAvailable("content_sops", id).then((result) => {
+        setIdHint(result.available ? "available" : "taken");
+      });
+    }, ID_CHECK_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [watchedId, isNew]);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const { blocked, confirmLeave, cancelLeave } = useUnsavedChangesGuard({
+    isDirty,
+    onSave: () => void handleSubmit(submit)(),
   });
 
   function submit(values: SopFormValues) {
@@ -234,6 +294,11 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
             <p className="text-[11px] text-status-outdated">{validationText(tValidation, errors.id.message)}</p>
           ) : (
             <p className="text-[11px] text-text-secondary">{t("fields.idHint")}</p>
+          )}
+          {isNew && idHint && (
+            <p className={`text-[11px] ${idHint === "taken" ? "text-status-outdated" : "text-text-secondary"}`}>
+              {tForm(`idHint.${idHint}`)}
+            </p>
           )}
         </div>
         <div className="space-y-1.5">
@@ -313,14 +378,43 @@ export function SopEditor({ isNew, sop, status, version }: SopEditorProps) {
         </SubmitButton>
         <button
           type="button"
-          onClick={() => router.push("/admin/sops")}
+          onClick={() => setPreviewOpen(true)}
+          className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
+        >
+          {tForm("preview")}
+        </button>
+        <Link
+          href="/admin/sops"
           className="rounded-lg border border-border px-4 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
         >
           {t("form.cancel")}
-        </button>
+        </Link>
       </div>
 
       <GateReportDialog result={gateResult} onClose={() => setGateResult(null)} />
+
+      <ConfirmDialog
+        open={blocked}
+        title={tConfirm("leaveUnsavedTitle")}
+        description={tConfirm("leaveUnsavedDescription")}
+        confirmLabel={tConfirm("leaveAnyway")}
+        tone="primary"
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+      />
+
+      <DraftPreview
+        kind="sop"
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={watchedTitle || watchedId || sop.id}
+        sop={{
+          id: watchedId ?? "",
+          title: watchedTitle ?? "",
+          summary: watchedSummary ?? "",
+          steps: watchedSteps ?? [],
+        }}
+      />
     </form>
   );
 }

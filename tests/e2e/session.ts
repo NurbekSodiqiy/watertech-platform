@@ -47,6 +47,17 @@ export function useOperatorSession(): void {
   });
 }
 
+/** The manager counterpart of `useOperatorSession` — skips when
+ * `TEST_SESSION_COOKIE` is unset. Call it at the top of a `test.describe()`
+ * body for a spec that needs `/admin` or `/dashboard`. */
+export function useManagerSession(): void {
+  test.skip(!managerCookie, "TEST_SESSION_COOKIE is not set");
+
+  test.beforeEach(async ({ context, baseURL }) => {
+    await applySession(context, managerCookie ?? "", baseURL);
+  });
+}
+
 /** Fails loudly rather than passing an empty assertion when the cookie has
  * expired or belongs to the wrong role and middleware bounced the request. */
 export async function expectSignedInAt(page: Page, path: RegExp): Promise<void> {
