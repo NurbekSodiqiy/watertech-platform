@@ -704,6 +704,64 @@
         "older": "Eskiroq",
         "page": "{page}-sahifa"
       },
+      "users": {
+        "nav": "Foydalanuvchilar",
+        "title": "Foydalanuvchilar va kirish huquqi",
+        "description": "Kim tizimga kira oladi va qaysi rolda. Har bir o'zgarish kirish jurnaliga yoziladi.",
+        "activityUnavailable": "Oxirgi faollikni hozir yuklab bo'lmadi — qolgan ma'lumotlar to'g'ri.",
+        "add": "+ Foydalanuvchi qo'shish",
+        "filters": {
+          "role": "Rol bo'yicha filtr",
+          "allRoles": "Barcha rollar",
+          "status": "Holat bo'yicha filtr",
+          "allStatuses": "Barcha holatlar"
+        },
+        "roles": {
+          "operator": "Operator",
+          "manager": "Menejer"
+        },
+        "status": {
+          "active": "Faol",
+          "inactive": "Faol emas"
+        },
+        "columns": {
+          "email": "Email",
+          "name": "Ism",
+          "role": "Rol",
+          "status": "Holat",
+          "lastActivity": "Oxirgi faollik",
+          "onboarding": "Onboarding",
+          "actions": "Amallar"
+        },
+        "you": "Siz",
+        "roleSelectLabel": "{email} roli",
+        "selfLocked": "O'z rolingiz va holatingizni boshqa menejer o'zgartiradi",
+        "noActivity": "Faollik yo'q",
+        "onboardingLink": "Onboarding holati",
+        "deactivate": "To'xtatish",
+        "activate": "Tiklash",
+        "deactivateTitle": "Kirishni to'xtatish",
+        "deactivateDescription": "{name} endi tizimga kira olmaydi: sessiyani yangilash va Google orqali qayta kirish darhol bloklanadi. Hozir ochiq sahifalar kirish tokeni muddati tugaguncha (odatda 1 soatgacha) ishlashi mumkin. Kirishni istalgan vaqtda tiklash mumkin.",
+        "activateTitle": "Kirishni tiklash",
+        "activateDescription": "{name} yana Google hisobi orqali tizimga kira oladi — «{role}» sifatida.",
+        "toastAdded": "Foydalanuvchi qo'shildi — endi Google orqali kira oladi",
+        "toastRoleChanged": "Rol o'zgartirildi — keyingi token yangilanishida (odatda 1 soat ichida) kuchga kiradi",
+        "toastActivated": "Kirish tiklandi",
+        "toastDeactivated": "Kirish to'xtatildi — sessiya endi yangilanmaydi",
+        "dialog": {
+          "title": "Foydalanuvchi qo'shish",
+          "description": "Shu email bilan ochilgan Google hisobi tizimga kira oladi.",
+          "email": "Email (Google hisobi)",
+          "emailPlaceholder": "ism@kompaniya.uz",
+          "fullName": "To'liq ism (ixtiyoriy)",
+          "fullNamePlaceholder": "Masalan, Aziza Karimova",
+          "role": "Rol",
+          "roleHint": "Menejer kontentni tahrirlaydi, foydalanuvchilarni boshqaradi va monitoringni ko'radi. Operator bilimlar bazasidan foydalanadi.",
+          "cancel": "Bekor qilish",
+          "submit": "Qo'shish",
+          "submitting": "Qo'shilmoqda…"
+        }
+      },
       "shared": {
         "versions": "Versiyalar tarixi",
         "idLabel": "ID (slug)",
@@ -1482,6 +1540,10 @@
       "gate_blocked": "Nashr qorovuli to'xtatdi",
       "not_found": "Yozuv topilmadi — u o'chirilgan bo'lishi mumkin",
       "reference_in_use": "Bu yozuvga boshqa yozuvlar bog'langan — avval ularni o'zgartiring",
+      "email_taken": "Bu email allaqachon ro'yxatda — jadvaldan topib, kerak bo'lsa kirishni tiklang",
+      "last_manager": "Oxirgi faol menejerni olib tashlab bo'lmaydi — avval boshqa menejer qo'shing",
+      "self_change": "O'z rolingiz yoki holatingizni o'zgartira olmaysiz — buni boshqa menejer qilishi kerak",
+      "auth_sync_failed": "O'zgarish saqlandi, lekin kirish xizmati uni tasdiqlamadi — amalni yana bir bor bajaring",
       "unknown": "Kutilmagan xatolik — qaytadan urinib ko'ring"
     },
     "validation": {

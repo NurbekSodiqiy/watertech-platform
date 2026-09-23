@@ -16,7 +16,10 @@
 -- 0009 (user_state), 0010 (content_changelog), 0011 (content_contacts),
 -- 0012 (content_sops), 0013 (allowed_users, telemetry_events, and the write-side
 -- integrity block at the end: append-only history, draft default, updated_by),
--- 0014 (the role gate on every policy above, and the access-token hook itself).
+-- 0014 (the role gate on every policy above, and the access-token hook itself),
+-- 0017 (allow-list writes: manager-only, column-limited, the last-manager /
+-- self-change / stale-manager guard, the append-only access_audit, and
+-- admin_user_last_activity()).
 --
 -- 0013 is the baseline for allowed_users and telemetry_events, which predate
 -- supabase/migrations. On a project where 0013 has not been applied yet, the
@@ -87,10 +90,23 @@ insert into public.user_state (user_email, key, value) values
 -- dashboard's operator filter lists (0005). The two emails match the operator
 -- and manager identities used below; `rls-deactivated@test` is the is_active =
 -- false case, and `rls-unknown@test` is deliberately NOT inserted.
+-- `rls-manager-2@test` is a second active manager, so the 0017 block can tell
+-- "self-change" apart from "last manager". Since 0017 each insert here also
+-- writes an access_audit row (actor = the editor's own login).
 insert into public.allowed_users (email, role, is_active) values
   ('op@test', 'operator', true),
   ('rls-manager@test', 'manager', true),
+  ('rls-manager-2@test', 'manager', true),
   ('rls-deactivated@test', 'operator', false);
+
+do $$
+begin
+  if to_regclass('public.access_audit') is null
+     or to_regprocedure('public.admin_user_last_activity()') is null
+     or to_regprocedure('private.allowed_users_guard()') is null then
+    raise exception 'RLS FAIL: access_audit / admin_user_last_activity() / allowed_users_guard() missing — apply 0017_user_admin_and_access_audit.sql, then re-run this file';
+  end if;
+end $$;
 
 -- === The access-token hook (0014) ==============================================
 -- Runs as the editor's own role, before any role switch: EXECUTE on the hook is
@@ -244,7 +260,9 @@ begin
       ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$),
       -- The allow-list is manager-only (0005/0014) — not even an operator's own
       -- row is readable, so the filter is deliberately unrestricted.
-      ('allowed_users',                     'public.allowed_users',          $f$true$f$)
+      ('allowed_users',                     'public.allowed_users',          $f$true$f$),
+      -- ...and so is its history (0017), the operator's own entries included.
+      ('access_audit',                      'public.access_audit',           $f$true$f$)
     ) as t(label, relation, filter)
   loop
     begin
@@ -332,6 +350,62 @@ begin
   end;
 end $$;
 
+-- allowed_users (0017): an operator cannot add, promote, deactivate or remove
+-- anyone — themselves included — nor read the last-activity column. These are
+-- the statements a direct PostgREST call with an operator's JWT would run.
+do $$
+declare
+  n bigint;
+begin
+  -- The insert column grant is shared by every `authenticated` session, so
+  -- what stops an operator is the guard (WT403: not an active manager, it
+  -- fires before the WITH CHECK) — or the policy, should the guard be absent.
+  begin
+    insert into public.allowed_users (email, role) values ('rls-op-added@test', 'manager');
+    raise exception 'RLS FAIL: operator can INSERT an allowed_users row';
+  exception
+    when insufficient_privilege then null;
+    when sqlstate 'WT403' then null;
+  end;
+
+  update public.allowed_users set role = 'manager' where email = 'op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: operator can promote THEMSELVES to manager (% rows)', n;
+  end if;
+
+  update public.allowed_users set is_active = false where email = 'rls-manager@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: operator can deactivate a manager (% rows)', n;
+  end if;
+
+  -- No WHERE clause, so no SELECT policy is consulted: only the UPDATE
+  -- policy's USING stands between this statement and every row. It must hide
+  -- them all; reaching the guard (WT403) means the policy let them through.
+  begin
+    update public.allowed_users set full_name = 'rls-operator-was-here';
+    get diagnostics n = row_count;
+    if n <> 0 then
+      raise exception 'RLS FAIL: operator''s unfiltered UPDATE matched % allowed_users rows', n;
+    end if;
+  exception when sqlstate 'WT403' then
+    raise exception 'RLS FAIL: the allowed_users UPDATE policy let an operator reach rows (only the guard refused)';
+  end;
+
+  begin
+    delete from public.allowed_users where email = 'rls-manager@test';
+    raise exception 'RLS FAIL: operator can DELETE an allowed_users row';
+  exception when insufficient_privilege then null; -- no delete grant, as intended
+  end;
+
+  begin
+    perform * from public.admin_user_last_activity();
+    raise exception 'RLS FAIL: operator can call admin_user_last_activity()';
+  exception when sqlstate 'WT403' then null; -- the manager check refused, as intended
+  end;
+end $$;
+
 -- === As a non-member (0014) ====================================================
 -- Three JWTs the access-token hook would never issue any more, but that the
 -- database has to refuse on its own:
@@ -402,6 +476,7 @@ begin
         ('content_gate_reports'),
         ('telemetry_events'),
         ('allowed_users'),
+        ('access_audit'),
         ('user_state'),
         ('rate_limits')
       ) as t(relation)
@@ -461,7 +536,8 @@ begin
       ('content_gate_reports',             'public.content_gate_reports',   $f$row_id = 'rls-test-draft'$f$),
       ('another operator''s telemetry_events', 'public.telemetry_events',   $f$user_email = 'rls-other-op@test'$f$),
       ('another operator''s user_state',    'public.user_state',             $f$user_email = 'rls-other-op@test'$f$),
-      ('allowed_users',                     'public.allowed_users',          $f$email = 'op@test'$f$)
+      ('allowed_users',                     'public.allowed_users',          $f$email = 'op@test'$f$),
+      ('access_audit (the fixture insert)', 'public.access_audit',           $f$target_email = 'op@test'$f$)
     ) as t(label, relation, filter)
   loop
     begin
@@ -603,6 +679,244 @@ begin
     raise exception 'RLS FAIL: manager can execute rate_limit_hit()';
   exception when insufficient_privilege then null; -- execute revoked, as intended
   end;
+end $$;
+
+-- === As a manager: allow-list administration (0017) ============================
+-- What /admin/users does, run as the statements PostgREST would run for it.
+-- Each refusal below is asserted by SQLSTATE — the same codes
+-- lib/admin/actions/user-access.ts turns into last_manager / self_change /
+-- unauthorized — so they prove the database refuses on its own, UI or not.
+
+do $$
+declare
+  n bigint;
+  ub text;
+  audit record;
+  col text;
+begin
+  -- Add: allowed, stamped with the manager's JWT email, and audited.
+  insert into public.allowed_users (email, role, full_name) values ('rls-new@test', 'operator', 'RLS New');
+  select updated_by into ub from public.allowed_users where email = 'rls-new@test';
+  if ub is distinct from 'rls-manager@test' then
+    raise exception 'RLS FAIL: allowed_users insert stamped updated_by = % (expected the JWT email)', coalesce(ub, '<null>');
+  end if;
+
+  select * into audit from public.access_audit where target_email = 'rls-new@test' and action = 'insert';
+  if audit is null or audit.actor is distinct from 'rls-manager@test' or audit.before is not null
+     or audit.after ->> 'role' is distinct from 'operator' then
+    raise exception 'RLS FAIL: the insert audit row is wrong or missing (%)', to_jsonb(audit);
+  end if;
+
+  -- Re-role another row: allowed, audited with before and after.
+  update public.allowed_users set role = 'manager' where email = 'rls-new@test';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: manager cannot change another row''s role (% rows)', n;
+  end if;
+  select count(*) into n from public.access_audit
+  where target_email = 'rls-new@test' and action = 'update'
+    and before ->> 'role' = 'operator' and after ->> 'role' = 'manager' and actor = 'rls-manager@test';
+  if n <> 1 then
+    raise exception 'RLS FAIL: the role change left % matching audit rows (expected 1)', n;
+  end if;
+
+  -- An update that changes nothing is not an event.
+  update public.allowed_users set role = 'manager' where email = 'rls-new@test';
+  select count(*) into n from public.access_audit where target_email = 'rls-new@test' and action = 'update';
+  if n <> 1 then
+    raise exception 'RLS FAIL: a no-op update wrote an audit row (% update rows)', n;
+  end if;
+
+  -- Column grants: role, is_active and full_name only.
+  foreach col in array array['email', 'created_at', 'updated_at', 'updated_by'] loop
+    begin
+      execute format(
+        'update public.allowed_users set %I = %L where email = %L',
+        col,
+        case col when 'email' then 'rls-renamed@test' when 'updated_by' then 'attacker@test' else '2020-01-01' end,
+        'rls-new@test'
+      );
+      raise exception 'RLS FAIL: manager can UPDATE allowed_users.%', col;
+    exception when insufficient_privilege then null; -- no column grant, as intended
+    end;
+  end loop;
+
+  begin
+    delete from public.allowed_users where email = 'rls-new@test';
+    raise exception 'RLS FAIL: manager can DELETE an allowed_users row (deactivate instead)';
+  exception when insufficient_privilege then null; -- no delete grant, as intended
+  end;
+
+  -- Their own row: renaming is fine, demoting or deactivating is not — even
+  -- with two other active managers (rls-manager-2, rls-new) left.
+  update public.allowed_users set full_name = 'RLS Manager' where email = 'rls-manager@test';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: manager cannot rename their own row (% rows)', n;
+  end if;
+
+  begin
+    update public.allowed_users set role = 'operator' where email = 'rls-manager@test';
+    raise exception 'RLS FAIL: manager can DEMOTE their own row';
+  exception when sqlstate 'WT461' then null;
+  end;
+
+  begin
+    update public.allowed_users set is_active = false where email = 'rls-manager@test';
+    raise exception 'RLS FAIL: manager can DEACTIVATE their own row';
+  exception when sqlstate 'WT461' then null;
+  end;
+
+  -- The history is append-only for a manager too.
+  begin
+    update public.access_audit set actor = 'attacker@test';
+    raise exception 'RLS FAIL: manager can UPDATE access_audit';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.access_audit;
+    raise exception 'RLS FAIL: manager can DELETE from access_audit';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.access_audit (actor, target_email, action) values ('attacker@test', 'op@test', 'insert');
+    raise exception 'RLS FAIL: manager can INSERT a forged access_audit row';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Last activity: op@test has a telemetry fixture row, rls-new@test none.
+  select count(*) into n from public.admin_user_last_activity()
+  where member_email = 'op@test' and last_seen_at is not null;
+  if n <> 1 then
+    raise exception 'RLS FAIL: admin_user_last_activity() has no last_seen_at for op@test';
+  end if;
+  select count(*) into n from public.admin_user_last_activity()
+  where member_email = 'rls-new@test' and last_seen_at is null;
+  if n <> 1 then
+    raise exception 'RLS FAIL: admin_user_last_activity() invented activity for rls-new@test';
+  end if;
+
+  -- Last manager: this session may deactivate every OTHER manager (staging's
+  -- real ones included — the whole file rolls back), after which demoting
+  -- itself is "last manager", which the guard checks before "self".
+  update public.allowed_users set is_active = false
+  where role = 'manager' and is_active and email <> 'rls-manager@test';
+
+  select count(*) into n from public.allowed_users where role = 'manager' and is_active;
+  if n <> 1 then
+    raise exception 'RLS FAIL: setup — expected exactly one active manager, found %', n;
+  end if;
+
+  begin
+    update public.allowed_users set role = 'operator' where email = 'rls-manager@test';
+    raise exception 'RLS FAIL: the LAST active manager was demoted';
+  exception when sqlstate 'WT460' then null;
+  end;
+end $$;
+
+-- A manager token whose allow-list row no longer says manager: demoted
+-- (op@test) or deactivated (rls-new@test, just above) while the old access
+-- token is still valid. RLS believes the claim; the guard reads the row.
+do $$
+declare
+  ident record;
+begin
+  for ident in
+    select * from (values
+      ('a demoted manager',     '{"sub":"00000000-0000-4000-8000-000000000006","role":"authenticated","email":"op@test","app_metadata":{"role":"manager"}}'),
+      ('a deactivated manager', '{"sub":"00000000-0000-4000-8000-000000000007","role":"authenticated","email":"rls-new@test","app_metadata":{"role":"manager"}}')
+    ) as t(label, claims)
+  loop
+    perform set_config('request.jwt.claims', ident.claims, true);
+
+    begin
+      insert into public.allowed_users (email, role) values ('rls-backdoor@test', 'manager');
+      raise exception 'RLS FAIL: % (stale manager token) can INSERT a manager row', ident.label;
+    exception when sqlstate 'WT403' then null;
+    end;
+
+    begin
+      update public.allowed_users set role = 'manager', is_active = true where email = ident.claims::jsonb ->> 'email';
+      raise exception 'RLS FAIL: % (stale manager token) can restore their own manager row', ident.label;
+    exception when sqlstate 'WT403' then null;
+    end;
+
+    begin
+      update public.allowed_users set is_active = false where email = 'rls-deactivated@test';
+      raise exception 'RLS FAIL: % (stale manager token) can change another row', ident.label;
+    exception when sqlstate 'WT403' then null;
+    end;
+  end loop;
+end $$;
+
+-- === The owner's side of 0017 ==================================================
+-- The editor's own role (the table owner, RLS bypassed), carrying the claims
+-- PostgREST sends for the service-role key: no email, so no actor and no
+-- "self" — but the last-manager check still holds.
+
+reset role;
+set local request.jwt.claims = '{"role":"service_role"}';
+
+do $$
+declare
+  n bigint;
+  c record;
+begin
+  -- rls-manager@test is still the only active manager (block above).
+  begin
+    update public.allowed_users set is_active = false where role = 'manager';
+    raise exception 'RLS FAIL: a service-role UPDATE deactivated the last active manager';
+  exception when sqlstate 'WT460' then null;
+  end;
+
+  begin
+    delete from public.allowed_users where email = 'rls-manager@test';
+    raise exception 'RLS FAIL: a service-role DELETE removed the last active manager';
+  exception when sqlstate 'WT460' then null;
+  end;
+
+  -- Audited too, with the JWT role as the actor.
+  update public.allowed_users set full_name = 'Renamed by the service role' where email = 'op@test';
+  select count(*) into n from public.access_audit
+  where target_email = 'op@test' and action = 'update' and actor = 'service_role';
+  if n <> 1 then
+    raise exception 'RLS FAIL: a service-role update left % audit rows (expected 1)', n;
+  end if;
+
+  -- The append-only trigger stops even the owner.
+  begin
+    delete from public.access_audit where target_email = 'op@test';
+    raise exception 'RLS FAIL: the table owner can DELETE from access_audit';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- The grant matrix, read from the catalog so it holds without a role switch.
+  for c in
+    select * from (values
+      ('service_role', 'public.access_audit',  'INSERT'),
+      ('service_role', 'public.access_audit',  'UPDATE'),
+      ('service_role', 'public.access_audit',  'DELETE'),
+      ('service_role', 'public.access_audit',  'TRUNCATE'),
+      ('authenticated', 'public.access_audit', 'INSERT'),
+      ('anon',          'public.access_audit', 'SELECT'),
+      ('authenticated', 'public.allowed_users', 'DELETE'),
+      ('authenticated', 'public.allowed_users', 'TRUNCATE'),
+      ('anon',          'public.allowed_users', 'SELECT'),
+      ('anon',          'public.allowed_users', 'INSERT')
+    ) as t(grantee, relation, privilege)
+  loop
+    if has_table_privilege(c.grantee, c.relation, c.privilege) then
+      raise exception 'RLS FAIL: % holds % on %', c.grantee, c.privilege, c.relation;
+    end if;
+  end loop;
+
+  for c in
+    select * from (values ('email'), ('created_at'), ('updated_at'), ('updated_by')) as t(col)
+  loop
+    if has_column_privilege('authenticated', 'public.allowed_users', c.col, 'UPDATE') then
+      raise exception 'RLS FAIL: authenticated may UPDATE allowed_users.%', c.col;
+    end if;
+  end loop;
 end $$;
 
 rollback;

@@ -16,6 +16,7 @@ import type { ContentBundle } from "@/lib/content/loader";
 import { statusSchema } from "@/lib/admin/schemas";
 import { CONTENT_REGISTRY, DEFAULT_LIST_ORDER, isContentTable, type ListColumnOf } from "@/lib/admin/registry";
 import { isSnapshotRow, snapshotText } from "@/lib/admin/snapshot";
+import { isUserRole, type AdminUser } from "@/lib/admin/users";
 import type { StatusValue } from "@/lib/admin/actions/status";
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
 import type {
@@ -518,4 +519,55 @@ export async function listTrash({ offset = 0, pageSize = 25 } = {}): Promise<Tra
   }
 
   return { entries, offset, pageSize, hasMore: data.length === pageSize };
+}
+
+// === Allow-list (/admin/users) ======================================================
+// public.allowed_users under the manager's read policy (0014), joined in TS
+// with admin_user_last_activity() (0017). The two are read side by side and
+// the activity is optional: an unapplied 0017 or a failed call leaves the
+// "last activity" column empty, not the page.
+
+export interface AdminUserList {
+  users: AdminUser[];
+  /** False when admin_user_last_activity() could not be read. */
+  activityAvailable: boolean;
+}
+
+export async function listAdminUsers(): Promise<AdminUserList> {
+  const supabase = createClient();
+  const [rows, activity] = await Promise.all([
+    supabase
+      .from("allowed_users")
+      .select("email,full_name,role,is_active,updated_at,updated_by")
+      .order("email"),
+    supabase.rpc("admin_user_last_activity"),
+  ]);
+  if (rows.error) throw new Error(`allowed_users: ${rows.error.message}`);
+
+  if (activity.error) console.error("[admin] admin_user_last_activity:", activity.error.code, activity.error.message);
+  const lastSeen = new Map<string, string | null>(
+    (activity.data ?? []).map((row) => [row.member_email, row.last_seen_at])
+  );
+
+  const users: AdminUser[] = [];
+  for (const row of rows.data) {
+    // allowed_users_role_chk is NOT VALID (0013): a legacy row may carry a
+    // role this page cannot offer, and the hook would stamp it verbatim —
+    // which roleFromClaims() then refuses. Logged, not rendered.
+    if (!isUserRole(row.role)) {
+      console.error("[admin] allowed_users row with an unknown role skipped");
+      continue;
+    }
+    users.push({
+      email: row.email,
+      fullName: row.full_name,
+      role: row.role,
+      isActive: row.is_active,
+      lastActivityAt: lastSeen.get(row.email) ?? null,
+      updatedAt: row.updated_at,
+      updatedBy: row.updated_by,
+    });
+  }
+
+  return { users, activityAvailable: !activity.error };
 }

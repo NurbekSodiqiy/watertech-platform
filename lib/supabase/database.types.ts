@@ -8,6 +8,9 @@
 // content_versions (op) added by hand from 0013 on 2026-09-22 — run
 // `npm run gen:types` once 0013 is applied to confirm them against the project.
 // reorder_content_rows added by hand from 0015 on 2026-09-22.
+// access_audit and admin_user_last_activity added by hand from 0017 on
+// 2026-09-23. access_audit's Insert/Update exist only because the generator
+// always emits them — no API role holds either privilege on that table.
 // dashboard_* and run_retention added by hand from 0016 on 2026-09-23. Every
 // RETURNS TABLE function comes back from PostgREST as an array of rows; bigint
 // and numeric columns arrive as JSON numbers. `p_operator` / `p_limit` /
@@ -31,6 +34,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_audit: {
+        Row: {
+          action: string
+          actor: string
+          after: Json | null
+          before: Json | null
+          created_at: string
+          id: number
+          target_email: string
+        }
+        Insert: {
+          action: string
+          actor: string
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: never
+          target_email: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: never
+          target_email?: string
+        }
+        Relationships: []
+      }
       admin_notifications: {
         Row: {
           actor: string | null
@@ -863,6 +896,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_user_last_activity: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          last_seen_at: string | null
+          member_email: string
+        }[]
+      }
       custom_access_token_hook: {
         Args: { event: Json }
         Returns: Json

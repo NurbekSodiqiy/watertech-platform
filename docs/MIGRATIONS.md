@@ -28,11 +28,12 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0014 | `role_gated_rls.sql` | `private.app_role/is_member/is_manager`; every policy role-gated and InitPlan-wrapped; the access-token hook refuses instead of stamping `'none'` | 0013 (and 0009, see below) |
 | 0015 | `reorder_rows.sql` | `public.reorder_content_rows(text, text[], int[])` — version-guarded, all-or-nothing `sort_order` write for a whole list | 0014 (`private.is_manager()`) |
 | 0016 | `dashboard_rpc_and_retention.sql` | seven `public.dashboard_*` aggregate functions (manager only), covering indexes on `telemetry_events`, `public.run_retention()` and its pg_cron job when pg_cron is enabled | 0014, 0006, 0007, 0013 |
+| 0017 | `user_admin_and_access_audit.sql` | managers write `allowed_users` (insert; update of `role`/`is_active`/`full_name` only); `private.allowed_users_guard` (stale-manager WT403, last manager WT460, self-change WT461); append-only `public.access_audit` written by trigger; `public.admin_user_last_activity()` | 0014, 0013, 0002 |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015` and then `0016` go last. `0013`, `0014`, `0015` and `0016` all abort with a clear message when an
+`0014`, `0015`, `0016` and then `0017` go last. `0013` through `0017` all abort with a clear message when an
 earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
@@ -61,7 +62,10 @@ statements into their own file and run them concurrently, outside a transaction.
 4. **`0014`.** Once, after `0013`'s second pass.
 5. **`0015`.** After `0014` — it checks for `private.is_manager()` and aborts without it.
 6. **`0016`.** After `0015`, same check.
-7. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+7. **`0017`.** After `0016`. On a fresh project it notices that there is no active manager yet — add the
+   first one by hand (the `insert` in [SECURITY.md §5](SECURITY.md#5-adding-removing-and-promoting-people));
+   everyone after that is added at `/admin/users`.
+8. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -84,6 +88,11 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
       shows its error state (the RPC is missing), and `/api/cron/content-scan` answers `retention_failed`
       after its scan. Nothing an operator sees is affected.
 - [ ] `supabase/tests/dashboard-parity.sql` and `retention-checks.sql` on staging, after 0016.
+- [ ] **0017** allow-list administration + `access_audit` — requires 0014 first. Until it is applied,
+      `/admin/users` lists the users (the read policy is 0014's) but every add / role change / deactivate
+      answers `unauthorized` (no write grant, no policy), and the "last activity" column is empty with a
+      notice. Nothing else is affected. Also set `SUPABASE_SERVICE_ROLE_KEY` on the server if it is not
+      already: without it the row changes but the Auth ban does not (`auth_sync_failed`).
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -138,6 +147,18 @@ raises a notice saying exactly that when it finds no `user_state` table.
 4. **No type regeneration strictly needed**, but `npm run gen:types` would now also emit the
    `dashboard_*` / `run_retention` entries hand-written in `lib/supabase/database.types.ts` — compare them.
 
+### After applying 0017
+
+1. **Read the notices.** 0017 reports (a) a project with no active manager — add one by hand, nothing
+   else can — and (b) legacy mixed-case emails, which `/admin/users` lists but cannot change until
+   `update public.allowed_users set email = lower(email) where email <> lower(email);` has run. It also
+   warns if the guard/audit functions are not owned by the owner of `access_audit` (run it as `postgres`).
+2. **Run `supabase/tests/rls-checks.sql` on staging** — its 0017 blocks assert every refusal by SQLSTATE.
+3. **Check `SUPABASE_SERVICE_ROLE_KEY`** is set where the app runs: deactivation bans the account in
+   Supabase Auth through the service-role client (docs/SECURITY.md §4).
+4. **No type regeneration strictly needed**; `access_audit` and `admin_user_last_activity` are
+   hand-written in `lib/supabase/database.types.ts` — compare them with `npm run gen:types` when convenient.
+
 ### Retention policy (0016)
 
 `public.run_retention()` is the only place the numbers live (its `constant` declarations); this table
@@ -186,8 +207,24 @@ What it asserts about `0014` specifically:
 - an operator still reads published content and their own `user_state`; a manager still reads drafts and
   every dashboard table, `allowed_users` included.
 
+What it asserts about `0017` specifically:
+
+- an operator cannot insert, promote (themselves included), deactivate or delete an `allowed_users` row —
+  including an unfiltered `UPDATE`, which only the update policy can stop — nor call
+  `admin_user_last_activity()`;
+- a manager can add a row and re-role another, both stamped with their JWT email and audited; a no-op
+  update writes no audit row; `email`, `created_at`, `updated_at` and `updated_by` are not updatable, and
+  nothing is deletable;
+- a manager may rename but not demote or deactivate their own row (`WT461`), and the last active manager
+  cannot be demoted (`WT460`) — through a manager session, and through `service_role`/the SQL editor too,
+  single-row and whole-table;
+- a manager token whose row was demoted or deactivated can no longer write the allow-list (`WT403`);
+- `access_audit` is readable by managers only, writable by nobody (its owner included), and the grant
+  matrix of both tables matches 0017.
+
 A failure of the `0013` block on a project where `0013` has not been applied means "apply 0013", not
-"the policies are wrong"; the `0014` blocks fail the same way with "is 0014 applied?".
+"the policies are wrong"; the `0014` blocks fail the same way with "is 0014 applied?", and a missing
+`0017` stops the file early with "apply 0017_user_admin_and_access_audit.sql".
 `permission denied … missing GRANT` anywhere means a table is missing its `GRANT … to authenticated`
 (the lesson of `0003`).
 
@@ -264,3 +301,18 @@ A full rollback file drops the ten functions (`public.dashboard_kpis`, `_operato
 `create index telemetry_events_type_ts_idx on public.telemetry_events (type, ts);`) before dropping the
 `_cover_` pair. The dashboard code of S09 cannot run without the functions, so it goes back together
 with the app release that preceded it.
+
+### Rolling back 0017
+
+To take write access away again without losing anything: `drop policy if exists
+"allowed_users_manager_insert" on public.allowed_users;`, the same for `"allowed_users_manager_update"`,
+then `revoke insert, update on table public.allowed_users from authenticated;`. `/admin/users` then answers
+`unauthorized` for every change and the allow-list goes back to being edited in the SQL editor. Leave the
+guard and audit triggers in place: they cost nothing and keep auditing the SQL editor.
+
+A full rollback file also drops the four triggers on `allowed_users` (`trg_allowed_users_guard`,
+`trg_set_updated_at`, `trg_stamp_actor`, `trg_allowed_users_audit`), the functions
+`private.allowed_users_guard()`, `private.audit_allowed_users()`, `public.admin_user_last_activity()`, and
+finally `private.access_audit_append_only()` with the table it protects. **Keep `public.access_audit`**
+unless the history is truly unwanted — it is the only record of who changed the allow-list. `anon`'s
+revoked privileges are not worth restoring.

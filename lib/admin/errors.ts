@@ -14,6 +14,11 @@ import { VALIDATION_DETAIL_LIMIT } from "@/lib/admin/validation";
  * - `gate_blocked`      — the publish gate refused; `gate` carries its report.
  * - `not_found`         — the row (or version snapshot) is gone.
  * - `reference_in_use`  — another row still points at this one (delete guard, S07).
+ * - `email_taken`       — adding an allow-list email that already has a row (/admin/users).
+ * - `last_manager`      — the change would leave no active manager (SQL WT460, 0017).
+ * - `self_change`       — a manager demoting or deactivating their own row (SQL WT461, 0017).
+ * - `auth_sync_failed`  — the allow-list row was written, but Supabase Auth did not confirm
+ *                         the matching ban / unban; repeating the action retries it.
  * - `unknown`           — anything else; the real cause is in the server log.
  */
 export type AdminErrorCode =
@@ -24,6 +29,10 @@ export type AdminErrorCode =
   | "gate_blocked"
   | "not_found"
   | "reference_in_use"
+  | "email_taken"
+  | "last_manager"
+  | "self_change"
+  | "auth_sync_failed"
   | "unknown";
 
 /** Why a delete was refused or needs confirming. `block`: live rows point at

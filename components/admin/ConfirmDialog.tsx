@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -42,6 +43,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const t = useTranslations("admin.confirm");
   const reduce = useReducedMotion();
+  const titleId = useId();
+  const descriptionId = useId();
 
   return (
     <AnimatePresence>
@@ -58,6 +61,8 @@ export function ConfirmDialog({
           <m.div
             role="alertdialog"
             aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
             // Three actions (cancel + the safe alternative + the destructive
             // one) need the wider panel to stay on one row.
             className={`relative w-full rounded-2xl border border-border bg-surface p-5 shadow-soft ${
@@ -73,8 +78,12 @@ export function ConfirmDialog({
                 <AlertTriangle size={16} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-primary-dark">{title}</p>
-                <p className="mt-1 text-[13px] text-text-secondary">{description}</p>
+                <p id={titleId} className="text-[14px] font-semibold text-primary-dark">
+                  {title}
+                </p>
+                <p id={descriptionId} className="mt-1 text-[13px] text-text-secondary">
+                  {description}
+                </p>
               </div>
             </div>
 

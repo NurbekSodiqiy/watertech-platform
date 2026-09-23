@@ -9,6 +9,8 @@ const LOGIN_BUTTON = { uz: "Google bilan kirish", ru: "Войти через Goo
 const GATED_ROUTES: { path: string; login: RegExp; locale: keyof typeof LOGIN_BUTTON }[] = [
   { path: "/", login: /\/login$/, locale: "uz" },
   { path: "/admin", login: /\/login$/, locale: "uz" },
+  { path: "/admin/users", login: /\/login$/, locale: "uz" },
+  { path: "/ru/admin/users", login: /\/ru\/login$/, locale: "ru" },
   { path: "/dashboard/content", login: /\/login$/, locale: "uz" },
   { path: "/ru/", login: /\/ru\/login$/, locale: "ru" },
   // Regression for the matcher bug where a bare `products/` exclusion
@@ -71,5 +73,16 @@ test.describe("manager session (TEST_SESSION_COOKIE)", () => {
     await page.goto("/admin");
     await expectStillOn(page, /\/admin$/);
     await expect(page.getByText(/^\d+ ta yozuv$/)).toHaveCount(6);
+  });
+
+  // Read-only: nothing here writes the allow-list.
+  test("/admin/users lists the allow-list and locks the manager's own row", async ({ page }) => {
+    await page.goto("/admin/users");
+    await expectStillOn(page, /\/admin\/users$/);
+    await expect(page.getByRole("heading", { name: "Foydalanuvchilar va kirish huquqi" })).toBeVisible();
+    const ownRow = page.getByRole("row").filter({ hasText: "Siz" });
+    await expect(ownRow).toHaveCount(1);
+    await expect(ownRow.getByRole("combobox")).toBeDisabled();
+    await expect(ownRow.getByRole("button", { name: "To'xtatish" })).toBeDisabled();
   });
 });

@@ -63,11 +63,14 @@ Per table, since 0014:
 | --- | --- | --- | --- |
 | the 10 `content_*` tables | published rows | every row, plus insert/update/delete | nothing |
 | `user_state` | own rows, read + write | every row, read only | nothing, and no insert |
-| `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `telemetry_events`, `allowed_users` | nothing | read (plus the `read_at` flip on `admin_notifications`) | nothing |
+| `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `telemetry_events` | nothing | read (plus the `read_at` flip on `admin_notifications`) | nothing |
+| `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never its own role/status, never the last active manager, and only while its own row is still an active manager; no delete | nothing |
+| `access_audit` (0017) | nothing | read — nobody writes it but the trigger, `service_role` included | nothing |
 | `rate_limits` | nothing | nothing | nothing — `service_role` only, through `rate_limit_hit()` |
 
 No policy anywhere targets `anon`, and `anon` holds no grant on any table. Writes that need to bypass
-RLS (telemetry ingestion, the copilot log, the publish gate, the content loaders) go through
+RLS (telemetry ingestion, the copilot log, the publish gate, the content loaders — and, since 0017, the
+Supabase Auth ban/unban behind `/admin/users`, which has no session-scoped equivalent) go through
 [lib/supabase/admin.ts](../lib/supabase/admin.ts) in server code only, and take the email from the
 verified session, never from the payload.
 
@@ -112,11 +115,11 @@ take effect: without it the hook never runs and no role is ever stamped.**
       to **asymmetric (ECC) signing keys** if it is still on the legacy shared secret: `getClaims()`
       then verifies the JWT locally in middleware instead of calling the Auth API on every request.
       `middleware.ts` logs a one-time development warning while the project is still on HS256.
-- [ ] **6. Confirm the allow-list.** `select email, role, is_active from public.allowed_users;` — every
-      row is a person who should have access today, and exactly the right people have
-      `role = 'manager'`. This table is the whole authorization model; `authenticated` has `SELECT` on
-      it and nothing else (0013 revokes insert/update/delete), so it is edited in the dashboard or by
-      `service_role`.
+- [ ] **6. Confirm the allow-list.** `/admin/users`, or `select email, role, is_active from
+      public.allowed_users;` — every active row is a person who should have access today, and exactly
+      the right people have `role = 'manager'`. This table is the whole authorization model. Since 0017
+      managers edit it at `/admin/users` (§5); before 0017, `authenticated` had `SELECT` only and it was
+      edited in the SQL editor.
 
 After 1–6: run [supabase/tests/rls-checks.sql](../supabase/tests/rls-checks.sql) on **staging**. Its
 first block calls the hook directly and asserts the refusals; its non-member block asserts that a
@@ -125,19 +128,30 @@ table — published content included.
 
 ## 4. Residual risk: the access-token window
 
-**An access token is believed on its signature alone.** Nothing re-reads `allowed_users` while it is
-valid. So removing or deactivating somebody takes effect like this:
+**An access token is believed on its signature alone.** Middleware verifies it locally with
+`getClaims()` and PostgREST checks only its signature and expiry. Nothing re-reads `allowed_users`, or
+asks Supabase Auth whether the user is banned, while it is valid. So removing or deactivating somebody
+takes effect like this:
 
 | Action | Takes effect |
 | --- | --- |
-| `is_active = false`, or deleting the `allowed_users` row | Their **next token issuance** — which includes every refresh — is refused. Their current access token keeps working until it expires. |
-| Changing `role` (operator ↔ manager) | Same: the old role stays in force for the rest of the current token's life, in middleware *and* in RLS. |
+| **Deactivate at `/admin/users`** (0017 + `lib/admin/actions/user-access.ts`) | Two steps, in this order. (1) `is_active = false`: the access-token hook refuses every new token. (2) A Supabase Auth **ban** (`auth.admin.updateUserById(id, { ban_duration: "876000h" })`): GoTrue refuses the refresh-token grant ("Invalid Refresh Token: User Banned") and any new Google sign-in (403 "User is banned") at once, **whether or not the hook is enabled**. The access token already in their browser keeps working until it expires; after that, middleware's refresh fails and they land on `/login`. |
+| `is_active = false` by hand in the SQL editor, or deleting the row | Step (1) only: refused at their next token issuance (every refresh included), but **no ban**. If the hook is disabled, nothing stops the refresh. Prefer the page, or ban the user under Authentication → Users as well. |
+| Changing `role` (operator ↔ manager), at `/admin/users` or by hand | Their next refresh carries the new role. Until then the old role stays in force, in middleware *and* in RLS — with one exception since 0017: a demoted or deactivated manager can no longer **write the allow-list** with their old token (the guard trigger reads their current row, WT403), so they cannot restore themselves. |
 | Revoking sessions (Authentication → Users → the user → sign out / revoke) | Kills the refresh token, so no new access token can be minted. Does **not** invalidate the access token already in their browser. |
 
 **The window is the remaining TTL of the access token they are holding — at most the JWT expiry set in
-step 5, one hour by default.** Shortening that setting shortens the window proportionally; it is the
-only lever short of rotating the project's JWT signing key, which invalidates every session at once and
-is the break-glass option for a real compromise.
+step 5, one hour by default.** The ban does not shorten it: no request path in this app asks GoTrue about
+a user while their access token is valid, and making middleware do so would break its network-free rule
+(CLAUDE.md §4). Shortening the JWT expiry setting shortens the window proportionally; it is the only lever
+short of rotating the project's JWT signing key, which invalidates every session at once and is the
+break-glass option for a real compromise. The deactivate dialog on `/admin/users` says this in the
+manager's language ("open pages may keep working until the access token expires, usually up to an hour").
+
+If the ban step fails (GoTrue unreachable, the service-role key missing from the server's environment),
+the row is already inactive and the page reports `auth_sync_failed` instead of success. Pressing
+"deactivate" again retries only the ban. Until it succeeds the person is in the "by hand" row of the table
+above: the hook still refuses their next token.
 
 For this project's threat model — ~30 internal users, an internal sales knowledge base, no financial
 transactions — an hour of stale access after a deactivation is acceptable. It is **not** acceptable for
@@ -153,22 +167,45 @@ Two smaller residual notes:
 
 ## 5. Adding, removing and promoting people
 
+**`/admin/users`** (managers only, since 0017): add a person (email, optional name, role), change a role
+inline, deactivate or reactivate behind a confirmation. There is no delete — deactivating keeps the row,
+because `telemetry_events` and `copilot_logs` still reference the email and the dashboard's operator
+filter reads this table.
+
+The rules, and where each is enforced (the UI enforces none of them; it only avoids offering what would
+be refused):
+
+| Rule | TS (`lib/admin/actions/user-access.ts`) | Database (0017) |
+| --- | --- | --- |
+| Caller is a manager | `requireManagerSession()` | `allowed_users_manager_insert` / `_update` policies |
+| …and their row still says so (not a stale manager token) | pre-read of the active managers → `unauthorized` | `private.allowed_users_guard`, SQLSTATE `WT403` |
+| Email valid, stored lowercase | zod (`lib/admin/users.ts`) | `allowed_users_email_lowercase_chk` |
+| Only `role`, `is_active`, `full_name` change | the update payloads | column-level `GRANT UPDATE (role, is_active, full_name)` |
+| Never zero active managers | `accessViolation()` → `last_manager` | guard, `WT460` — also for `service_role` and the SQL editor |
+| No manager demotes or deactivates their own row | `accessViolation()` → `self_change` | guard, `WT461` |
+| No delete from a session | no action exists | no `DELETE` grant, and the guard checks deletes too |
+
+The guard serialises every write to the table on a transaction-scoped advisory lock, so two managers
+deactivating each other at the same moment cannot both succeed: the second one re-counts after the
+first commits and is refused.
+
+Every effective insert, update and delete — from the page, the SQL editor or `service_role` — appends one
+row to **`public.access_audit`** (`actor`, `target_email`, `action`, the whole row `before` and `after`).
+The table is append-only: no API role can write it, and a trigger refuses `UPDATE`/`DELETE`/`TRUNCATE`
+even from its owner. `actor` is the caller's JWT email, else the JWT role (`service_role`), else the
+database login (`postgres` in the SQL editor).
+
+The SQL editor still works — it is how the **first** manager is created on a new project, since nothing
+can create one otherwise:
+
 ```sql
 -- add (lowercase email — allowed_users_email_lowercase_chk)
 insert into public.allowed_users (email, role, full_name)
-values ('someone@company.uz', 'operator', 'Someone');
-
--- suspend, keeping the row and its history
-update public.allowed_users set is_active = false where email = 'someone@company.uz';
-
--- promote / demote
-update public.allowed_users set role = 'manager' where email = 'someone@company.uz';
+values ('someone@company.uz', 'manager', 'Someone');
 ```
 
-Then, for a suspension that has to be immediate, revoke their sessions in Authentication → Users and
-read §4 for what that does and does not do. Deleting the row works too; `is_active = false` is
-preferred because `telemetry_events` and `copilot_logs` still reference the email, and the dashboard's
-operator filter reads this table.
+A deactivation done there does not ban the account in Supabase Auth (§4); use the page, or also ban the
+user under Authentication → Users.
 
 ## 6. When you change any of this
 

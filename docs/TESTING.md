@@ -106,8 +106,8 @@ every painted element and fails on the widest one whose right edge is past the v
 
 | As | Must NOT see | Must see |
 | --- | --- | --- |
-| operator | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, `allowed_users`, other operators' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
-| manager | `rate_limits` | all of the left column, read-only for `user_state` |
+| operator | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, `allowed_users`, `access_audit`, other operators' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
+| manager | `rate_limits` | all of the left column, read-only for `user_state` and `access_audit` |
 | non-member × 3 | **every table, published content included** | nothing at all |
 
 It also asserts the write side: an operator may insert/update/delete only their own `user_state` rows, a
@@ -128,6 +128,15 @@ insert a fabricated `content_versions` row, a content row inserted without a `st
 `updated_by` is stamped from the JWT even when the payload sends another email, and a delete leaves a
 snapshot with `op = 'delete'` — including the `content_packages` row removed by the `on delete cascade`
 from its group.
+
+The allow-list blocks (migration 0017) run the statements `/admin/users` sends, as PostgREST would send
+them, and assert each refusal by SQLSTATE: an operator cannot insert, promote, deactivate or delete a row;
+a manager can add and re-role others (stamped and audited, a no-op update unaudited) but cannot touch
+`email`/`created_at`/`updated_at`/`updated_by`, delete, or demote/deactivate their own row (`WT461`); the
+last active manager cannot be demoted (`WT460`), whether by a manager, by `service_role` or in one
+whole-table `UPDATE`; a manager token whose row was demoted or deactivated is refused (`WT403`); and
+`access_audit` cannot be written by anyone, its owner included. To reach "last manager" through a manager
+session, the block deactivates every other manager on staging — inside the same rolled-back transaction.
 
 **Run it against the staging project only, never production.** It writes fixture rows. They are always
 rolled back, but while it runs it holds locks on live tables, and rolled-back inserts still consume

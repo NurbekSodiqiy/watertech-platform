@@ -18,6 +18,10 @@ const ERROR_CODES = [
   "gate_blocked",
   "not_found",
   "reference_in_use",
+  "email_taken",
+  "last_manager",
+  "self_change",
+  "auth_sync_failed",
   "unknown",
 ] as const;
 

@@ -15,6 +15,7 @@ import {
   Phone,
   ScrollText,
   Trash2,
+  UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -60,6 +61,7 @@ export function AdminShell({
   const tContacts = useTranslations("pages.admin.contacts");
   const tSops = useTranslations("pages.admin.sops");
   const tTrash = useTranslations("pages.admin.trash");
+  const tUsers = useTranslations("pages.admin.users");
   const tAdmin = useTranslations("pages.admin");
   const tShell = useTranslations("admin.shell");
   const navEntries: AdminNavEntry[] = [
@@ -68,6 +70,7 @@ export function AdminShell({
     { path: "/admin/contacts", label: tContacts("nav"), icon: Phone },
     { path: "/admin/sops", label: tSops("nav"), icon: ScrollText },
     { path: "/admin/trash", label: tTrash("nav"), icon: Trash2 },
+    { path: "/admin/users", label: tUsers("nav"), icon: UserCog },
   ];
 
   async function handleSignOut() {
