@@ -7,15 +7,10 @@ import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { QualityPanel } from "@/components/dashboard/QualityPanel";
 import { OnboardingProgressTable } from "@/components/dashboard/OnboardingProgressTable";
+import { DashboardWidgetError } from "@/components/dashboard/DashboardWidgetError";
 import { parseDashboardRange } from "@/lib/dashboard/range";
-import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
-import { filterRows } from "@/lib/telemetry/aggregate";
-import {
-  aggregateNotHelpful,
-  aggregateZeroResultQueriesDetailed,
-  aggregateMostViewed,
-  fetchOnboardingProgress,
-} from "@/lib/dashboard/quality";
+import { fetchDashboardKpis, fetchQualityTelemetry } from "@/lib/dashboard/telemetry-window";
+import { fetchOnboardingProgress } from "@/lib/dashboard/quality";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "dashboard.metadata" });
@@ -39,17 +34,15 @@ export default async function DashboardQualityPage({
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Sifat render");
 
   const range = parseDashboardRange(searchParams);
-  const { currentRows, labelMaps, kpis } = await fetchDashboardTelemetry(range);
-  const rows = filterRows(currentRows, { operatorEmail: range.operatorEmail });
-
-  const notHelpful = aggregateNotHelpful(rows);
-  const zeroResultQueries = aggregateZeroResultQueriesDetailed(rows);
-  const mostViewed = aggregateMostViewed(rows, labelMaps);
-  // Not derived from telemetry like the three above — onboarding progress is
-  // the operators' own user_state rows, read here under the manager policy in
-  // 0009_user_state.sql. It honours the operator filter but not the date
-  // range: the checklist is a running total, not an activity window.
-  const onboardingProgress = await fetchOnboardingProgress(range.operatorEmail);
+  const [kpis, quality, onboardingProgress] = await Promise.all([
+    fetchDashboardKpis(range),
+    fetchQualityTelemetry(range),
+    // Not derived from telemetry like the quality lists — onboarding progress
+    // is the operators' own user_state rows, read here under the manager
+    // policy in 0009_user_state.sql. It honours the operator filter but not the
+    // date range: the checklist is a running total, not an activity window.
+    fetchOnboardingProgress(range.operatorEmail),
+  ]);
 
   if (process.env.NODE_ENV !== "production") console.timeEnd("[dashboard] Sifat render");
 
@@ -60,9 +53,17 @@ export default async function DashboardQualityPage({
         <OperatorFilter range={range} basePath={BASE_PATH} />
       </div>
 
-      <KpiGrid kpis={kpis} />
+      {kpis.ok ? <KpiGrid kpis={kpis.data} /> : <DashboardWidgetError />}
 
-      <QualityPanel notHelpful={notHelpful} zeroResultQueries={zeroResultQueries} mostViewed={mostViewed} />
+      {quality.ok ? (
+        <QualityPanel
+          notHelpful={quality.data.notHelpful}
+          zeroResultQueries={quality.data.zeroResultQueries}
+          mostViewed={quality.data.mostViewed}
+        />
+      ) : (
+        <DashboardWidgetError />
+      )}
 
       <OnboardingProgressTable rows={onboardingProgress} />
     </div>

@@ -5,7 +5,10 @@ import type { TelemetryEventType } from "./types";
 export { TOTAL_ONBOARDING_ITEMS } from "@/lib/content/onboarding";
 
 /** Shape of a row as it comes back from `telemetry_events` — snake_case,
- * unlike the client-side TelemetryEvent. */
+ * unlike the client-side TelemetryEvent. The dashboard no longer reads raw
+ * rows (0016 aggregates in SQL, see lib/dashboard/telemetry-window.ts); the
+ * aggregate* functions below are the reference implementation that
+ * tests/unit/dashboard/parity.test.ts holds the SQL functions to. */
 export interface TelemetryRow {
   id: number;
   user_email: string;
@@ -132,6 +135,11 @@ export interface OperatorSummary {
   checklistPercent: number | null;
 }
 
+/** null when there is no checklist to measure against. */
+export function checklistPercent(completed: number, total: number): number | null {
+  return total > 0 ? Math.round((completed / total) * 100) : null;
+}
+
 /** Total idle time for one operator's events — idle_start/idle_end are
  * paired sequentially per session_id (they alternate by construction on
  * the client, so a simple scan is sufficient; an unmatched trailing
@@ -201,7 +209,7 @@ export function aggregatePerOperator(rows: TelemetryRow[], checklistTotal: numbe
       copyCount,
       checklistCompleted,
       checklistTotal,
-      checklistPercent: checklistTotal > 0 ? Math.round((checklistCompleted / checklistTotal) * 100) : null,
+      checklistPercent: checklistPercent(checklistCompleted, checklistTotal),
     });
   }
 

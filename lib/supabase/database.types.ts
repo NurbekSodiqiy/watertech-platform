@@ -8,6 +8,10 @@
 // content_versions (op) added by hand from 0013 on 2026-09-22 — run
 // `npm run gen:types` once 0013 is applied to confirm them against the project.
 // reorder_content_rows added by hand from 0015 on 2026-09-22.
+// dashboard_* and run_retention added by hand from 0016 on 2026-09-23. Every
+// RETURNS TABLE function comes back from PostgREST as an array of rows; bigint
+// and numeric columns arrive as JSON numbers. `p_operator` / `p_limit` /
+// `p_skip_if_scheduled` have SQL defaults, hence optional.
 //
 // allowed_users and telemetry_events were created by hand before
 // supabase/migrations existed; 0013_baseline_and_audit_integrity.sql is their
@@ -863,6 +867,67 @@ export type Database = {
         Args: { event: Json }
         Returns: Json
       }
+      dashboard_hourly: {
+        Args: { p_from: string; p_to: string; p_operator?: string }
+        Returns: {
+          event_count: number
+          hour_of_day: number
+        }[]
+      }
+      dashboard_kpis: {
+        Args: { p_from: string; p_to: string; p_prev_from: string; p_operator?: string }
+        Returns: {
+          active_ms: number
+          active_ms_prev: number
+          active_operators: number
+          active_operators_prev: number
+          zero_result_searches: number
+          zero_result_searches_prev: number
+        }[]
+      }
+      dashboard_most_viewed: {
+        Args: { p_from: string; p_to: string; p_operator?: string; p_limit?: number }
+        Returns: {
+          view_count: number
+          view_entity_id: string | null
+          view_path: string
+          view_type: string
+        }[]
+      }
+      dashboard_not_helpful: {
+        Args: { p_from: string; p_to: string; p_operator?: string; p_limit?: number }
+        Returns: {
+          feedback_count: number
+          page_path: string
+        }[]
+      }
+      dashboard_operator_activity: {
+        Args: { p_from: string; p_to: string; p_operator?: string }
+        Returns: {
+          active_ms: number
+          checklist_completed: number
+          copy_count: number
+          operator_email: string
+          top_viewed: Json
+        }[]
+      }
+      dashboard_web_vitals: {
+        Args: { p_from: string; p_to: string; p_operator?: string }
+        Returns: {
+          metric_name: string
+          p50: number
+          p75: number
+          samples: number
+        }[]
+      }
+      dashboard_zero_result_searches: {
+        Args: { p_from: string; p_to: string; p_operator?: string; p_limit?: number }
+        Returns: {
+          last_seen_at: string
+          search_count: number
+          search_query: string
+        }[]
+      }
       rate_limit_hit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
@@ -870,6 +935,19 @@ export type Database = {
       reorder_content_rows: {
         Args: { p_table: string; p_ids: string[]; p_versions: number[] }
         Returns: undefined
+      }
+      run_retention: {
+        Args: { p_skip_if_scheduled?: boolean }
+        Returns: {
+          admin_notifications_deleted: number
+          content_gate_reports_deleted: number
+          content_versions_deletes_deleted: number
+          content_versions_updates_deleted: number
+          copilot_logs_deleted: number
+          copilot_logs_redacted: number
+          skipped: boolean
+          telemetry_events_deleted: number
+        }[]
       }
     }
     Enums: {

@@ -27,12 +27,13 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0013 | `baseline_and_audit_integrity.sql` | baseline for `allowed_users` + `telemetry_events`; `status` defaults to `'draft'`; `updated_by` stamped by the DB; delete snapshots; `content_versions` locked down | 0002, 0010–0012 |
 | 0014 | `role_gated_rls.sql` | `private.app_role/is_member/is_manager`; every policy role-gated and InitPlan-wrapped; the access-token hook refuses instead of stamping `'none'` | 0013 (and 0009, see below) |
 | 0015 | `reorder_rows.sql` | `public.reorder_content_rows(text, text[], int[])` — version-guarded, all-or-nothing `sort_order` write for a whole list | 0014 (`private.is_manager()`) |
+| 0016 | `dashboard_rpc_and_retention.sql` | seven `public.dashboard_*` aggregate functions (manager only), covering indexes on `telemetry_events`, `public.run_retention()` and its pg_cron job when pg_cron is enabled | 0014, 0006, 0007, 0013 |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014` and then `0015` go last. Both it and `0013` abort with a clear message when an earlier file is missing, so the
-order is enforced rather than assumed.
+`0014`, `0015` and then `0016` go last. `0013`, `0014`, `0015` and `0016` all abort with a clear message when an
+earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
 no effect until it is **enabled in the dashboard** (Authentication → Hooks). That step and the rest of
@@ -59,7 +60,8 @@ statements into their own file and run them concurrently, outside a transaction.
    statement in the file is idempotent, so the second pass re-applies the baseline harmlessly.
 4. **`0014`.** Once, after `0013`'s second pass.
 5. **`0015`.** After `0014` — it checks for `private.is_manager()` and aborts without it.
-6. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+6. **`0016`.** After `0015`, same check.
+7. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -76,6 +78,12 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
 - [ ] **0015** `reorder_content_rows` — requires 0014 first. Nothing calls it until the drag-and-drop
       list UI lands in S12, so an unapplied 0015 breaks nothing today; `reorderRows()` would answer
       `unknown` (the RPC is missing) if it were called.
+- [ ] **0016** dashboard functions + retention — requires 0014 first. **Apply it before (or together with)
+      deploying the code that calls it**: from S09 on the dashboard reads only through these functions, so
+      until 0016 exists every telemetry widget on `/dashboard`, `/dashboard/content` and `/dashboard/quality`
+      shows its error state (the RPC is missing), and `/api/cron/content-scan` answers `retention_failed`
+      after its scan. Nothing an operator sees is affected.
+- [ ] `supabase/tests/dashboard-parity.sql` and `retention-checks.sql` on staging, after 0016.
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -111,6 +119,41 @@ raises a notice saying exactly that when it finds no `user_state` table.
 3. **No type regeneration needed.** The `private` schema is not exposed by PostgREST and nothing in the
    app calls its functions, so `lib/supabase/database.types.ts` is unaffected.
 4. **Run the RLS checks** (next section).
+
+### After applying 0016
+
+1. **Run the checks on staging**: `supabase/tests/dashboard-parity.sql` (every function against a
+   hand-computed table, plus the operator refusal and the grants) and `supabase/tests/retention-checks.sql`
+   — see [TESTING.md](TESTING.md#dashboard-parity-and-retention-checks-staging-only).
+2. **Decide who schedules retention.** 0016 schedules `watertech-run-retention` (daily, 21:30 UTC = 02:30
+   Tashkent) only if pg_cron is already enabled; its last notice says which way it went. Without pg_cron,
+   `/api/cron/content-scan` (Vercel Cron, 03:00 UTC) calls `run_retention(p_skip_if_scheduled => true)` after
+   its scan, and that call becomes a no-op the day a pg_cron job exists — so enabling pg_cron later
+   (Dashboard → Database → Extensions) and **re-running 0016** is all it takes to move the job into the
+   database. Job history: `select * from cron.job_run_details order by start_time desc limit 10;`.
+3. **Run the first retention pass by hand.** On a project that has never pruned anything the first run can
+   delete a large backlog in one transaction, which can outlast the API's statement timeout when the cron
+   route calls it. Run `select * from public.run_retention();` once in the SQL editor; every later daily run
+   only removes one day's worth.
+4. **No type regeneration strictly needed**, but `npm run gen:types` would now also emit the
+   `dashboard_*` / `run_retention` entries hand-written in `lib/supabase/database.types.ts` — compare them.
+
+### Retention policy (0016)
+
+`public.run_retention()` is the only place the numbers live (its `constant` declarations); this table
+describes them.
+
+| Table | Rule |
+| --- | --- |
+| `telemetry_events` | rows older than 180 days are deleted |
+| `copilot_logs` | `question` is set to null after 30 days; the row is deleted after 90 days |
+| `content_gate_reports` | rows older than 180 days are deleted |
+| `admin_notifications` | **read** notifications created more than 90 days ago are deleted; unread ones are kept |
+| `content_versions` | the newest 50 `op = 'update'` snapshots per `(table_name, row_id)` are kept; `op = 'delete'` snapshots (what `/admin/trash` restores from) are kept 180 days |
+
+The dashboard's longest range (93 days, `MAX_RANGE_SPAN_DAYS` in `lib/dashboard/range.ts`) compares against the 93
+days before it, 186 days in total — so at that one range the previous window's oldest ~6 days are already
+pruned and the KPI deltas lean positive. Every shorter range is unaffected.
 
 ## Running `rls-checks.sql` on staging
 
@@ -165,7 +208,9 @@ anyone should want.
 
 **Section 2 — `telemetry_events`.** The table pre-dates the migration, so rolling back means dropping
 only what `0013` added: `drop index if exists public.telemetry_events_ts_idx, public.telemetry_events_user_email_ts_idx, public.telemetry_events_type_ts_idx;`.
-Dropping the table would destroy the dashboard's history — never do that as a rollback.
+Dropping the table would destroy the dashboard's history — never do that as a rollback. (Once `0016` is
+applied, `_ts_idx` and `_type_ts_idx` no longer exist: `0016` replaced them with `_ts_cover_idx` and
+`_type_ts_cover_idx` on the same key columns.)
 
 **Section 3 — trigger functions.** Restore the `0002` body of `snapshot_content_version()` (plain
 `language plpgsql`, no `security definer`, `BEFORE UPDATE` behaviour only) and
@@ -204,3 +249,18 @@ the `0001` hook body, then `drop schema private cascade;` last — the policies 
 so dropping it first fails. **Doing this re-opens the P0 in `docs/SECURITY.md` §2.** Reverting only the
 hook, and keeping the role-gated policies, is the safe partial rollback: restore the `0001` body and
 nothing else.
+
+### Rolling back 0016
+
+Nothing in 0016 changes or deletes data by itself — only `run_retention()` does, when something calls it.
+To stop pruning immediately: `select cron.unschedule('watertech-run-retention');` (if the job exists) and
+`revoke execute on function public.run_retention(boolean) from service_role;` (the cron route then logs
+`retention_failed` after each scan). Rows already pruned are gone; there is no undo for retention.
+
+A full rollback file drops the ten functions (`public.dashboard_kpis`, `_operator_activity`, `_hourly`,
+`_zero_result_searches`, `_web_vitals`, `_not_helpful`, `_most_viewed`, `public.run_retention`,
+`private.dashboard_active_ms`, `private.dashboard_zero_result_events`) and re-creates the two 0013 indexes
+(`create index telemetry_events_ts_idx on public.telemetry_events (ts);`,
+`create index telemetry_events_type_ts_idx on public.telemetry_events (type, ts);`) before dropping the
+`_cover_` pair. The dashboard code of S09 cannot run without the functions, so it goes back together
+with the app release that preceded it.

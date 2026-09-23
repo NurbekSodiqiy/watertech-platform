@@ -218,6 +218,72 @@ full stage tree of every script, to render a name. `tests/unit/admin/registry.te
 ever reappears in a list projection. Full rows are still one call away (`listFullRows`) for the two callers
 that map them through `lib/content/db` — the publish gate's bundle and the script editor's link pickers.
 
+## Dashboard queries (S09, migration 0016)
+
+**Before.** Each dashboard tab ran one `select` of raw `telemetry_events` rows for the range plus the equal-length
+previous range (up to 186 days), with no order, limit or pagination, and aggregated in the page. PostgREST caps a
+response at `max-rows` (1000 by default), so once the window held more than 1000 events every number on the tab was
+computed on an arbitrary subset, and nothing said so. The payload grew with activity: 1000 rows of 10 columns is
+roughly 300-400 kB of JSON per render, all of it discarded after aggregation.
+
+**After.** The pages call `public.dashboard_*` functions through `supabase.rpc` (`lib/dashboard/telemetry-window.ts`),
+in parallel: Faollik makes 5 calls, Sifat 4 (plus the onboarding query), Kontent 1. Each returns aggregates only, so
+the payload no longer depends on how busy the range was:
+
+| Function | Rows returned | Measured JSON |
+|---|---:|---:|
+| `dashboard_kpis` | 1 | ~150 B |
+| `dashboard_operator_activity` | one per active operator (~30) | ~4.6 kB |
+| `dashboard_hourly` | 24 | ~0.9 kB |
+| `dashboard_zero_result_searches` | <= `p_limit` (100) | a few kB at most |
+| `dashboard_web_vitals` | one per metric (5) | < 0.5 kB |
+| `dashboard_not_helpful` | <= `p_limit` (100) | a few kB at most |
+| `dashboard_most_viewed` | <= `p_limit` (10) | ~0.9 kB |
+
+Every ranked list is capped by `p_limit` in SQL, after ranking, so no response can reach `max-rows`.
+
+**Measured latency.** Synthetic `telemetry_events`: 372 000 rows, 2 000 events a day for 186 days across 30
+operators and 15 event types, `vacuum analyze`d. Median of 3 warm calls per function, measured in PGlite 0.5.8
+(Postgres 18 compiled to WebAssembly, single-threaded, run in Node). It is a pessimistic stand-in: native Postgres on
+Supabase is typically several times faster, so treat these as upper bounds and re-measure on staging.
+
+| Function | 7-day range (14 k + 14 k rows) | 93-day range (186 k + 186 k rows) |
+|---|---:|---:|
+| `dashboard_kpis` (both windows) | 24 ms | 272 ms |
+| `dashboard_operator_activity` | 32 ms | 513 ms |
+| `dashboard_hourly` | 13 ms | 138 ms |
+| `dashboard_zero_result_searches` | 5 ms | 51 ms |
+| `dashboard_web_vitals` | 10 ms | 104 ms |
+| `dashboard_not_helpful` | 5 ms | 59 ms |
+| `dashboard_most_viewed` | 8 ms | 99 ms |
+
+The calls of a tab run in parallel, so a tab's database wait is its slowest call: `dashboard_operator_activity` on
+Faollik. The plans use index-only scans on the two covering indexes 0016 adds
+(`telemetry_events_ts_cover_idx`, `telemetry_events_type_ts_cover_idx`); the first-seen row of each listed group is
+fetched with one primary-key probe (`LATERAL … LIMIT 1`), not a join along the primary key.
+
+**Bundle.** The error state (`components/dashboard/DashboardWidgetError.tsx`, a `WidgetFallback` with
+`router.refresh()` as retry) moves `/dashboard` and `/dashboard/quality` from 117 kB to 133 kB in the route table;
+`/dashboard/content` stays at 140 kB. The +16 kB is one chunk, next-intl's client runtime (`useTranslations`,
+`NextIntlClientProvider`), which `dashboard/layout.tsx` already loads on every dashboard page: the table counts a
+page's own entry chunks and not its layout's, so it now lists a chunk the browser was downloading anyway. Checked in
+`.next/app-build-manifest.json`: beyond the layout's chunks, each page still loads only its own page chunk and the
+one shared chunk it loaded before. Manager routes are outside the 180 kB operator budget either way.
+
+**How to measure on staging.** In the SQL editor, impersonate a manager and time the call:
+
+```sql
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"role":"authenticated","app_metadata":{"role":"manager"}}';
+explain (analyze, buffers) select * from public.dashboard_operator_activity(now() - interval '7 days', now());
+rollback;
+```
+
+`EXPLAIN` of a plpgsql function shows only the function scan; for the inner plan, paste the function's query with
+literal bounds (the `with op_first as (…)` body) under the same role. In dev, the pages' `console.time` lines
+(`[dashboard] Faollik render`, …) time the whole server render.
+
 ## Budgets
 
 | Budget | Limit |
@@ -225,6 +291,9 @@ that map them through `lib/content/db` — the publish gate's bundle and the scr
 | Operator route First Load JS (`next build` table) | <= 180 kB |
 | Client message payload | only allow-listed namespaces (`lib/i18n/client-messages.ts`), enforced by vitest |
 | Modules mounted only after an interaction | `next/dynamic` when >= ~4 kB parsed or when they pull a dependency into first load |
+| Dashboard data | aggregates only: no dashboard code path selects rows from `telemetry_events`; a new widget is a new SQL function with a case in `supabase/tests/dashboard-parity.sql` |
+| Dashboard ranked lists | capped by `p_limit` (<= 1000, PostgREST's `max-rows`); the pages send 100 / 100 / 10 |
+| Dashboard function latency (staging, native Postgres) | <= 300 ms per call at the default 7-day range; <= 2 s at the 93-day maximum — far inside the `authenticated` role's statement timeout (8 s on Supabase), which would turn an overrun into the widget's error state |
 
 ### Routes over 180 kB after S05 (6 of 36 operator routes; baseline: 6)
 

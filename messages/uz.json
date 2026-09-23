@@ -512,7 +512,6 @@
       "zeroResults": "Natijasiz qidiruvlar"
     },
     "activity": {
-      "loadError": "Ma'lumotlarni yuklab bo'lmadi: {error}",
       "perOperator": "Operatorlar bo'yicha faollik",
       "mostViewed": "Eng ko'p ko'rilgan",
       "noData": "Ma'lumot yo'q",

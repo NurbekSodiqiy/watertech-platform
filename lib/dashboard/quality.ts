@@ -78,7 +78,14 @@ export interface MostViewedItem {
 
 const MOST_VIEWED_TYPES: ReadonlySet<TelemetryRow["type"]> = new Set(["stage_view", "objection_view", "faq_view"]);
 
-export function aggregateMostViewed(rows: TelemetryRow[], maps: EntityLabelMaps, limit = 10): MostViewedItem[] {
+/** Length of the Sifat tab's "most viewed" list — passed to
+ * public.dashboard_most_viewed as p_limit, and the reference default below. */
+export const MOST_VIEWED_LIMIT = 10;
+
+/** The not-helpful, zero-result and most-viewed aggregators in this file are
+ * the reference for public.dashboard_not_helpful / _zero_result_searches /
+ * _most_viewed (0016) — see tests/unit/dashboard/parity.test.ts. */
+export function aggregateMostViewed(rows: TelemetryRow[], maps: EntityLabelMaps, limit = MOST_VIEWED_LIMIT): MostViewedItem[] {
   const counts = new Map<string, MostViewedItem>();
   for (const r of rows) {
     if (!MOST_VIEWED_TYPES.has(r.type)) continue;

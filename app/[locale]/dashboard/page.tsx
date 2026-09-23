@@ -6,18 +6,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
+import { DashboardWidgetError } from "@/components/dashboard/DashboardWidgetError";
 import { formatDuration } from "@/lib/dashboard/format";
 import { parseDashboardRange } from "@/lib/dashboard/range";
-import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
-import {
-  aggregatePerOperator,
-  aggregateZeroResultSearches,
-  aggregateHourly,
-  aggregateWebVitals,
-  filterRows,
-  PLANNED_HOURS,
-  TOTAL_ONBOARDING_ITEMS,
-} from "@/lib/telemetry/aggregate";
+import { fetchActivityTelemetry, fetchDashboardKpis } from "@/lib/dashboard/telemetry-window";
+import { PLANNED_HOURS } from "@/lib/telemetry/aggregate";
 
 const BASE_PATH = "/dashboard";
 
@@ -45,13 +38,10 @@ export default async function DashboardPage({
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Faollik render");
 
   const range = parseDashboardRange(searchParams);
-  const { currentRows, labelMaps, kpis, error } = await fetchDashboardTelemetry(range);
-
-  const rows = filterRows(currentRows, { operatorEmail: range.operatorEmail });
-  const operators = aggregatePerOperator(rows, TOTAL_ONBOARDING_ITEMS, labelMaps);
-  const zeroResultSearches = aggregateZeroResultSearches(rows);
-  const hourlyActual = aggregateHourly(rows);
-  const webVitals = aggregateWebVitals(rows);
+  const [kpis, { operators, hourly, zeroResultSearches, webVitals }] = await Promise.all([
+    fetchDashboardKpis(range),
+    fetchActivityTelemetry(range),
+  ]);
 
   if (process.env.NODE_ENV !== "production") console.timeEnd("[dashboard] Faollik render");
 
@@ -62,17 +52,13 @@ export default async function DashboardPage({
         <OperatorFilter range={range} basePath={BASE_PATH} />
       </div>
 
-      <KpiGrid kpis={kpis} />
-
-      {error && (
-        <div className="rounded-2xl border border-status-outdated/40 bg-status-outdated/10 p-4 text-[13px] text-primary-dark">
-          {tDash("loadError", { error })}
-        </div>
-      )}
+      {kpis.ok ? <KpiGrid kpis={kpis.data} /> : <DashboardWidgetError />}
 
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">{tDash("perOperator")}</h2>
-        {operators.length === 0 ? (
+        {!operators.ok ? (
+          <DashboardWidgetError />
+        ) : operators.data.length === 0 ? (
           <EmptyState
             variant="inline"
             stateKey="dashboardNoEvents"
@@ -82,7 +68,7 @@ export default async function DashboardPage({
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {operators.map((op) => (
+            {operators.data.map((op) => (
               <div key={op.email} className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-soft">
                 <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
                   <p className="truncate text-[14px] font-semibold text-primary-dark">{op.email}</p>
@@ -138,44 +124,50 @@ export default async function DashboardPage({
 
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">{tDash("hourlyHeading")}</h2>
-        <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
-          <table className="w-full min-w-[480px] text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-border bg-surface-alt/60">
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("hour")}</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("plan")}</th>
-                <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("actual")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PLANNED_HOURS.map((block) => {
-                const actual = hourlyActual.slice(block.startHour, block.endHour).reduce((a, b) => a + b, 0);
-                return (
-                  <tr key={block.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2.5 text-text-secondary">
-                      {block.startHour}:00–{block.endHour}:00
-                    </td>
-                    <td className="px-4 py-2.5 text-primary-dark">{tPlan(String(block.id))}</td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`inline-flex min-w-[32px] justify-center rounded-full px-2 py-0.5 text-[12px] font-semibold ${
-                          actual > 0 ? "bg-status-ok/15 text-status-ok" : "bg-border/50 text-text-secondary"
-                        }`}
-                      >
-                        {actual}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {!hourly.ok ? (
+          <DashboardWidgetError />
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
+            <table className="w-full min-w-[480px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-alt/60">
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("hour")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("plan")}</th>
+                  <th className="px-4 py-2.5 font-semibold text-primary-dark">{tDash("actual")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PLANNED_HOURS.map((block) => {
+                  const actual = hourly.data.slice(block.startHour, block.endHour).reduce((a, b) => a + b, 0);
+                  return (
+                    <tr key={block.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2.5 text-text-secondary">
+                        {block.startHour}:00–{block.endHour}:00
+                      </td>
+                      <td className="px-4 py-2.5 text-primary-dark">{tPlan(String(block.id))}</td>
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={`inline-flex min-w-[32px] justify-center rounded-full px-2 py-0.5 text-[12px] font-semibold ${
+                            actual > 0 ? "bg-status-ok/15 text-status-ok" : "bg-border/50 text-text-secondary"
+                          }`}
+                        >
+                          {actual}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">{tDash("zeroHeading")}</h2>
-        {zeroResultSearches.length === 0 ? (
+        {!zeroResultSearches.ok ? (
+          <DashboardWidgetError />
+        ) : zeroResultSearches.data.length === 0 ? (
           <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
@@ -187,7 +179,7 @@ export default async function DashboardPage({
                 </tr>
               </thead>
               <tbody>
-                {zeroResultSearches.map((s) => (
+                {zeroResultSearches.data.map((s) => (
                   <tr key={s.query} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 text-primary-dark">{s.query}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{s.count}</td>
@@ -201,7 +193,9 @@ export default async function DashboardPage({
 
       <section className="space-y-3">
         <h2 className="text-[15px] font-bold text-primary-dark">{tDash("webVitals")}</h2>
-        {webVitals.length === 0 ? (
+        {!webVitals.ok ? (
+          <DashboardWidgetError />
+        ) : webVitals.data.length === 0 ? (
           <EmptyState variant="inline" stateKey="dashboardNoEvents" title={t("title")} reason={t("reason")} />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-soft">
@@ -215,7 +209,7 @@ export default async function DashboardPage({
                 </tr>
               </thead>
               <tbody>
-                {webVitals.map((v) => (
+                {webVitals.data.map((v) => (
                   <tr key={v.name} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 font-semibold text-primary-dark">{v.name}</td>
                     <td className="px-4 py-2.5 text-primary-dark">{v.p50}</td>

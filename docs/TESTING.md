@@ -8,6 +8,7 @@ manual, and the signed-in half of the e2e suite needs a session cookie captured 
 | Unit (Vitest, node env) | `npm test` | `tests/unit/**/*.test.ts` | yes |
 | End-to-end (Playwright, Chromium) | `npm run build && npm run e2e` | `tests/e2e/*.spec.ts` | yes, unauthenticated only |
 | Row Level Security | Supabase SQL editor | `supabase/tests/rls-checks.sql` | no — staging only |
+| Dashboard SQL parity + retention | Supabase SQL editor | `supabase/tests/dashboard-parity.sql`, `retention-checks.sql` | no — staging only (the TS half of the parity check runs in `npm test`) |
 | Accessibility (axe-core, in Playwright) | `npm run e2e` | `tests/e2e/a11y.spec.ts` | yes, public routes only |
 | Types + lint | `npm run typecheck && npm run lint` | — | yes |
 
@@ -150,6 +151,31 @@ fails with "is 0014 applied?" and the non-member block reports rows a pre-0014 p
 Either way, write the fix as a new migration instead of editing the table by hand.
 
 Re-run it after every migration that touches a policy or GRANT.
+
+## Dashboard parity and retention checks (staging only)
+
+Migration 0016 moved the manager dashboard's aggregates into SQL functions. The TS aggregators
+(`lib/telemetry/aggregate.ts`, `lib/dashboard/kpi.ts`, `lib/dashboard/quality.ts`) stay as the
+reference, and one expected table pins both sides:
+
+- `supabase/tests/dashboard-parity.sql` holds a JSON document (between the `$parity$` markers) with
+  ~80 fixture events and every function's expected rows, for all operators and for one. It inserts the
+  events, calls each `dashboard_*` function as a manager and compares the result to those rows. It then
+  checks that an operator and a claim-less token are refused with `WT403` by the functions themselves,
+  and that only `authenticated` holds `EXECUTE` on them.
+- `tests/unit/dashboard/parity.test.ts` (in `npm test`) reads **the same file**, runs the TS
+  aggregators over the same events, and asserts that the expected rows mapped through
+  `lib/dashboard/telemetry-rpc.ts` equal what the aggregators produce. Change an expectation and both
+  suites see it; add a widget and it gets a fixture case in the document, not a second table.
+- `supabase/tests/retention-checks.sql` puts one row on each side of every horizon in
+  `public.run_retention()`, runs it, asserts what is left, runs it again (nothing left to do), checks
+  the `p_skip_if_scheduled` switch against the pg_cron job, and that only `service_role` can execute it.
+
+Run each like `rls-checks.sql`: staging project → SQL Editor → paste the whole file → run once. Pass is a
+single row (`Dashboard parity checks passed` / `Retention checks passed`), failure an error starting
+with `PARITY FAIL:` / `RETENTION FAIL:`. Both end in `ROLLBACK`. The parity fixture lives in March 2001,
+so no real event can fall into its windows; the retention check also prunes real staging rows inside
+the transaction, which the rollback restores.
 
 ## CI (`.github/workflows/ci.yml`)
 

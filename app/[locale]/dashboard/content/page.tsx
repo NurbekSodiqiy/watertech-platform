@@ -6,8 +6,9 @@ import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { ContentHealthPanel } from "@/components/dashboard/ContentHealthPanel";
+import { DashboardWidgetError } from "@/components/dashboard/DashboardWidgetError";
 import { parseDashboardRange } from "@/lib/dashboard/range";
-import { fetchDashboardTelemetry } from "@/lib/dashboard/telemetry-window";
+import { fetchDashboardKpis } from "@/lib/dashboard/telemetry-window";
 import { getContentHealth } from "@/lib/dashboard/content-health";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
@@ -32,7 +33,7 @@ export default async function DashboardContentPage({
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Kontent render");
 
   const range = parseDashboardRange(searchParams);
-  const [{ kpis }, health] = await Promise.all([fetchDashboardTelemetry(range), getContentHealth()]);
+  const [kpis, health] = await Promise.all([fetchDashboardKpis(range), getContentHealth()]);
 
   if (process.env.NODE_ENV !== "production") console.timeEnd("[dashboard] Kontent render");
 
@@ -43,7 +44,7 @@ export default async function DashboardContentPage({
         <OperatorFilter range={range} basePath={BASE_PATH} />
       </div>
 
-      <KpiGrid kpis={kpis} />
+      {kpis.ok ? <KpiGrid kpis={kpis.data} /> : <DashboardWidgetError />}
 
       <ContentHealthPanel health={health} />
     </div>

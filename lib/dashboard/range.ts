@@ -1,9 +1,11 @@
 import "server-only";
 import { todayInTashkent, tashkentDayRangeUTC, isValidDateString } from "@/lib/telemetry/aggregate";
 
-/** Longest span a manager can query in one go — keeps the combined telemetry
- * query (current range + the equal-length previous range right before it,
- * see combinedQueryWindow) bounded to at most ~184 days of rows. */
+/** Longest span a manager can query in one go — keeps the dashboard
+ * functions' scans (the range + the equal-length previous range the KPI deltas
+ * compare against, see previousEqualRange) bounded to two 93-day windows.
+ * Telemetry is kept 180 days (run_retention, 0016), so at the very longest
+ * range the previous window's oldest days may already be pruned. */
 export const MAX_RANGE_SPAN_DAYS = 92;
 
 export interface DashboardRange {
@@ -65,16 +67,6 @@ export function previousEqualRange(range: DashboardRange): DashboardRange {
   const prevTo = addDays(range.from, -1);
   const prevFrom = addDays(prevTo, -(spanDays - 1));
   return { from: prevFrom, to: prevTo, operatorEmail: range.operatorEmail };
-}
-
-/** One window spanning both the previous and the current range, so a page
- * needs exactly one telemetry query per render (see CLAUDE.md #4 / dashboard
- * task item 6) instead of two — the two halves are split back out of the
- * returned rows by comparing `ts` against dashboardRangeWindow(range).startUTC. */
-export function combinedQueryWindow(range: DashboardRange): RangeWindow {
-  const { startUTC } = dashboardRangeWindow(previousEqualRange(range));
-  const { endUTC } = dashboardRangeWindow(range);
-  return { startUTC, endUTC };
 }
 
 export interface RangePreset {
