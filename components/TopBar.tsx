@@ -35,7 +35,16 @@ export function TopBar({
         </span>
       </Link>
 
-      <div className="relative min-w-0 flex-1 sm:max-w-[440px] sm:flex-none">
+      <button
+        type="button"
+        onClick={onOpenSearch}
+        className="shrink-0 rounded-lg p-1.5 text-primary-dark hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary-light sm:hidden"
+        aria-label={t("searchPlaceholder")}
+      >
+        <Search size={20} />
+      </button>
+
+      <div className="relative hidden min-w-0 flex-1 sm:block sm:max-w-[440px] sm:flex-none">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
         <button
           type="button"

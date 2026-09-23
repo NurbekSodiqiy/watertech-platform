@@ -1,6 +1,6 @@
 import { localeOrDefault, localizedPath } from "@/lib/i18n/localized-path";
 import { purgeLocalUserData, purgeServiceWorkerCaches } from "@/lib/auth/purge";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client-lazy";
 
 export interface SignOutOptions {
   /** The locale the operator is signed out in, straight from useLocale() —
@@ -39,7 +39,7 @@ export async function signOutAndPurge({ locale, email }: SignOutOptions): Promis
   await purgeServiceWorkerCaches();
 
   try {
-    await createClient().auth.signOut();
+    await (await getSupabaseClient()).auth.signOut();
   } catch {
     // The local session is cleared either way, and the navigation below is
     // what the operator sees. A server-side revoke that failed is retried by

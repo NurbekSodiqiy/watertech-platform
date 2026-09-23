@@ -7,7 +7,7 @@ import { stripLocalePrefix } from "@/lib/i18n/strip-locale";
 
 /** Tracks page_enter/page_leave purely off route changes — no visible UI.
  * Mounted once in app/[locale]/layout.tsx, as a sibling of AppShell (not
- * inside it — AppShell.tsx is design-locked, AGENTS.md), so it still sees
+ * inside it — AppShell.tsx is design-locked, CLAUDE.md §6), so it still sees
  * every navigation across the whole app. Uses next/navigation's raw
  * usePathname (not next-intl's) and strips the locale prefix itself, so
  * `path` values stay locale-less for dashboard aggregation. */

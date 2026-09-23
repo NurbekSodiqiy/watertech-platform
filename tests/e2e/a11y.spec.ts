@@ -91,6 +91,110 @@ for (const theme of THEMES) {
   });
 }
 
+/** WCAG relative luminance contrast of two opaque sRGB colours. */
+function contrastRatio(a: readonly number[], b: readonly number[]): number {
+  const lum = ([r, g, bl]: readonly number[]) => {
+    const [lr, lg, lb] = [r, g, bl].map((c) => {
+      const s = c / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Parses `rgb(...)` / `rgba(...)` as the browser reports computed colours. */
+function parseColor(value: string): [number, number, number, number] {
+  const nums = value.match(/[\d.]+/g)?.map(Number) ?? [];
+  return [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0, nums[3] ?? 1];
+}
+
+for (const theme of THEMES) {
+  test.describe(`a11y — nav badge contrast (${theme})`, () => {
+    test.skip(!operatorCookie, "TEST_OPERATOR_COOKIE is not set");
+
+    test("sidebar count badges and the whole page pass axe colour-contrast", async ({ context, page, baseURL }) => {
+      await applySession(context, operatorCookie ?? "", baseURL);
+      await useTheme(page, theme);
+      await page.goto("/");
+      await expectSignedInAt(page, /localhost:3000\/(\?|$)/);
+      await expectTheme(page, theme);
+      await page.waitForLoadState("networkidle");
+
+      const results = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+      expect(
+        results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`),
+        "colour-contrast violations"
+      ).toEqual([]);
+
+      // axe reports text on a semi-transparent fill as `incomplete` (it cannot
+      // composite the tint), so the badge is measured directly: its 15% status
+      // fill is composited over the sidebar surface and compared with the text.
+      const badge = page.locator('nav[aria-label] span[class*="bg-status-"]').first();
+      test.skip((await badge.count()) === 0, "no sidebar count badge on this account today");
+
+      const measured = await badge.evaluate((el) => {
+        const own = getComputedStyle(el);
+        let surface = el.parentElement;
+        while (surface && /rgba\(.*,\s*0\)$/.test(getComputedStyle(surface).backgroundColor)) {
+          surface = surface.parentElement;
+        }
+        return {
+          text: own.color,
+          fill: own.backgroundColor,
+          surface: surface ? getComputedStyle(surface).backgroundColor : "rgb(255, 255, 255)",
+        };
+      });
+
+      const [sr, sg, sb] = parseColor(measured.surface);
+      const [fr, fg, fb, fa] = parseColor(measured.fill);
+      const backdrop = [fr * fa + sr * (1 - fa), fg * fa + sg * (1 - fa), fb * fa + sb * (1 - fa)];
+      const [tr, tg, tb] = parseColor(measured.text);
+      expect(contrastRatio([tr, tg, tb], backdrop), "badge text vs tinted fill").toBeGreaterThanOrEqual(4.5);
+    });
+  });
+}
+
+test.describe("command palette semantics", () => {
+  test.skip(!operatorCookie, "TEST_OPERATOR_COOKIE is not set");
+
+  test("the input is a combobox whose active descendant follows the highlight", async ({ context, page, baseURL }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+    await page.goto("/faq");
+    await expectSignedInAt(page, /\/faq$/);
+
+    await page.keyboard.press("Control+k");
+    const dialog = page.getByRole("dialog");
+    const combobox = dialog.getByRole("combobox");
+    await expect(combobox).toBeFocused();
+
+    // "kompaniya" is a top-level page title, so results exist without the search index.
+    await combobox.fill("kompaniya");
+    const listbox = dialog.getByRole("listbox");
+    await expect(listbox).toBeVisible();
+    await expect(combobox).toHaveAttribute("aria-expanded", "true");
+    await expect(combobox).toHaveAttribute("aria-controls", (await listbox.getAttribute("id")) ?? "");
+
+    const options = listbox.getByRole("option");
+    expect(await options.count()).toBeGreaterThan(0);
+    await expect(options.first()).toHaveAttribute("aria-selected", "true");
+    await expect(combobox).toHaveAttribute("aria-activedescendant", (await options.first().getAttribute("id")) ?? "");
+
+    if ((await options.count()) > 1) {
+      await page.keyboard.press("ArrowDown");
+      await expect(options.nth(1)).toHaveAttribute("aria-selected", "true");
+      await expect(options.first()).toHaveAttribute("aria-selected", "false");
+      await expect(combobox).toHaveAttribute("aria-activedescendant", (await options.nth(1).getAttribute("id")) ?? "");
+    }
+
+    // No matches: nothing to control, so the combobox reports itself collapsed.
+    await combobox.fill("zzzzzzzzqq");
+    await expect(combobox).toHaveAttribute("aria-expanded", "false");
+    await expect(combobox).not.toHaveAttribute("aria-activedescendant", /.+/);
+  });
+});
+
 test.describe("keyboard walk", () => {
   test.skip(!operatorCookie, "TEST_OPERATOR_COOKIE is not set");
 

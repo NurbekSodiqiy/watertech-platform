@@ -74,6 +74,24 @@ test.describe("mobile 375x812 — operator routes", () => {
     });
   }
 
+  test("the search button is visible, inside the viewport and opens the palette", async ({ page }) => {
+    await page.goto("/faq");
+    await expectSignedInAt(page, /\/faq$/);
+
+    // Below `sm` the text field is hidden and an icon-only button takes over.
+    const search = page.getByRole("button", { name: /Bilimlar bazasidan qidirish/ });
+    await expect(search).toBeVisible();
+    const box = await search.boundingBox();
+    expect(box, "search button has a box").not.toBeNull();
+    expect(box?.width ?? 0, "search button width").toBeGreaterThanOrEqual(24);
+    expect((box?.x ?? 0) + (box?.width ?? 0), "search button right edge").toBeLessThanOrEqual(VIEWPORT.width);
+
+    await search.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("combobox")).toBeFocused();
+  });
+
   test("the nav drawer stays inside the viewport", async ({ page }) => {
     await page.goto("/faq");
     await expectSignedInAt(page, /\/faq$/);

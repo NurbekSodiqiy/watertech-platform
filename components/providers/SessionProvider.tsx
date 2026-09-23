@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client-lazy";
 import { purgeLocalUserData } from "@/lib/auth/purge";
 import { toSessionUser, type SessionUser } from "@/lib/auth/session-user";
 import { setTelemetryOwner } from "@/lib/telemetry/client";
@@ -48,8 +48,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const generation = useRef(0);
 
   useEffect(() => {
-    const supabase = createClient();
     let active = true;
+    let unsubscribe: (() => void) | null = null;
 
     /** Purges first when the account changed, then points the stores at the
      * session that is current now. Every step re-checks that no newer auth
@@ -93,17 +93,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       void apply((generation.current += 1), email, leaving ? previous.email : undefined);
     }
 
-    supabase.auth.getSession().then(({ data }) => handle(data.session?.user ?? null, false));
+    // The client is a lazy chunk (lib/supabase/client-lazy.ts), so the
+    // subscription starts once it has arrived. `active` is checked after the
+    // load: an unmount before then must not leave a listener behind.
+    getSupabaseClient()
+      .then(async (supabase) => {
+        if (!active) return;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      handle(session?.user ?? null, event === "SIGNED_OUT");
-    });
+        // Subscribed before the first read, so an auth event that lands while
+        // getSession() is pending is not missed.
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          handle(session?.user ?? null, event === "SIGNED_OUT");
+        });
+        unsubscribe = () => subscription.unsubscribe();
+
+        const { data } = await supabase.auth.getSession();
+        handle(data.session?.user ?? null, false);
+      })
+      .catch(() => {
+        // The chunk or the session read failed: the provider stays "loading"
+        // and consumers keep their signed-out defaults, same as offline.
+      });
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 

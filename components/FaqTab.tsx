@@ -88,7 +88,7 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
               </div>
             </div>
             <div className="relative rounded-2xl rounded-tl-sm border border-primary/20 border-l-[3px] border-l-primary bg-primary-light/25 px-6 py-5">
-              <span aria-hidden className="absolute left-4 top-2 text-5xl leading-none text-accent/25 select-none">&#8220;</span>
+              <span aria-hidden className="absolute left-4 top-2 text-[32px] leading-none text-accent/25 select-none">&#8220;</span>
               <p className="relative pl-4 text-base leading-relaxed text-primary-dark whitespace-pre-wrap">
                 {selectedFaqItem.answer}
               </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
@@ -78,6 +78,7 @@ export function CommandPalette({
   const tEmpty = useTranslations("emptyState.searchNoResults");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const listboxId = useId();
 
   // Page-title matches (above) point straight at a URL already, so they're
   // kept as-is; content matches (objection/script-stage/faq/competitor/
@@ -239,12 +240,20 @@ export function CommandPalette({
     }
   }
 
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
+  const hasOptions = list.length > 0;
+
   function renderRow(item: ResolvedItem, index: number) {
     const isActive = index === activeIndex;
     return (
       <button
         // A pinned item is usually also a recent one, so the path alone is not unique across groups.
         key={`${item.group ?? "result"}:${item.path}`}
+        id={optionId(index)}
+        role="option"
+        aria-selected={isActive}
+        // Focus stays in the input; the highlight is announced via aria-activedescendant.
+        tabIndex={-1}
         onClick={() => go(item.path)}
         onMouseMove={() => {
           if (!isActive) moveHighlight(index);
@@ -286,6 +295,12 @@ export function CommandPalette({
         <Search size={18} className="shrink-0 text-text-secondary" />
         <input
           ref={inputRef}
+          role="combobox"
+          aria-expanded={hasOptions}
+          aria-controls={hasOptions ? listboxId : undefined}
+          aria-activedescendant={hasOptions ? optionId(activeIndex) : undefined}
+          aria-autocomplete="list"
+          aria-label={tChrome("commandPalette.title")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleInputKeyDown}
@@ -308,7 +323,13 @@ export function CommandPalette({
                 has moved never reports "safe to remove", so closing the palette
                 after arrowing through it would hang. */}
             <AnimatePresence initial={false}>
-              <div key="rows" className="space-y-0.5">
+              <div
+                key="rows"
+                id={hasOptions ? listboxId : undefined}
+                role={hasOptions ? "listbox" : undefined}
+                aria-label={hasOptions ? tChrome("commandPalette.results") : undefined}
+                className="space-y-0.5"
+              >
                 {results.length === 0 && indexLoading && (
                   <p className="px-2.5 py-6 text-center text-[13px] text-text-secondary">{tChrome("commandPalette.loading")}</p>
                 )}
@@ -327,11 +348,19 @@ export function CommandPalette({
           </>
         ) : idleItems.length > 0 ? (
           <AnimatePresence initial={false}>
-            <div key="rows" className="space-y-0.5">
+            <div
+              key="rows"
+              id={listboxId}
+              role="listbox"
+              aria-label={tChrome("commandPalette.results")}
+              className="space-y-0.5"
+            >
               {idleItems.map((item, index) => (
                 <Fragment key={`${item.group}:${item.path}`}>
                   {item.group !== idleItems[index - 1]?.group && (
-                    <p className="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+                    <p
+                      role="presentation"
+                      className="px-2.5 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
                       {item.group === "favourites" ? tCommon("favourites") : tCommon("recents")}
                     </p>
                   )}

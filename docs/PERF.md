@@ -330,31 +330,51 @@ literal bounds (the `with op_first as (…)` body) under the same role. In dev, 
 | Dashboard ranked lists | capped by `p_limit` (<= 1000, PostgREST's `max-rows`); the pages send 100 / 100 / 10 |
 | Dashboard function latency (staging, native Postgres) | <= 300 ms per call at the default 7-day range; <= 2 s at the 93-day maximum — far inside the `authenticated` role's statement timeout (8 s on Supabase), which would turn an overrun into the widget's error state |
 
-### Routes over 180 kB after S05 (6 of 36 operator routes; baseline: 6)
+### Routes over 180 kB: none after S14 (baseline: 6 of 36 operator routes)
 
-| Route | Baseline | After S16 | After S05 |
-|---|---:|---:|---:|
-| `/company/onboarding` | 248 kB | 248 kB | 249 kB |
-| `/sales-process/scripts` | 248 kB | 235 kB | 238 kB |
-| `/products` | 231 kB | 231 kB | 234 kB |
-| `/` | 237 kB | 226 kB | 229 kB |
-| `/sales-process/battle-cards/[slug]` | 223 kB | 223 kB | 225 kB |
-| `/changelog` | 212 kB | 212 kB | 214 kB |
+| Route | Baseline | After S16 | After S05 | After S14 |
+|---|---:|---:|---:|---:|
+| `/company/onboarding` | 248 kB | 248 kB | 249 kB | 180 kB |
+| `/sales-process/scripts` | 248 kB | 235 kB | 238 kB | 170 kB |
+| `/products` | 231 kB | 231 kB | 234 kB | 166 kB |
+| `/` | 237 kB | 226 kB | 229 kB | 160 kB |
+| `/sales-process/battle-cards/[slug]` | 223 kB | 223 kB | 225 kB | 156 kB |
+| `/changelog` | 212 kB | 212 kB | 214 kB | 145 kB |
 
-**Why.** All six import the per-user state store (`useUserState`: pins, favourites, onboarding progress, scripts
-position, changelog read receipts), and `lib/user-state/store.ts` imports `lib/supabase/client` statically. That
-brings the Supabase browser client into the page's first-load JS: `auth-js` 14.0 kB + `supabase-js` with
-storage/postgrest/realtime 53.2 kB + `zod` 12.7 kB, all gzip, about 80 kB. `/company/onboarding` (248 kB) and
-`/sales-process/scripts` (238 kB) add their own page code on top. `/login` (200 kB, public) needs the client to
-start OAuth. S05 added 1-3 kB to each by putting that same store on the layout path (see above).
+`/company/onboarding` reads 180 kB in the route table, which is rounded: it meets the `<= 180 kB` limit with no
+headroom, so the next client import on that page needs a look at the table first.
+
+**Why they were over.** All six import the per-user state store (`useUserState`: pins, favourites, onboarding
+progress, scripts position, changelog read receipts), and `lib/user-state/store.ts` imported `lib/supabase/client`
+statically, which put the Supabase browser client (~67-80 kB gzip) into every page's first-load JS. S14 removed
+that (see below).
+
+## After 2026-09-23 (S14, lazy Supabase client)
+
+`lib/supabase/client-lazy.ts` exports `getSupabaseClient()`: one memoized `import("@/lib/supabase/client")`, one
+shared client, and a failed chunk load is not cached (the next call retries). `SessionProvider`,
+`lib/user-state/store.ts` and `lib/auth/sign-out.ts` use it instead of the static import; `lib/auth/purge.ts` only
+reached the client through the store. Behaviour that had to survive, and how:
+
+- **Owner guard (S05).** Every place that used the client already re-checked `owner` after its awaits. The client
+  load is one more await, so `syncFromServer`, `pruneDaily` and the `send()` loop each re-check `owner` / `stopped`
+  straight after `getSupabaseClient()` and before the request goes out. Nothing queued under one account can be
+  uploaded because the chunk arrived late.
+- **Purge.** `stopUserStateSends()` is synchronous and unchanged; `signOutAndPurge` still purges before it asks for
+  the client, and revokes the session with it afterwards.
+- **Singleton.** The store's module-level client is replaced by the loader's single promise.
+- **SessionProvider.** The auth subscription now starts when the chunk arrives. `active` is checked after the load
+  so an unmount in between leaves no listener, and the subscription is registered before `getSession()` so an auth
+  event during the first read is not missed. Until then the provider is `loading`, as it already was on first paint.
+
+`/login` (200 kB, public) still imports the client statically through `GoogleSignInButton`: it needs it to start
+OAuth and is not an operator route.
+
+Also in S14 (no bundle effect): the palette input is now a `combobox` (`CommandPalette`), the TopBar search is an
+icon-only button below `sm`, the nav badge text and lock icon colours changed. See `docs/AUDIT.md` #9-#14.
 
 ## Open items
 
-1. **The Supabase browser client is imported statically in four places**: `components/providers/SessionProvider.tsx`,
-   `lib/user-state/store.ts`, `lib/auth/sign-out.ts` and `lib/auth/purge.ts` (through the store). Each only uses it inside an effect or an async function, so a
-   dynamic `import("@/lib/supabase/client")` would take about 67 kB gzip (auth-js + supabase-js; zod stays if anything
-   else uses it) out of the scripts every operator page needs before it can hydrate. It is the largest remaining item and
-   the only one that would bring the six routes above under budget. Not done in S16: it changes when the session resolves
-   in an auth-related provider, which is outside this task's steps.
+1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
 2. `MiniCalculatorButton` and the certificate lightbox could be split (~1.5 kB gzip each) if a later task names `TopBar`.
 3. LCP was not measured in a browser (operator routes need a Google OAuth session); the `priority` choice is by layout.

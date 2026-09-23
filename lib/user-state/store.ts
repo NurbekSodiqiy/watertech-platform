@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client-lazy";
 import { DAILY_KEY_PREFIX, dateKey, type UserStateKeyDef } from "@/lib/user-state/keys";
 import { LEGACY_OWNER_MARKER_KEY, legacyBelongsTo } from "@/lib/user-state/legacy";
 import {
@@ -94,12 +94,6 @@ let ownerResolution: Promise<string | null> | null = null;
 let legacyOwner: string | null = null;
 
 let cachedEmail: string | null | undefined;
-let clientSingleton: ReturnType<typeof createClient> | null = null;
-
-function supabase() {
-  if (!clientSingleton) clientSingleton = createClient();
-  return clientSingleton;
-}
 
 /** The signed-in email, read once from the cookie session (no network unless
  * the token needs refreshing, same as SessionProvider). Reads and deletes
@@ -109,7 +103,7 @@ function supabase() {
 async function currentEmail(): Promise<string | null> {
   if (cachedEmail !== undefined) return cachedEmail;
   try {
-    const { data } = await supabase().auth.getSession();
+    const { data } = await (await getSupabaseClient()).auth.getSession();
     cachedEmail = data.session?.user?.email ?? null;
   } catch {
     cachedEmail = null;
@@ -402,7 +396,9 @@ async function syncFromServer<T>(def: UserStateKeyDef<T>, ownerId: string): Prom
 
   let remote: StoredValue<T> | null = null;
   try {
-    const { data, error } = await supabase()
+    const client = await getSupabaseClient();
+    if (owner !== ownerId) return;
+    const { data, error } = await client
       .from("user_state")
       .select("value, updated_at")
       .eq("user_email", email)
@@ -527,7 +523,9 @@ function pruneDaily(today: string, ownerId: string) {
     const email = await currentEmail();
     if (!email || stopped || owner !== ownerId) return;
     try {
-      await supabase()
+      const client = await getSupabaseClient();
+      if (stopped || owner !== ownerId) return;
+      await client
         .from("user_state")
         .delete()
         .eq("user_email", email)
@@ -566,7 +564,9 @@ async function send(): Promise<void> {
       try {
         // No user_email in the payload: the column defaults to the JWT's own
         // email claim, so identity never travels through the client.
-        const { error } = await supabase()
+        const client = await getSupabaseClient();
+        if (stopped || owner !== ownerId) break;
+        const { error } = await client
           .from("user_state")
           .upsert(
             { key: write.key, value: write.value as never, updated_at: write.updatedAt },

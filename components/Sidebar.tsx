@@ -23,7 +23,7 @@ function NavCountBadge({ tone, count }: { tone: "ok" | "warning"; count: number 
   return (
     <span
       className={`ml-auto flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-        tone === "ok" ? "bg-status-ok/15 text-status-ok" : "bg-status-warning/15 text-status-warning"
+        tone === "ok" ? "bg-status-ok/15 text-primary-dark" : "bg-status-warning/15 text-primary-dark"
       }`}
     >
       {count}
@@ -142,7 +142,7 @@ const NavItem = memo(function NavItem({
               iconSize={depth === 0 ? 18 : 14}
             />
             <span className="truncate">{t(node.title)}</span>
-            {node.locked && <LockIcon size={11} className="ml-auto shrink-0 text-status-warning" />}
+            {node.locked && <LockIcon size={11} className="ml-auto shrink-0 text-status-outdated" />}
             {navBadges?.[node.path] && (
               <NavCountBadge tone={navBadges[node.path].tone} count={navBadges[node.path].count} />
             )}
@@ -234,7 +234,7 @@ function CollapsedNavItem({
       >
         <IconBadge Icon={Icon} active={active} size={40} iconSize={18} />
         {node.locked && (
-          <LockIcon size={10} className="absolute right-1 top-1 text-status-warning" />
+          <LockIcon size={10} className="absolute right-1 top-1 text-status-outdated" />
         )}
         {isPinned && (
           <span
