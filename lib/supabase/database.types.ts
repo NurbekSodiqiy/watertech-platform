@@ -11,6 +11,7 @@
 // access_audit and admin_user_last_activity added by hand from 0017 on
 // 2026-09-23. access_audit's Insert/Update exist only because the generator
 // always emits them — no API role holds either privilege on that table.
+// copilot_stats / copilot_unanswered added by hand from 0019 on 2026-09-23.
 // dashboard_* and run_retention added by hand from 0016 on 2026-09-23. Every
 // RETURNS TABLE function comes back from PostgREST as an array of rows; bigint
 // and numeric columns arrive as JSON numbers. `p_operator` / `p_limit` /
@@ -909,6 +910,30 @@ export type Database = {
       custom_access_token_hook: {
         Args: { event: Json }
         Returns: Json
+      }
+      copilot_stats: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          error_count: number
+          error_rate: number | null
+          no_hits_count: number
+          no_hits_rate: number | null
+          ok_count: number
+          p50_latency_ms: number | null
+          p95_latency_ms: number | null
+          rate_limited_count: number
+          total_count: number
+        }[]
+      }
+      copilot_unanswered: {
+        Args: { p_from: string; p_to: string; p_limit?: number }
+        Returns: {
+          ask_count: number
+          last_asked_at: string
+          operator_count: number
+          question_key: string
+          sample_question: string
+        }[]
       }
       dashboard_hourly: {
         Args: { p_from: string; p_to: string; p_operator?: string }

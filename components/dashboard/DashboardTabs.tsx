@@ -3,37 +3,27 @@
 import { m, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
-import { Activity, FileStack, Star, type LucideIcon } from "lucide-react";
+import { isNavItemActive, managerArea } from "@/lib/admin/nav";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
-interface DashboardTab {
-  path: string;
-  labelKey: "activity" | "content" | "quality";
-  icon: LucideIcon;
-}
-
-const TABS: DashboardTab[] = [
-  { path: "/dashboard", labelKey: "activity", icon: Activity },
-  { path: "/dashboard/content", labelKey: "content", icon: FileStack },
-  { path: "/dashboard/quality", labelKey: "quality", icon: Star },
-];
+const TABS = managerArea("dashboard").items;
 
 /** Client component so it can read the current pathname for active-tab
  * highlighting; layout.tsx has no searchParams to derive that from itself. */
 export function DashboardTabs() {
-  const t = useTranslations("dashboard.tabs");
+  const t = useTranslations("dashboard");
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
   return (
     <nav className="flex flex-wrap gap-1 border-b border-border">
       {TABS.map((tab) => {
-        const isActive = tab.path === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(tab.path);
+        const isActive = isNavItemActive(tab, pathname);
         const Icon = tab.icon;
         return (
           <Link
-            key={tab.path}
-            href={tab.path}
+            key={tab.href}
+            href={tab.href}
             className={`relative flex items-center gap-1.5 border-b-2 border-transparent px-3.5 py-2.5 text-[13px] font-medium transition-colors ${
               isActive ? "text-primary-dark" : "text-text-secondary hover:text-primary-dark"
             }`}
@@ -47,7 +37,7 @@ export function DashboardTabs() {
               />
             )}
             <Icon size={14} />
-            {t(tab.labelKey)}
+            {t(tab.label)}
           </Link>
         );
       })}

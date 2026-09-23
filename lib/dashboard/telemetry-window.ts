@@ -42,12 +42,12 @@ export type WidgetData<T> = { ok: true; data: T } | { ok: false };
 const ZERO_RESULT_LIMIT = 100;
 const NOT_HELPFUL_LIMIT = 100;
 
-interface RpcResult<Row> {
+export interface RpcResult<Row> {
   data: Row[] | null;
   error: { message: string; code?: string } | null;
 }
 
-function toWidget<Row, T>(fn: string, result: RpcResult<Row>, map: (rows: Row[]) => T): WidgetData<T> {
+export function toWidget<Row, T>(fn: string, result: RpcResult<Row>, map: (rows: Row[]) => T): WidgetData<T> {
   if (result.error || !result.data) {
     console.error(`[dashboard] ${fn} failed:`, result.error?.code ?? "", result.error?.message ?? "no data");
     return { ok: false };

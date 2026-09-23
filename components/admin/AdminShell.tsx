@@ -3,44 +3,16 @@
 import type { ReactNode } from "react";
 import { Link } from "@/i18n/routing";
 import { usePathname } from "@/i18n/routing";
-import {
-  AlertCircle,
-  Boxes,
-  HelpCircle,
-  LayoutDashboard,
-  LogOut,
-  MessagesSquare,
-  Newspaper,
-  Package,
-  Phone,
-  ScrollText,
-  Trash2,
-  UserCog,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ManagerAreaSwitch } from "@/components/admin/ManagerAreaSwitch";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { signOutAndPurge } from "@/lib/auth/sign-out";
+import { isNavItemActive, managerArea } from "@/lib/admin/nav";
 
-interface AdminNavEntry {
-  path: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-/** `pages.admin.<key>.nav` is the label of each entry. */
-const ADMIN_NAV: { path: string; key: "overview" | "scripts" | "objections" | "faq" | "competitors" | "packages" | "products"; icon: LucideIcon }[] = [
-  { path: "/admin", key: "overview", icon: LayoutDashboard },
-  { path: "/admin/scripts", key: "scripts", icon: MessagesSquare },
-  { path: "/admin/objections", key: "objections", icon: AlertCircle },
-  { path: "/admin/faq", key: "faq", icon: HelpCircle },
-  { path: "/admin/competitors", key: "competitors", icon: Users },
-  { path: "/admin/packages", key: "packages", icon: Package },
-  { path: "/admin/products", key: "products", icon: Boxes },
-];
+const ADMIN_NAV_ITEMS = managerArea("admin").items;
 
 /** Manager-only admin shell — structurally its own thing (sticky header +
  * left nav), deliberately not built from AppShell/Sidebar (design-locked,
@@ -57,21 +29,8 @@ export function AdminShell({
   const pathname = usePathname();
   const locale = useLocale();
   const { user } = useSessionUser();
-  const tChangelog = useTranslations("pages.admin.changelog");
-  const tContacts = useTranslations("pages.admin.contacts");
-  const tSops = useTranslations("pages.admin.sops");
-  const tTrash = useTranslations("pages.admin.trash");
-  const tUsers = useTranslations("pages.admin.users");
   const tAdmin = useTranslations("pages.admin");
   const tShell = useTranslations("admin.shell");
-  const navEntries: AdminNavEntry[] = [
-    ...ADMIN_NAV.map((entry) => ({ path: entry.path, label: tAdmin(`${entry.key}.nav`), icon: entry.icon })),
-    { path: "/admin/changelog", label: tChangelog("nav"), icon: Newspaper },
-    { path: "/admin/contacts", label: tContacts("nav"), icon: Phone },
-    { path: "/admin/sops", label: tSops("nav"), icon: ScrollText },
-    { path: "/admin/trash", label: tTrash("nav"), icon: Trash2 },
-    { path: "/admin/users", label: tUsers("nav"), icon: UserCog },
-  ];
 
   async function handleSignOut() {
     await signOutAndPurge({ locale, email: user?.email });
@@ -79,41 +38,64 @@ export function AdminShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur">
+      <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface/95 px-4 backdrop-blur sm:gap-3">
         <div className="flex shrink-0 items-center gap-2">
           <Logo className="h-7 w-7 shrink-0" />
-          <span className="text-sm font-semibold text-primary-dark">{tShell("title")}</span>
+          <span className="hidden text-sm font-semibold text-primary-dark sm:inline">{tShell("title")}</span>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           {notificationsSlot}
-          <Link
-            href="/dashboard"
-            className="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
-          >
-            {tShell("monitoring")}
-          </Link>
+          <ManagerAreaSwitch />
           <ThemeToggle />
           <button
             onClick={handleSignOut}
+            aria-label={tShell("signOut")}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-primary-dark transition-colors hover:bg-surface-alt"
           >
             <LogOut size={15} className="text-text-secondary" />
-            {tShell("signOut")}
+            <span className="hidden sm:inline">{tShell("signOut")}</span>
           </button>
         </div>
       </header>
 
+      {/* The left nav below is md-and-up; on a phone this strip is the only way between sections. */}
+      <nav
+        aria-label={tShell("sections")}
+        className="flex gap-1 overflow-x-auto border-b border-border bg-surface px-3 py-2 md:hidden"
+      >
+        {ADMIN_NAV_ITEMS.map((item) => {
+          const isActive = isNavItemActive(item, pathname);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-[13px] ${
+                isActive
+                  ? "bg-primary/10 font-semibold text-primary-dark"
+                  : "text-text-secondary hover:bg-primary/5 hover:text-primary-dark"
+              }`}
+            >
+              <Icon size={15} />
+              {tAdmin(item.label)}
+            </Link>
+          );
+        })}
+      </nav>
+
       <div className="flex min-w-0 flex-1">
         <aside className="hidden w-60 shrink-0 border-r border-border bg-surface px-3 py-4 md:block">
-          <nav className="space-y-1">
-            {navEntries.map((entry) => {
-              const isActive = entry.path === "/admin" ? pathname === "/admin" : pathname.startsWith(entry.path);
-              const Icon = entry.icon;
+          <nav aria-label={tShell("sections")} className="space-y-1">
+            {ADMIN_NAV_ITEMS.map((item) => {
+              const isActive = isNavItemActive(item, pathname);
+              const Icon = item.icon;
               return (
                 <Link
-                  key={entry.path}
-                  href={entry.path}
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] ${
                     isActive
                       ? "bg-primary/10 font-semibold text-primary-dark"
@@ -121,7 +103,7 @@ export function AdminShell({
                   }`}
                 >
                   <Icon size={16} />
-                  {entry.label}
+                  {tAdmin(item.label)}
                 </Link>
               );
             })}

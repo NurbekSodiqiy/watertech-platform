@@ -30,11 +30,12 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0016 | `dashboard_rpc_and_retention.sql` | seven `public.dashboard_*` aggregate functions (manager only), covering indexes on `telemetry_events`, `public.run_retention()` and its pg_cron job when pg_cron is enabled | 0014, 0006, 0007, 0013 |
 | 0017 | `user_admin_and_access_audit.sql` | managers write `allowed_users` (insert; update of `role`/`is_active`/`full_name` only); `private.allowed_users_guard` (stale-manager WT403, last manager WT460, self-change WT461); append-only `public.access_audit` written by trigger; `public.admin_user_last_activity()` | 0014, 0013, 0002 |
 | 0018 | `product_images.sql` | public Storage bucket `product-images` (2 MB, JPEG/PNG/WebP/AVIF); manager-only select/insert/update/delete policies on `storage.objects` for that bucket (writes under `products/` only); `content_products.image_path` with a shape check; `content_products.filename` nullable | 0014 (`private.is_manager()`), 0002, Storage enabled |
+| 0019 | `copilot_stats.sql` | `public.copilot_stats(p_from, p_to)` (request counts, no-hits / error rate, p50 / p95 latency) and `public.copilot_unanswered(p_from, p_to, p_limit)` (no-hits questions grouped by a normalized form; operator counts, never emails), both manager only (WT403); `private.copilot_normalize_question()` mirroring `lib/search/normalize.ts` | 0014 (`private.is_manager()`), 0006 |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015`, `0016`, `0017` and then `0018` go last. `0013` through `0018` all abort with a clear message when an
+`0014`, `0015`, `0016`, `0017`, `0018` and then `0019` go last. `0013` through `0019` all abort with a clear message when an
 earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
@@ -67,7 +68,8 @@ statements into their own file and run them concurrently, outside a transaction.
    first one by hand (the `insert` in [SECURITY.md §5](SECURITY.md#5-adding-removing-and-promoting-people));
    everyone after that is added at `/admin/users`.
 8. **`0018`.** After `0017` (it needs only `0014`'s `private.is_manager()`, and Storage enabled on the project).
-9. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+9. **`0019`.** After `0018` (it needs only `0014`'s `private.is_manager()` and `0006`'s `copilot_logs`).
+10. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -99,6 +101,9 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
       upload writes `image_path`, which answers `unknown` until the column exists, and `/admin/products/new` cannot
       save a product without a `filename` until that column is nullable. The catalog is unaffected either way: a row
       without `image_path` renders its legacy `/products/<filename>`. Then run `supabase/tests/storage-checks.sql`
+      on staging.
+- [ ] **0019** copilot statistics — requires 0014 and 0006. Until it is applied `/dashboard/copilot` shows its error
+      state in both widgets (the RPC is missing); nothing else is affected. Then run `supabase/tests/copilot-checks.sql`
       on staging.
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
@@ -320,6 +325,15 @@ A full rollback file drops the ten functions (`public.dashboard_kpis`, `_operato
 `_cover_` pair. The dashboard code of S09 cannot run without the functions, so it goes back together
 with the app release that preceded it.
 
+### After applying 0019
+
+1. **Run `supabase/tests/copilot-checks.sql` on staging** — counts, rates and percentiles against a hand-computed
+   table, the normalization corpus, the manager-only refusals (WT403), argument errors (WT400) and the grants.
+2. **Open `/dashboard/copilot`.** Both widgets must render; a range older than 30 days lists no questions from
+   before the cut-off, by design — `run_retention()` (0016) nulls the question text after 30 days.
+3. **No type regeneration strictly needed**; `copilot_stats` and `copilot_unanswered` are hand-written in
+   `lib/supabase/database.types.ts` — compare with `npm run gen:types` when convenient.
+
 ### Rolling back 0018
 
 Photos already uploaded are the only data 0018 enables; decide about them first. To stop uploads without
@@ -347,3 +361,10 @@ A full rollback file also drops the four triggers on `allowed_users` (`trg_allow
 finally `private.access_audit_append_only()` with the table it protects. **Keep `public.access_audit`**
 unless the history is truly unwanted — it is the only record of who changed the allow-list. `anon`'s
 revoked privileges are not worth restoring.
+
+### Rolling back 0019
+
+Nothing is stored: the three functions are the whole migration. `drop function public.copilot_stats(timestamptz,
+timestamptz); drop function public.copilot_unanswered(timestamptz, timestamptz, integer); drop function
+private.copilot_normalize_question(text);` removes it, and `/dashboard/copilot` then shows its widgets' error state
+until the app release that added the tab is rolled back with it.

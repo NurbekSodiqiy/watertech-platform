@@ -76,6 +76,13 @@
     }
   },
   "chrome": {
+    "managerNav": {
+      "label": "Rahbariyat bo'limlari",
+      "areas": {
+        "dashboard": "Monitoring",
+        "admin": "Kontent"
+      }
+    },
     "appShell": {
       "mobileNavTitle": "Navigatsiya",
       "closeMobileNav": "Navigatsiyani yopish",
@@ -262,6 +269,14 @@
     "trashNone": {
       "title": "Savat bo'sh",
       "reason": "O'chirilgan yozuvlar yo'q"
+    },
+    "copilotNoUnanswered": {
+      "title": "Javobsiz savollar yo'q",
+      "reason": "Tanlangan davrda copilot barcha savollarga javob topgan"
+    },
+    "activityNone": {
+      "title": "Faoliyat topilmadi",
+      "reason": "Tanlangan filtrlarga mos yozuv yo'q"
     },
     "filterNoMatch": {
       "title": "Mos qator topilmadi",
@@ -480,15 +495,16 @@
     "description": "Operatorlar faolligi, kontent holati va sifat ko'rsatkichlari — bir joyda.",
     "metadata": {
       "content": "Rahbariyat monitoring — Kontent",
-      "quality": "Rahbariyat monitoring — Sifat"
+      "quality": "Rahbariyat monitoring — Sifat",
+      "copilot": "Rahbariyat monitoring — Copilot"
     },
     "tabs": {
       "activity": "Faollik",
       "content": "Kontent",
-      "quality": "Sifat"
+      "quality": "Sifat",
+      "copilot": "Copilot"
     },
     "header": {
-      "content": "Kontent",
       "signOut": "Chiqish"
     },
     "duration": {
@@ -544,6 +560,30 @@
       "lastSeen": "Oxirgi marta: {date}",
       "createFaq": "FAQ yaratish",
       "mostViewed": "Eng ko'p ko'rilgan kontent"
+    },
+    "copilot": {
+      "kpi": {
+        "requests": "Copilot so'rovlari",
+        "noHitsRate": "Javobsiz so'rovlar ulushi",
+        "errorRate": "Xatolar ulushi",
+        "latency": "Javob vaqti (p50 / p95)"
+      },
+      "latency": {
+        "ms": "{value} ms",
+        "seconds": "{value} s"
+      },
+      "unanswered": {
+        "heading": "Copilot javob topa olmagan savollar",
+        "note": "Savol matni {days} kundan keyin o'chiriladi, shuning uchun eski davrdagi savollar bu yerda ko'rinmaydi.",
+        "columns": {
+          "question": "Savol",
+          "count": "Necha marta",
+          "operators": "Operatorlar",
+          "lastAsked": "Oxirgi marta",
+          "action": "Amal"
+        },
+        "createFaq": "FAQ yaratish"
+      }
     }
   },
   "pages": {
@@ -685,6 +725,64 @@
           "statusDraft": "Qoralama",
           "statusPublished": "Nashr etilgan"
         }
+      },
+      "activity": {
+        "nav": "Faoliyat",
+        "title": "Faoliyat jurnali",
+        "description": "Kontent tahrirlari va o'chirishlar, nashr tekshiruvlari va foydalanuvchi ruxsatlari o'zgarishlari — bitta ro'yxatda.",
+        "filters": {
+          "source": "Manba",
+          "allSources": "Barcha manbalar",
+          "table": "Jadval",
+          "allTables": "Barcha jadvallar",
+          "actor": "Muallif",
+          "actorPlaceholder": "email",
+          "from": "Dan",
+          "to": "Gacha",
+          "apply": "Qo'llash",
+          "reset": "Tozalash"
+        },
+        "sources": {
+          "version": "Versiya",
+          "gate": "Nashr tekshiruvi",
+          "access": "Ruxsat"
+        },
+        "columns": {
+          "when": "Qachon",
+          "source": "Manba",
+          "actor": "Kim",
+          "what": "Nima",
+          "result": "Natija",
+          "action": "Amal"
+        },
+        "op": {
+          "update": "Tahrir",
+          "delete": "O'chirilgan"
+        },
+        "gate": {
+          "passed": "O'tdi",
+          "blocked": "To'sildi"
+        },
+        "access": {
+          "insert": "Qo'shildi",
+          "update": "O'zgartirildi",
+          "delete": "O'chirildi"
+        },
+        "fields": {
+          "role": "Rol",
+          "is_active": "Holat"
+        },
+        "values": {
+          "active": "Faol",
+          "inactive": "Nofaol"
+        },
+        "diff": "Farqlar",
+        "open": "Ochish",
+        "system": "Tizim",
+        "newer": "Yangiroq",
+        "older": "Eskiroq",
+        "page": "{page}-sahifa",
+        "truncated": "Eng chuqur ko'rish mumkin bo'lgan sahifaga yetildi. Eskiroq yozuvlarni ko'rish uchun sana filtrini ishlating."
       },
       "trash": {
         "nav": "Savat",
@@ -1564,8 +1662,8 @@
     },
     "shell": {
       "title": "Kontent boshqaruvi",
-      "monitoring": "Monitoring",
-      "signOut": "Chiqish"
+      "signOut": "Chiqish",
+      "sections": "Kontent bo'limlari"
     },
     "table": {
       "add": "+ Qo'shish",

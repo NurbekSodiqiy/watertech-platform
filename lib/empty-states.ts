@@ -20,6 +20,8 @@ import {
   Newspaper,
   Phone,
   Trash2,
+  Bot,
+  Activity,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -64,6 +66,8 @@ export const EMPTY_STATES = {
   adminListNone: { key: "adminListNone", icon: Inbox, ctaKind: "create" },
   versionsNone: { key: "versionsNone", icon: History, ctaKind: "retry" },
   trashNone: { key: "trashNone", icon: Trash2, ctaKind: "retry" },
+  copilotNoUnanswered: { key: "copilotNoUnanswered", icon: Bot, ctaKind: "link" },
+  activityNone: { key: "activityNone", icon: Activity, ctaKind: "clear-filters" },
   offline: { key: "offline", icon: WifiOff, ctaKind: "retry" },
   notFound: { key: "notFound", icon: FileQuestion, ctaKind: "home" },
 } as const satisfies Record<string, EmptyStateCatalogEntry>;

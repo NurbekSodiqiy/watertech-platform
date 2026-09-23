@@ -16,3 +16,14 @@ export function formatRelative(iso: string, t: RelativeTimeTranslator, locale: s
   if (diffDay < 30) return t("days", { count: diffDay });
   return new Date(iso).toLocaleDateString(locale === "ru" ? "ru-RU" : "uz-UZ");
 }
+
+/** Absolute date and time in the office's time zone (Tashkent, like every
+ * other date the manager area shows). Deterministic for a given instant, so —
+ * unlike formatRelative — it is safe to call while rendering on the server. */
+export function formatDateTime(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "uz-UZ", {
+    timeZone: "Asia/Tashkent",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}

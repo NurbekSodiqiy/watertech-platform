@@ -9,6 +9,7 @@ manual, and the signed-in half of the e2e suite needs a session cookie captured 
 | End-to-end (Playwright, Chromium) | `npm run build && npm run e2e` | `tests/e2e/*.spec.ts` | yes, unauthenticated only |
 | Row Level Security | Supabase SQL editor | `supabase/tests/rls-checks.sql` | no — staging only |
 | Dashboard SQL parity + retention | Supabase SQL editor | `supabase/tests/dashboard-parity.sql`, `retention-checks.sql` | no — staging only (the TS half of the parity check runs in `npm test`) |
+| Copilot statistics | Supabase SQL editor | `supabase/tests/copilot-checks.sql` | no — staging only (the normalization corpus's TS half runs in `npm test`) |
 | Storage policies + product photos | Supabase SQL editor | `supabase/tests/storage-checks.sql` | no — staging only (the limits' TS half runs in `npm test`) |
 | Accessibility (axe-core, in Playwright) | `npm run e2e` | `tests/e2e/a11y.spec.ts` | yes, public routes only |
 | Types + lint | `npm run typecheck && npm run lint` | — | yes |
@@ -186,6 +187,23 @@ single row (`Dashboard parity checks passed` / `Retention checks passed`), failu
 with `PARITY FAIL:` / `RETENTION FAIL:`. Both end in `ROLLBACK`. The parity fixture lives in March 2001,
 so no real event can fall into its windows; the retention check also prunes real staging rows inside
 the transaction, which the rollback restores.
+
+## Copilot checks (staging only, after 0019)
+
+`supabase/tests/copilot-checks.sql` inserts thirteen `copilot_logs` rows in March 2001 (marker `copilot-check` in
+`model`) and asserts, as a manager, what `copilot_stats()` and `copilot_unanswered()` promise: the counts per
+status; the no-hits and error rates over *handled* requests (a `rate_limited` row is not one); p50 / p95 over the
+requests that answered (a 60 s error does not move them); a half-open window (a row exactly on `p_to` is out, one
+exactly on `p_from` is in); NULL rates and latencies for an empty window; a redacted (null) question never listed;
+two spellings of one question in one group with the most recent wording as the sample; ordering by count, then
+recency. It then checks that an operator and a claim-less token get `WT403`, bad arguments `WT400`, that no
+result column carries an email, and that only `authenticated` may execute the functions.
+
+The normalization corpus in that file (between the `$corpus$` markers) is shared with
+`tests/unit/dashboard/copilot-normalize.test.ts`, which feeds every question to `normalizeSearchText()` in
+`lib/search/normalize.ts` — the function `private.copilot_normalize_question()` mirrors. Change the corpus
+or either implementation and one of the two suites fails. Run it like `dashboard-parity.sql`; pass is
+`Copilot checks passed`, failure an error starting with `COPILOT FAIL:`. It ends in `ROLLBACK`.
 
 ## Storage checks (staging only, after 0018)
 
