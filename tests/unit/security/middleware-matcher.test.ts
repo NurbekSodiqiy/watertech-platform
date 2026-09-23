@@ -17,9 +17,43 @@ describe("matchesMiddleware", () => {
     }
   });
 
+  // A file extension used to skip middleware on ANY path. Under a dynamic
+  // segment that rendered the operator shell to an anonymous visitor, and every
+  // one of these (plus the unanchored single-file prefixes) wrote a new ISR
+  // cache entry without a session. Each must reach the auth gate now.
+  describe("paths that merely end in a file extension are matched", () => {
+    const gated = [
+      "/sales-process/scripts/lead-orqali-tushgan.json",
+      "/uz/sales-process/scripts/lead-orqali-tushgan.txt",
+      "/ru/sales-process/battle-cards/alfa-therm.webp",
+      "/tools/amocrm/lead-creation.map",
+      "/ru/tools/amocrm/lead-creation.png",
+      "/admin/scripts/x.json",
+      "/admin/versions/content_scripts/x.png",
+      "/x.json",
+      "/robots.txt",
+      "/ru/products/truba-ppr.jpg",
+      "/products/comparisons/x.png",
+      "/sw.jsx",
+      "/sw.js.map",
+      "/favicon.ico.json",
+      "/faviconXico",
+      "/manifest.webmanifest.json",
+    ];
+
+    for (const path of gated) {
+      it(`matches ${path}`, () => {
+        expect(matchesMiddleware(path)).toBe(true);
+      });
+    }
+  });
+
   describe("excluded paths are not matched", () => {
     const excluded = [
       "/products/truba-ppr.jpg",
+      "/products/manifest.json",
+      "/certificates/sertifikat-atl-asosiy.png",
+      "/favicon.ico",
       "/_next/static/x.js",
       "/_next/image?url=…",
       "/sw.js",

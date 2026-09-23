@@ -1,3 +1,186 @@
+# Audit-2 — release audit
+
+The release audit of roadmap Audit-2 (S01–S14), at commit `4d832e3`, 2026-09-23, Next.js 14.2.35, Node
+24.20. Every claim below was checked by running something or by reading the code path end to end; where
+a check could not run on this machine, the table says so and why. The S17 audit follows further down.
+
+Severity, as in S17: **P0** breaks users or security · **P1** visible defect · **P2** rule drift or a
+defence-in-depth gap · **P3** nit.
+
+## A. Results
+
+| Check | Result | Measured |
+|---|---|---|
+| `npm run typecheck` | pass | 0 errors |
+| `npm run lint` | pass | 0 warnings |
+| `npm run check:i18n` | pass | no hard-coded strings; `uz.json` / `ru.json` 1 254 keys each, none one-sided |
+| `npm test` | pass | 68 files, 1 061 tests (67 / 1 015 before this audit) |
+| `npm run build` | pass | 145 pages generated; every operator route ≤ 180 kB (section E) |
+| `npm run e2e` | pass, partial | 44 passed, 48 skipped: 43 need `TEST_OPERATOR_COOKIE`, 5 need `TEST_SESSION_COOKIE`; 0 failed |
+| Migrations, fresh project (0013 → 0001–0012 → 0013 → 0014–0019) | pass (PGlite) | all 20 applies, then 0013–0019 re-applied: idempotent |
+| Migrations, existing project (a reconstructed 0007 database → 0008–0019) | pass (PGlite) | same; 0017 reports the legacy mixed-case email, as documented |
+| Migrations in strict filename order (what `supabase db reset` does) | **fail** | stops at 0001: `relation "public.allowed_users" does not exist` — open item O6 |
+| `rls-checks.sql`, `dashboard-parity.sql`, `retention-checks.sql`, `storage-checks.sql`, `copilot-checks.sql` | pass (PGlite, both paths) | one "passed" row each |
+| Mutation test of the SQL checks | pass after F3/F4 | content_versions retention rules: 6 of 6 injected faults caught (5 of 6 before); history rewrite: 2 of 2 (0 of 2 before) |
+| Threat model (section C) | 9 of 9 hold | one middleware bypass found and fixed (F1) |
+| Cross-layer regression hunt (section D) | pass | one unvalidated publish path fixed (F2) |
+
+**Not run here.** The Supabase CLI (`supabase start` / `db reset`) is not installed and there is no Docker,
+so the SQL ran in PGlite 0.5.8 (PostgreSQL 18 compiled to WebAssembly) behind a stub of Supabase's roles,
+default privileges, `auth.jwt()` and the Storage tables. That exercises every migration and every check
+file, but not PostgREST, GoTrue calling the auth hook, pg_cron or the Storage server — staging runs of the
+five check files remain the release gate (section F). Nothing signed in ran: automation here has no Google
+session, which is what the 48 skipped e2e cases need.
+
+## B. Findings of this audit
+
+### Fixed
+
+| # | Sev | Where | Finding | Fix | Test |
+|---|---|---|---|---|---|
+| F1 | P2 | [middleware.ts](../middleware.ts), [lib/security/middleware-matcher.ts](../lib/security/middleware-matcher.ts) | The matcher skipped middleware for **any** path ending in `.svg/.png/…/.json/.txt/.map`, and its three single-file exclusions (`favicon.ico`, `sw\.js`, `manifest\.webmanifest`) were unanchored prefixes. Under a dynamic segment that bypassed the auth gate: `/uz/tools/amocrm/lead-creation.map`, `/ru/sales-process/scripts/<slug>.json` and `/uz/admin/scripts/x.json` answered **200 to an anonymous request** — the operator URLs with the operator shell (navigation, FAQ count, published changelog ids) around a not-found body, the admin one with the plain not-found page. Each operator URL of this kind, and each `/<anything>.json` or `/sw.js<anything>`, also **wrote a new ISR cache entry**, unauthenticated and unbounded. No content row and no user data was exposed: the slug never matches, and admin reads are RLS-scoped. | The extension exclusion is scoped to the three folders `public/` has (`certificates/`, `icons/`, `products/`, all flat); the three files are anchored with `$`. | 19 unit cases, 16 of which fail on the old literal. Compiled with Next's own `getMiddlewareMatchers`: 6 of 20 probe paths reached middleware before, 20 of 20 after, and 14 of 14 asset/infra paths are still excluded. 10 e2e cases in `auth-gate.spec.ts` (5 URLs land on the login page, 5 assets are still served without a session). Live probe of the new build: anonymous requests wrote 0 ISR entries. |
+| F2 | P3 | [lib/dashboard/actions.ts](../lib/dashboard/actions.ts) | The dashboard quick actions passed the browser's `id` / `expectedVersion` to the publish gate and PostgREST without the zod parse CLAUDE.md §7 requires — `factory.setStatus` parses the same triple. A malformed id ran the gate on a missing row, which still writes a gate report and a "publish blocked" notification naming that string. | The same shape as `setStatus` (`idSchema`, a non-negative integer), parsed before the gate. | [tests/unit/dashboard/actions.test.ts](../tests/unit/dashboard/actions.test.ts): 27 cases, 21 red before the fix. |
+| F3 | P3 | [supabase/tests/retention-checks.sql](../supabase/tests/retention-checks.sql) | A `run_retention()` that ranked delete snapshots into the newest-50 rule passed the check. It would evict the delete snapshot of a restored-then-edited row inside 180 days and keep 49 edits instead of 50. | Fixture: a row deleted 10 days ago, restored and edited 52 times since. | The injected fault now fails with "a 10-day-old delete snapshot was deleted …". |
+| F4 | P3 | [supabase/tests/rls-checks.sql](../supabase/tests/rls-checks.sql) | Only a manager's INSERT into `content_versions` was asserted; a migration that re-granted UPDATE or DELETE to `authenticated` — letting a manager rewrite or erase history — passed. | UPDATE and DELETE asserted refused as well. | Both injected faults now fail. |
+
+Also added for task 2 (tooling, not a finding): [supabase/tests/migration-status.sql](../supabase/tests/migration-status.sql),
+a read-only catalog query that says which of 0001–0019 a project has had. Verified on an empty database,
+at 0007, 0012, 0016 and 0019.
+
+### Open
+
+| # | Sev | Where | Finding | Proposed fix | Why not fixed here |
+|---|---|---|---|---|---|
+| O1 | P3 | tables from 0002–0016 | `anon` keeps whatever table privileges the project's default privileges gave it: only `rate_limits`, `allowed_users` and `access_audit` are revoked. On a project with Supabase's standard defaults (a fresh staging project) `anon` holds ALL on 16 tables. Inert — RLS is on everywhere and no policy names `anon`, so SELECT and DML see and change nothing, and TRUNCATE/TRIGGER/REFERENCES are not reachable through PostgREST, GraphQL or Realtime — but the table and column names are visible to anonymous introspection. SECURITY.md said "anon holds no grant on any table"; corrected. | A new migration revoking all table and sequence privileges in `public` from `anon`, plus a catalog assertion in `rls-checks.sql` over every public table. | A new schema step on every project, for a gap nothing can exploit — the owner's call. |
+| O2 | P3 | `app/api/search-index`, `app/api/content-refs` | `Cache-Control: private, max-age=300`: after a sign-out the browser's HTTP cache (not the service worker's, which is purged) can replay the published search index for up to 5 minutes on a shared PC. No owner data. | `private, no-cache`; the service worker's own (purged) cache keeps the palette fast. | Changes caching behaviour for published content only. |
+| O3 | P3 | `app/api/events`, `app/api/copilot` | Body cap (§7 step 4): `/api/events` checks only the declared `Content-Length`, which a chunked body omits; `/api/copilot` re-checks the size but only after `request.text()` has buffered the whole body. Bounded by Vercel's 4.5 MB request limit, and zod bounds what is stored. | One streaming reader that stops at the cap, used by both routes. | Hardening; nothing beyond a 4.5 MB parse is reachable on Vercel. |
+| O4 | P3 | `components/admin/DataTable.tsx:739`, `:894`, `:901` | §6 type/radius scale: S12 added `rounded-md` ×2 and `text-[11.5px]`, following the admin area's existing drift (21 × `rounded-md` and 6 × `text-[11.5px]` before Audit-2; app-wide also `text-sm` ×20, `text-[16px]` ×14, …). Colours and the palette are clean. | One design-system task: extend the scale or sweep it, then add a lint check. | Fixing 3 of ~100 would make the admin UI inconsistent. |
+| O5 | P3 | `lib/content/loader.ts` | No test pins `status = 'published'` on the ten service-role loaders (correct today, verified by reading). A regression there would put drafts on operator pages — RLS does not apply to the service role. | Assert each getter's PostgREST query, the way `concurrency.test.ts` does. | Test-only; no defect. |
+| O6 | P3 | `supabase/migrations` | Not replayable in filename order: 0001 and 0005 need `allowed_users`, which 0013 creates, so `supabase db reset` fails at 0001. The documented two-pass order works (verified). | If the CLI is adopted: a `0000` bootstrap (`create table if not exists public.allowed_users (email text primary key, role text not null)`), or `supabase migration squash`. | The project has no CLI. |
+| O7 | P3 | CLAUDE.md §7, §9 | Rule text vs code: §7 asks for a CSP nonce on a new `<script>`, but `next.config.js` deliberately ships no nonce (`'unsafe-inline'`, for static prerendering); §9 says telemetry `meta` ≤ 500 bytes, `lib/telemetry/schema.ts` allows 600. | Align the text or the code in a rules task. | A rule-text decision. |
+| O8 | P3 | `components/admin/DataTable.tsx:345` | `runBulk` has no try/finally: a network failure mid-run leaves the bulk panel "running" until a reload. | try/finally around the loop. | UX nit. |
+| O9 | P3 | `lib/admin/actions/reorder.ts:1-2` | The `"use server"` directive appears twice. | Delete one line. | Nit. |
+
+S17's open items 15 and 16 (below) are unchanged.
+
+## C. Threat model
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| A non-allow-listed JWT reads nothing | holds | The access-token hook issues no token for an unknown or inactive email (0014; the hook block of `rls-checks.sql`). Middleware sends a token without a role to `/login?error=not_allowed`; the four session Route Handlers (`/api/events`, `/api/copilot`, `/api/search-index`, `/api/content-refs`) go through `getServerSession()`, which is null without a role (401), and the cron route takes a bearer secret compared in constant time; every admin Server Action goes through `requireManagerSession()`. RLS: three non-member identities see 0 rows in every table (`rls-checks.sql`). Functions, enumerated from the catalog: everything `authenticated` may execute is SECURITY INVOKER and refuses non-managers itself (WT403); the SECURITY DEFINER ones are `service_role`- or trigger-only; `anon` can execute nothing callable. |
+| An operator cannot read drafts, logs or other operators' state | holds | RLS operator block of `rls-checks.sql` (drafts in all ten tables, `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `access_audit`, others' `telemetry_events` and `user_state`). The ten service-role loaders filter `status = 'published'` (read; O5). Draft preview exists only inside the admin editors. |
+| A manager cannot forge history or remove the last manager | holds | `content_versions`: INSERT/UPDATE/DELETE revoked from `authenticated`, rows written only by the SECURITY DEFINER trigger (F4 closes the test gap); `version`, `updated_at`, `updated_by` forced by triggers on every update; `access_audit` append-only even for its owner; WT460 last manager, WT461 self-change and WT403 stale token enforced for a manager session, `service_role` and whole-table updates (`rls-checks.sql` 0017 blocks); the same rules pre-checked in TS (`user-access.test.ts`). |
+| No service-role import reachable from client code | holds | 10 importers of `lib/supabase/admin.ts`, all server-side (Route Handlers, `"use server"` or `server-only` modules, the seed CLI). An import-graph walk from all 124 `"use client"` files, stopping at the 27 `"use server"` boundaries they cross, found 0 paths to `lib/supabase/admin`, `lib/supabase/server`, `next/headers` or any `server-only` module. The values of `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` and `CRON_SECRET` occur in 0 files under `.next/static` and `.next/server`. |
+| Sign-out leaves no owner data or user caches | holds (O2 residual) | `lib/auth/purge.ts`: uploads and telemetry stop synchronously, the owner's namespaced localStorage keys, all of sessionStorage and the telemetry buffer go; the service worker deletes the 10 caches on `PURGED_CACHE_NAMES` by exact name; the session is revoked; a hard navigation replaces the document. Another tab's sign-out or account switch runs the same purge (`SessionProvider`). Unit: `purge`, `owner`, `store`, `sw-routes`. `sign-out.spec.ts` needs `TEST_OPERATOR_COOKIE` (skipped here). |
+| No `/products/*` or other route bypasses middleware | holds after F1 | Before F1, 14 of 20 probe paths skipped middleware (section B). |
+| No raw database error reaches the client | holds | Admin actions log through `logDbError` and return a code; Route Handlers return fixed `{ error }` strings; the error boundaries never render `error.message`; a Server Component throw is masked by Next in production. |
+| Uploads validate type and size on the server | holds | `lib/admin/actions/product-image.ts`: session → fields → declared type, extension and size → magic bytes (JPEG/PNG/WebP/AVIF, never SVG) → row version → content-addressed key. The bucket repeats the 2 MB and MIME limits (`storage-checks.sql`); `serverActions.bodySizeLimit` is 3 MB. |
+| Retention never deletes an `op = 'delete'` snapshot within 180 days | holds | `run_retention()` ranks only `op = 'update'` rows for the newest-50 rule and deletes delete snapshots only past 180 days; `retention-checks.sql` with the F3 fixture, mutation-tested. |
+
+## D. Cross-layer regression hunt
+
+| Path that writes content | Publish gate | Optimistic concurrency | `revalidateContent` |
+|---|---|---|---|
+| create (`factory`) | when saved as published, on the candidate | `.insert()` → `id_taken` | yes |
+| update (`factory`) | when saved as published, on the candidate | `eq("version")` | yes |
+| setStatus (`factory`), and bulk publish/draft (one setStatus per row) | on the stored row | `eq("version")` | yes |
+| remove, and bulk delete | — | `eq("version")`; references block or cascade | yes |
+| restore a version onto a live row | when the row is published, on the merged candidate; `status` is never written | `eq("version")` | yes |
+| restore from the trash | always comes back as a draft | `.insert()` → `id_taken` | yes |
+| reorder | — (`sort_order` only) | all-or-nothing, per-row version (0015) | yes |
+| product photo | — (`image_path` only, shape-checked by the database) | `eq("version")`; the new object is removed on a conflict | yes |
+| dashboard publish / unpublish / mark reviewed | publish: on the stored row (input validated since F2) | `eq("version")` | yes |
+| allow-list (not content) | — | none, by design: set-to-target writes, serialized by the guard's advisory lock | n/a |
+
+**i18n:** 1 254 keys in each of `uz.json` / `ru.json`, none one-sided; all 12 `AdminErrorCode`s have a
+message in both (`messages.test.ts`). **Design lock:** no hex/rgb outside the documented exceptions (the
+Google mark on `/login`, `app/manifest.ts`), no Tailwind default palette, no `bg-white`/`text-white`/
+`bg-black`, no inline colour styles; the type/radius scale is O4.
+
+## E. Measured numbers
+
+Route table of the final build — identical before and after this audit's fixes except the middleware
+(122 → 123 kB). Shared by all routes: 89.4 kB.
+
+| Area | First Load JS |
+|---|---|
+| Operator, largest | `/company/onboarding` 180 kB (at the budget), `/sales-process/scripts` 170, `/products` 166, `/company/about` and `/company/mission-values` 163, `/` 160, `/sales-process/battle-cards/[slug]` 156, `/changelog` 145 |
+| Operator, every other route | 127–144 kB |
+| Manager | `/admin/scripts/[id]` 178 kB (largest), other editors 169–170, lists 146, `/admin/users` 154, `/admin/trash` 129, `/admin/activity` 109, dashboards 133–140 |
+| Public | `/login` 200 kB (imports the Supabase client on purpose, see `docs/PERF.md`), `/offline` 109 kB |
+
+Tests: 68 unit files / 1 061 tests; 92 e2e cases (44 ran, 48 need a cookie); 5 staging SQL check files
+plus `migration-status.sql`. PGlite, one full check file each (WebAssembly, so an upper bound):
+`rls-checks` 74–84 ms, `dashboard-parity` 47–62, `retention-checks` 13–23, `storage-checks` 20–28,
+`copilot-checks` 19–26; the whole fresh chain 0013 → 0019 applies in about 0.2 s.
+
+## F. Production apply order
+
+Staging first, then production. Everything below is by hand in **Dashboard → SQL Editor**, as `postgres`,
+one file per run, reading the notices of each before the next ([MIGRATIONS.md](MIGRATIONS.md) is the full
+runbook, [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) the dashboard steps).
+
+1. **Find out where the project is.** Run `supabase/tests/migration-status.sql` (read-only — safe on
+   production). The first `false` row is the next file. MIGRATIONS.md believes production is at 0007, but
+   the project in `.env.local` has served `content_sops` rows (this audit's strict-mode build prerendered
+   all 12 SOP pages, possibly from `.next/cache`): either `.env.local` points at staging, or that belief
+   is stale.
+2. `0008` → `0009` → `0010` → `0011` → `0012` → `0013` (on an existing project, once).
+3. `0014`, then **Authentication → Hooks → Customize Access Token (JWT) Claims: enable,
+   `public.custom_access_token_hook`**, and the rest of SECURITY.md §3 (sign-ups, Google provider,
+   redirect URLs, JWT expiry and ECC signing keys, allow-list review). Sign in once as an operator and once
+   as a manager before going on. Turning the hook off is the way back if nobody can sign in.
+4. `0015` → `0016`, then `select * from public.run_retention();` once by hand → `0017` (read its notices:
+   no active manager / mixed-case emails; set `SUPABASE_SERVICE_ROLE_KEY` on the server for bans) →
+   `0018` (Storage enabled) → `0019`.
+5. **Staging only:** `rls-checks.sql`, `dashboard-parity.sql`, `retention-checks.sql`,
+   `storage-checks.sql`, `copilot-checks.sql` — each must answer its single "passed" row. They write
+   fixtures inside a rolled-back transaction; never run them on production.
+6. Deploy the app. The code of S09–S13 calls 0016–0019, so it must not go live before them.
+7. `migration-status.sql` again: 19 migrations and 3 facts `true`.
+
+Content for 0010–0012 (changelog, contacts, SOPs) reaches a project through `npm run seed:content`, which
+refuses anything but `SEED_TARGET=staging` and any ref in `PROD_PROJECT_REFS` — on production it is
+entered through `/admin`.
+
+## G. Residual risks
+
+- **Access-token window.** A deactivated or demoted user keeps their current access token until it
+  expires (≤ the JWT expiry, 1 h by default) — SECURITY.md §4.
+- **The publish gate is application-level.** A manager calling PostgREST directly with their own token can
+  set `status = 'published'` without it, or insert a row with a backdated `updated_at`. History and
+  `updated_by` stay trigger-written. Managers are trusted; the gate is quality control, not a boundary.
+- **PGlite is not Supabase.** PostgREST, GoTrue calling the hook, pg_cron and the Storage server were not
+  exercised; the staging runs in section F are the real gate.
+- **Unknown legacy policies.** 0013/0014 drop only the policy names they know. `rls-checks.sql` fails on
+  a leftover permissive SELECT policy on `telemetry_events` (verified by injecting one), and INSERT/
+  UPDATE/DELETE there are revoked, so a leftover write policy is inert.
+- **48 signed-in e2e cases** (sign-out purge, pins, changelog badge, locale, the operator a11y and mobile
+  checks, admin bulk/reorder) did not run in this audit.
+- **CSP** allows inline scripts — the documented trade-off for static prerendering (`next.config.js`).
+- O1 (anonymous grants) and O2 (HTTP-cache replay) above.
+
+## H. Fixed per phase (S01–S14)
+
+| Phase | Commit | What it fixed |
+|---|---|---|
+| S01 env split | `9d09fb8` | One `getServerEnv()` became three lazy, independent getters: a missing `CRON_SECRET` no longer took the service key — and every content getter — down with it. Env errors name the variable, never its value; each getter refuses to run in a browser. |
+| S02 DB baseline (0013) | `d134312` | Migrations for the two hand-made tables; `status` defaults to `draft`; `updated_by` stamped by the database from the JWT; DELETE (including cascades) leaves a snapshot; managers can no longer fabricate `content_versions` rows. |
+| S03 role-gated RLS (0014) | `8b10857` | **P0:** any Google account that completed OAuth could read every content table over PostgREST with the public anon key. The hook now refuses the token; every policy goes through `private.is_member()` / `is_manager()`. |
+| S04 middleware matcher | `09616df` | A `products/` prefix exclusion let `/products/comparisons`, `/roadmap`, `/technical-docs` skip the locale rewrite and the auth gate. (The extension-based hole it left is F1.) |
+| S05 shared-device purge | `f77cd05` | Client storage namespaced per account; sign-out purges queues, storage, the telemetry buffer and the service-worker caches; cross-tab purge; session-bound responses are never cached. |
+| S06 registry and action factory | `6ad4b30` | One write body for ten tables; database messages no longer reach the browser (`AdminErrorCode`); version-guarded deletes; list pages stopped shipping whole rows. |
+| S07 trash, restore, diff | `0e6e8ff` | A restore could republish a draft without the gate, and overwrite an edit made meanwhile; both fixed. Deletes refuse (or confirm a cascade) when other rows point at the row. |
+| S08 safeContent, seed guard | `238b138` | A failed content read now fails the build or keeps the last good page instead of publishing an empty knowledge base; the seed refuses production and no longer overwrites CMS edits. |
+| S09 dashboard RPCs, retention (0016) | `bc4d60c` | The dashboard's raw-row fetch was silently truncated at PostgREST's 1 000-row cap; aggregates moved into SQL. Retention policy in one function. |
+| S10 user management (0017) | `441c7ce` | Allow-list editing with last-manager, self-change and stale-token guards, an append-only audit, and an Auth ban on deactivation. |
+| S11 editors, product photos (0018) | `714f468` | All eight admin editors failed at request time (a zod schema passed into a Client Component); photo uploads with byte-level type checks. |
+| S12 admin ergonomics | `144d624` | Bulk actions, reorder, pagination, an unsaved-changes guard, slug autofill, draft preview. |
+| S13 copilot insights (0019) | `519cdfe` | Copilot statistics and unanswered questions without emails; activity feed; one manager navigation. |
+| S14 operator performance and a11y | `4d832e3` | Lazy Supabase client: the six operator routes over 180 kB came back under it (worst: `/company/onboarding` 249 → 180 kB); S17 findings 9–14. |
+
+---
+
 # Audit — S17
 
 An independent review of the whole app against CLAUDE.md, the tests added to keep the findings from

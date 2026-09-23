@@ -4,7 +4,7 @@
 // module — keep both in sync;
 // tests/unit/security/middleware-matcher-parity.test.ts enforces it.
 export const MIDDLEWARE_MATCHER =
-  "/((?!api/|auth/callback|monitoring(?:/|$)|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)";
+  "/((?!api/|auth/callback|monitoring(?:/|$)|_next/static|_next/image|favicon\\.ico$|sw\\.js$|manifest\\.webmanifest$|(?:certificates|icons|products)/[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)";
 
 // Next wraps every matcher source with an optional `/_next/data/...` prefix
 // and an optional `.json` suffix (see next/dist/build/analysis/get-page-static-info.js,

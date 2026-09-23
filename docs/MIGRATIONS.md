@@ -32,6 +32,27 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0018 | `product_images.sql` | public Storage bucket `product-images` (2 MB, JPEG/PNG/WebP/AVIF); manager-only select/insert/update/delete policies on `storage.objects` for that bucket (writes under `products/` only); `content_products.image_path` with a shape check; `content_products.filename` nullable | 0014 (`private.is_manager()`), 0002, Storage enabled |
 | 0019 | `copilot_stats.sql` | `public.copilot_stats(p_from, p_to)` (request counts, no-hits / error rate, p50 / p95 latency) and `public.copilot_unanswered(p_from, p_to, p_limit)` (no-hits questions grouped by a normalized form; operator counts, never emails), both manager only (WT403); `private.copilot_normalize_question()` mirroring `lib/search/normalize.ts` | 0014 (`private.is_manager()`), 0006 |
 
+### Which files has a project had?
+
+There is no migrations table, so ask the catalog: paste
+[supabase/tests/migration-status.sql](../supabase/tests/migration-status.sql) into the SQL editor and run
+it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0019`, `true` when
+the object only that file creates exists) plus three facts that should all be `true` (RLS on every public
+table, no policy naming `anon`, the access-token hook executable by `supabase_auth_admin` only). The first
+`false` row is the next file to apply. Whether the hook is *enabled* is a dashboard setting no query can
+see (SECURITY.md §3).
+
+**Not replayable in filename order.** `0001` and `0005` need `allowed_users`, which `0013` creates, so a
+runner that applies files strictly by name — `supabase db reset` — stops at `0001` with
+`relation "public.allowed_users" does not exist`. Use the orders below; adopting the Supabase CLI means
+adding a bootstrap first (AUDIT.md open item O6).
+
+**Verified (Audit-2, 2026-09-23)** in PGlite (PostgreSQL 18 in WebAssembly, with a stub of Supabase's
+roles, default privileges, `auth.jwt()` and Storage tables): both orders below apply cleanly, `0013`–`0019`
+re-apply idempotently, and all five `supabase/tests/*-checks.sql` files pass on the result. PostgREST,
+GoTrue, pg_cron and Storage itself were not exercised — the staging runs are still the gate. The condensed
+production sequence, with the dashboard steps in place, is [AUDIT.md §F](AUDIT.md#f-production-apply-order).
+
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
@@ -73,7 +94,9 @@ statements into their own file and run them concurrently, outside a transaction.
 
 ## Pending checklist
 
-As of 2026-09-22 the live project is believed to be at **0007**. Tick these off as they are applied:
+As of 2026-09-22 the live project is believed to be at **0007** — confirm with `migration-status.sql`
+before starting: the Audit-2 build read `content_sops` rows from the project in `.env.local`, so either
+that is staging or the belief is stale. Tick these off as they are applied:
 
 - [ ] **0008** `rate_limits` — until it is applied `/api/copilot` fails closed with 503.
 - [ ] **0010** `content_changelog` — the changelog page shows its empty state and the admin list errors.
@@ -213,7 +236,8 @@ ids that are not given back.
 
 What it asserts about `0013` specifically:
 
-- a manager cannot insert a fabricated `content_versions` row (policy dropped, `INSERT` revoked);
+- a manager cannot insert a fabricated `content_versions` row (policy dropped, `INSERT` revoked), nor
+  update or delete an existing one (`UPDATE`/`DELETE` revoked);
 - a content row inserted without a `status` lands as `'draft'`;
 - `updated_by` is taken from the JWT even when the payload sends a different email, on insert and on
   update;

@@ -152,18 +152,26 @@ export async function middleware(request: NextRequest) {
 // The `(?:/|$)` boundary keeps that exclusion to exactly /monitoring and
 // /monitoring/*, not every path that merely starts with "monitoring".
 // No `products/` or `fonts/` prefix exclusion: catalog images under
-// public/products/*.jpg are already excluded by the file-extension
-// alternative below, and app/fonts/InterVariable.woff2 is loaded through
-// next/font (bundled at build time), never served from a /fonts/ URL — a
-// prefix exclusion here only shadowed the real pages at /products/comparisons,
-// /products/roadmap and /products/technical-docs, bypassing both the
-// next-intl rewrite and the auth gate for the default locale.
+// public/products/*.jpg are excluded by the file-extension alternative below,
+// and app/fonts/InterVariable.woff2 is loaded through next/font (bundled at
+// build time), never served from a /fonts/ URL — a prefix exclusion here only
+// shadowed the real pages at /products/comparisons, /products/roadmap and
+// /products/technical-docs, bypassing both the next-intl rewrite and the auth
+// gate for the default locale.
+// The file-extension alternative is scoped to the three folders public/
+// actually has (certificates/, icons/, products/ — flat, no subfolders), and
+// the three single files are anchored with `$`. Unscoped, a trailing
+// `.json`/`.png`/`.map`… on ANY path skipped this middleware: under a dynamic
+// segment (/sales-process/scripts/x.json, /tools/amocrm/x.map) an anonymous
+// visitor got the operator shell rendered around a not-found body, and every
+// such URL — or /sw.js<anything>, /favicon<any>ico… — wrote a new ISR cache
+// entry, unauthenticated and unbounded (Audit-2).
 // This literal is duplicated as MIDDLEWARE_MATCHER in
 // lib/security/middleware-matcher.ts (Next.js statically analyses this
 // export, so it must stay a string literal here) — keep both in sync;
 // tests/unit/security/middleware-matcher-parity.test.ts enforces it.
 export const config = {
   matcher: [
-    "/((?!api/|auth/callback|monitoring(?:/|$)|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
+    "/((?!api/|auth/callback|monitoring(?:/|$)|_next/static|_next/image|favicon\\.ico$|sw\\.js$|manifest\\.webmanifest$|(?:certificates|icons|products)/[^/]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml|json|webmanifest|map)$).*)",
   ],
 };

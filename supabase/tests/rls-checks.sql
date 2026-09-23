@@ -576,6 +576,21 @@ begin
     when insufficient_privilege then null; -- policy dropped + grant revoked, as intended
   end;
 
+  -- ...nor rewrite or erase it: 0013 revokes UPDATE and DELETE too, so what
+  -- /admin/versions lists and /admin/trash restores is only what the trigger wrote.
+  begin
+    update public.content_versions set snapshot = '{"forged":true}' where row_id = 'rls-test-draft';
+    raise exception 'RLS FAIL: manager can UPDATE content_versions rows';
+  exception
+    when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.content_versions where row_id = 'rls-test-draft';
+    raise exception 'RLS FAIL: manager can DELETE content_versions rows';
+  exception
+    when insufficient_privilege then null;
+  end;
+
   -- A new row defaults to draft: status is deliberately not named here, exactly
   -- like a direct insert from a seed script or psql would leave it.
   insert into public.content_faqs (id, category, question, answer)

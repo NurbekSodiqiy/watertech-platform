@@ -11,6 +11,7 @@ manual, and the signed-in half of the e2e suite needs a session cookie captured 
 | Dashboard SQL parity + retention | Supabase SQL editor | `supabase/tests/dashboard-parity.sql`, `retention-checks.sql` | no — staging only (the TS half of the parity check runs in `npm test`) |
 | Copilot statistics | Supabase SQL editor | `supabase/tests/copilot-checks.sql` | no — staging only (the normalization corpus's TS half runs in `npm test`) |
 | Storage policies + product photos | Supabase SQL editor | `supabase/tests/storage-checks.sql` | no — staging only (the limits' TS half runs in `npm test`) |
+| Which migrations a project has had | Supabase SQL editor | `supabase/tests/migration-status.sql` | no — read-only, safe on any project (docs/MIGRATIONS.md) |
 | Accessibility (axe-core, in Playwright) | `npm run e2e` | `tests/e2e/a11y.spec.ts` | yes, public routes only |
 | Types + lint | `npm run typecheck && npm run lint` | — | yes |
 
@@ -45,7 +46,10 @@ Playwright starts `npm run start`, so **build first**. It reuses a server alread
 CI has no Google sign-in, so what runs there is what an anonymous visitor can reach:
 
 - `smoke.spec.ts`: `/` gate, the sign-in button in both locales, `/api/events` 401.
-- `auth-gate.spec.ts`: `/`, `/admin`, `/dashboard/content`, `/ru/` redirect to the matching login page.
+- `auth-gate.spec.ts`: `/`, `/admin`, `/dashboard/content`, `/ru/` redirect to the matching login page, and
+  so do URLs that merely end in a file extension (`/sales-process/scripts/<slug>.json`, `/x.json` — the
+  matcher hole Audit-2 F1 closed); `/sw.js`, the manifest and one file from each `public/` folder are
+  still served without a session.
 - `copilot-auth.spec.ts`: `/api/copilot` refuses anonymous requests before validating the body; `/api/cron/content-scan` needs the bearer secret.
 - `offline.spec.ts`: `/offline` (uz and ru) renders its EmptyState and retry button without a redirect.
 - `notifications.spec.ts`: `/admin/notifications` is behind the gate.
@@ -126,7 +130,8 @@ email is matched case-insensitively and gets its role stamped. See [SECURITY.md]
 model this verifies and the dashboard steps it cannot.
 
 The last manager block covers the integrity rules migration 0013 moved into the database: a manager cannot
-insert a fabricated `content_versions` row, a content row inserted without a `status` lands as `draft`,
+insert a fabricated `content_versions` row or update or delete an existing one, a content row inserted
+without a `status` lands as `draft`,
 `updated_by` is stamped from the JWT even when the payload sends another email, and a delete leaves a
 snapshot with `op = 'delete'` — including the `content_packages` row removed by the `on delete cascade`
 from its group.
@@ -181,6 +186,8 @@ reference, and one expected table pins both sides:
 - `supabase/tests/retention-checks.sql` puts one row on each side of every horizon in
   `public.run_retention()`, runs it, asserts what is left, runs it again (nothing left to do), checks
   the `p_skip_if_scheduled` switch against the pg_cron job, and that only `service_role` can execute it.
+  One fixture is a row deleted 10 days ago and edited 52 times since its restore: its delete snapshot
+  must survive the newest-50 rule, which ranks update snapshots only.
 
 Run each like `rls-checks.sql`: staging project → SQL Editor → paste the whole file → run once. Pass is a
 single row (`Dashboard parity checks passed` / `Retention checks passed`), failure an error starting

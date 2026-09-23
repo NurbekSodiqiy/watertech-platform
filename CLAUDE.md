@@ -75,12 +75,13 @@ components/
   motion/                          motion primitives — see §14
   story/                           scroll-storytelling scenes — see §14
 lib/
-  content/                        types.ts + seed data files + loader.ts (typed getters, incl. getContacts/getSops). Pages call getters, never arrays directly. No mock-data folder: every content kind lives in Supabase.
-  supabase/                        client.ts (browser) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
-  auth/                            claims helpers (role from JWT), route guards
+  content/                        types.ts + seed data files + loader.ts (typed getters, incl. getContacts/getSops). Pages call getters, never arrays directly. No mock-data folder: every content kind lives in Supabase. safe.ts decides what a failed read does (§8).
+  supabase/                        client.ts (browser) · client-lazy.ts (loads client.ts on demand, PERF.md S14) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
+  auth/                            claims.ts (role from JWT), server-session.ts, sign-out.ts + purge.ts (shared-device purge, §7), ban.ts (Supabase Auth ban)
+  user-state/                      per-user state store (pins, onboarding, read receipts); owner.ts namespaces every storage key per account
   telemetry/                       client.ts (queue), types.ts, aggregate.ts (server)
   search/                          index.ts (lazy Fuse), normalize.ts
-  security/                        rate-limit.ts, csp.ts
+  security/                        rate-limit.ts, durable-rate-limit.ts, csp.ts, middleware-matcher.ts (tested copy of the matcher literal, §7)
   admin/                           CMS domain logic. registry.ts is the single description of the
                                    10 content tables (schema, row mapper, list columns, admin path,
                                    cache tag); errors.ts the AdminErrorCode/ActionResult contract;
@@ -88,12 +89,15 @@ lib/
                                    generic listRows/listFullRows/getRow; actions/factory.ts the
                                    create/update/remove/setStatus builder and actions/deps.ts what
                                    binds it to a real request. actions/*.ts are thin "use server"
-                                   wrappers only — never a second copy of a write body.
+                                   wrappers only — never a second copy of a write body. The three
+                                   non-CRUD writes are dependency-injected the same way:
+                                   actions/restore.ts (history + trash), actions/user-access.ts
+                                   (allow-list), actions/product-image.ts (catalog photos).
   copilot/                         copilot prompt/response logic
   agents/                         copilot agent orchestration
   notifications/                  publish-gate / stale-content notifications inbox
   dashboard/                       KPI aggregation for the manager dashboard
-  pwa/                             Serwist config helpers
+  pwa/                             sw-routes.ts (runtime-cache rules + the sign-out purge list), sw-messages.ts
   motion/                          tokens.ts — durations, easings, spring presets; see §14
   i18n/                            small i18n helpers (e.g. strip-locale.ts) — routing lives in i18n/routing.ts, not here
   env.ts                           zod-validated process.env — the ONLY place that reads process.env
@@ -106,15 +110,21 @@ messages/
   uz.json, ru.json                 UI strings, one key set shared across both files — see §13
 hooks/                             useTrack, useNow, useMounted, useSessionUser…
 supabase/
-  migrations/*.sql                 every schema change is a numbered migration file
-  seed/                            seed scripts (content TS files are the seed source)
+  migrations/*.sql                 every schema change is a numbered migration file — apply order in docs/MIGRATIONS.md
+  seed/                            seed scripts (content TS files are the seed source); guard.ts refuses production (§7)
+  tests/*.sql                      SQL checks: rls, dashboard-parity, retention, storage, copilot (staging only,
+                                   they write rolled-back fixtures); migration-status.sql (read-only, any project)
 tests/
   unit/                            vitest unit tests mirror lib/ paths
   e2e/                             Playwright end-to-end tests
   fixtures/, stubs/                shared test fixtures and stubs
 docs/
   ADDING_A_MODULE.md               how to add a new content/domain module
-  TESTING.md                       how to run/extend the unit and e2e suites
+  TESTING.md                       how to run/extend the unit, e2e and SQL suites
+  SECURITY.md                      the auth model and the owner's dashboard checklist
+  MIGRATIONS.md                    apply order, per-migration runbooks, rollbacks
+  PERF.md                          bundle budgets, measuring method, history
+  AUDIT.md                         audit findings (Audit-2, S17): fixed, open, residual risk
 public/products/                   catalog images (never rename files — referenced by lib/content/products.ts)
 sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts
 instrumentation.ts                 Sentry/Next instrumentation hook
@@ -245,6 +255,24 @@ explicit strings (Tailwind must see full class names — never build class names
 
 ## 7. Supabase, auth & security rules
 
+The auth model and the owner's dashboard steps are in [docs/SECURITY.md](docs/SECURITY.md); the
+migration apply order and runbooks in [docs/MIGRATIONS.md](docs/MIGRATIONS.md); what the last audit
+found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
+
+- **Auth model — four layers, each refusing on its own.** (1) The Custom Access Token hook (0014) issues
+  a token only for an active `allowed_users` row and stamps `app_metadata.role` (`operator` | `manager`);
+  it is inert until enabled in the Supabase dashboard. (2) `middleware.ts` reads that role off the
+  locally verified JWT and confines each role to its own area. (3) RLS decides rows, through
+  `private.is_member()` / `private.is_manager()` only — never inline `auth.jwt() -> 'app_metadata'` in a
+  new policy. (4) Server code re-checks: `getServerSession()` in Route Handlers,
+  `requireManagerSession()` first in every admin Server Action. A new data-returning SQL function is
+  SECURITY INVOKER and refuses a non-manager itself (`WT403`), or is granted to `service_role` only.
+- **Middleware matcher.** It may exclude only real static files: the three `public/` folders
+  (`certificates/`, `icons/`, `products/`) by file extension, and `sw.js`, `manifest.webmanifest`,
+  `favicon.ico` exactly (anchored with `$`), besides `api/`, `auth/callback`, `monitoring`, `_next/*`.
+  Never an unscoped extension or an unanchored prefix — that let any `/<route>/<slug>.json` skip the auth
+  gate (Audit-2 F1). A new `public/` folder changes `middleware.ts`, `lib/security/middleware-matcher.ts`
+  and `tests/unit/security/middleware-matcher.test.ts` together; the parity test enforces the first two.
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only. `lib/supabase/admin.ts` is imported only from
   Route Handlers / Server Actions that need to bypass RLS, and the reason is written in a comment.
 - Route Handlers and Server Actions: (1) verify session with `getClaims()`, (2) check role from
@@ -252,15 +280,39 @@ explicit strings (Tailwind must see full class names — never build class names
   (`{ error: string }`) with proper status — in that order, always.
 - Never trust client-supplied identity (email, role) in any payload.
 - Admin Server Actions return an `AdminErrorCode`, never a sentence and never a database message
-  (`lib/admin/errors.ts`: `ActionResult = { ok: true } | { ok: false; code; gate?; field?; details? }`).
-  A Postgres error is read once, logged with `logDbError`, and collapsed into a code — its message,
-  hint and constraint names stay on the server. The client turns the code into copy through
-  `hooks/useActionError.ts` and `admin.errors.<code>`; a new code needs both message files (§13).
+  (`lib/admin/errors.ts`: `ActionResult = { ok: true } | { ok: false; code; gate?; field?; details?;
+  references? }`). The codes: `unauthorized`, `validation`, `id_taken`, `version_conflict`,
+  `gate_blocked`, `not_found`, `reference_in_use`, `email_taken`, `last_manager`, `self_change`,
+  `auth_sync_failed`, `unknown`. A Postgres error is read once, logged with `logDbError`, and collapsed
+  into a code — its message, hint and constraint names stay on the server. Database-raised states map
+  by SQLSTATE, never by message: `23505` → `id_taken` / `email_taken`, `23503` → `reference_in_use`,
+  `23514` / `WT400` → `validation`, `WT403` / `42501` → `unauthorized`, `WT409` → `version_conflict`, `WT460` →
+  `last_manager`, `WT461` → `self_change`. The client turns the code into copy through
+  `hooks/useActionError.ts` and `admin.errors.<code>`; a new code needs both message files (§13) —
+  `tests/unit/admin/messages.test.ts` fails otherwise.
+- Every argument of a Server Action is browser input, whatever its TS type: parse it with zod (an id with
+  `idSchema`, a version as a non-negative integer) before it reaches the publish gate or a query.
+- **Publish gate.** Every path that can make a row `published` runs `lib/agents/publish-gate` first and
+  writes nothing when it blocks: create/update when saved as published (on the candidate), `setStatus`
+  and so bulk publish (on the stored row), a version restore onto a published row (on the merged
+  candidate), the dashboard's quick publish. A restore from the trash always comes back as a draft.
 - A content write goes through `contentActions()` (`lib/admin/actions/factory.ts`) and its registry
   entry, with the RLS-scoped session client — never the service role. Creating uses `.insert()` so a
   taken id fails as `id_taken` instead of overwriting a live row; updating and deleting are guarded on
   the row's `version`. Do not hand-write a new upsert/delete body for a content table.
-- Every new table: RLS enabled, policies written in the migration, `updated_at`/`updated_by` columns.
+- Every new table: RLS enabled, policies written in the migration, `updated_at`/`updated_by` columns,
+  and explicit `GRANT`s (RLS alone grants nothing here — 0003). Every schema change is a **new** numbered
+  file, never an edit to one that ran anywhere; after any policy or grant change,
+  `supabase/tests/rls-checks.sql` runs on **staging** (never production — it writes rolled-back
+  fixtures). `supabase/tests/migration-status.sql` is read-only and says which files a project has had.
+- **Shared devices.** Operators share PCs, so sign-out is a purge (`lib/auth/sign-out.ts` →
+  `lib/auth/purge.ts`): uploads and telemetry stop synchronously, the leaving owner's localStorage keys,
+  all of sessionStorage and the telemetry buffer go, the service worker deletes its user caches, the
+  session is revoked, and a hard navigation replaces the page; another tab's sign-out or account switch
+  runs the same purge (`SessionProvider`). So: any new persisted client state uses an owner-namespaced
+  key (`lib/user-state/owner.ts`) or is added to `purgeableStorageKeys`; any new service-worker runtime
+  cache is listed in `PURGED_CACHE_NAMES` or `KEPT_CACHE_NAMES` (`lib/pwa/sw-routes.ts`, exact names);
+  a session-bound GET is `NetworkOnly`. UI preferences (theme, sidebar) are the only un-namespaced keys.
 - No `dangerouslySetInnerHTML` with content that can come from the database. Render structured data.
 - Any new `<script>` needs the CSP nonce (`headers().get("x-nonce")` in the server component that renders it).
 - Secrets and env: read only via `lib/env.ts`; never log env values; never commit `.env*`.
@@ -268,12 +320,26 @@ explicit strings (Tailwind must see full class names — never build class names
   `SEED_TARGET`, `PROD_PROJECT_REFS` and `NEXT_PUBLIC_SUPABASE_URL` from `process.env` directly. The
   seed is a developer CLI, not app runtime — it never ships in a bundle, and those variables only
   describe the machine running the command. Nothing under `app/`, `components/` or `lib/` may copy it.
+- **Seed rules** (`npm run seed:content`, `supabase/seed/guard.ts`): it runs only with
+  `SEED_TARGET=staging`, never against a ref listed in `PROD_PROJECT_REFS` (required for a hosted
+  project) and never against an unrecognised host; it is insert-only (existing rows, `status` included,
+  stay as managers saved them) unless `--force`; run `--dry-run` first. Production content is entered
+  through `/admin`. Never run the seed, a SQL check file or anything else that writes against production.
 
 ## 8. Content layer rules
 
 - Content lives behind typed getters in `lib/content/loader.ts` (`getScripts()`, `getObjections()`,
   `getFaqs()`, `getCompetitors()`, `getPackageGroups()`, `getProducts()`). Pages and server components
   call getters; client components receive data via props. Never import the raw arrays into UI.
+- **A failed content read** (`lib/content/safe.ts`) depends on who reads. Pages use the throwing
+  getters (`"page"` mode): `ContentUnavailableError` fails `next build` and keeps the last good ISR page
+  instead of publishing an empty knowledge base. Route Handlers, the Copilot retriever and the manager
+  dashboard use the `…OrEmpty` getters (`"degrade"` mode: log `[content:<kind>]`, return empty).
+  `CONTENT_BUILD_MODE=allow-empty` exists for CI's placeholder project only — never in Vercel, production
+  or `.env.local`; an unreadable value means `strict`.
+- The loaders read with the service role, which RLS does not restrict, so each one filters
+  `status = 'published'` itself; a new getter must too. Drafts reach the admin only, through the
+  RLS-scoped session client (`lib/admin/queries.ts`).
 - Business numbers (discount %, advance %) are numeric fields, never parsed from prose.
 - IDs are stable slugs (`obj-qimmat`, `lead-orqali-tushgan`); telemetry references them — never rename
   an id without a migration note.

@@ -24,7 +24,7 @@ not an email in a request body, not a role in a payload.
 | 3 | Google → `https://<ref>.supabase.co/auth/v1/callback` → back to `<origin>/auth/callback?code=…&locale=…` | Supabase Auth | The `code` is single-use and bound to the PKCE verifier in the browser. |
 | 4 | `exchangeCodeForSession(code)` | [app/auth/callback/route.ts](../app/auth/callback/route.ts) | **The gate.** GoTrue mints the access token here, and minting runs the hook in step 5. |
 | 5 | `public.custom_access_token_hook(event)` | [0014_role_gated_rls.sql](../supabase/migrations/0014_role_gated_rls.sql) | Active `allowed_users` row → stamps `app_metadata.role` = `operator` \| `manager`. Otherwise returns the Auth Hooks error response and **no token exists**. |
-| 6 | Route gating | [middleware.ts](../middleware.ts) | Reads the role off the locally verified JWT. Operators are confined to operator routes, managers to `/dashboard` and `/admin`, each direction enforced by the same check. Network-free (CLAUDE.md §4). |
+| 6 | Route gating | [middleware.ts](../middleware.ts) | Reads the role off the locally verified JWT. Operators are confined to operator routes, managers to `/dashboard` and `/admin`, each direction enforced by the same check. Network-free (CLAUDE.md §4). It runs on every path except `api/*`, `auth/callback`, the Sentry tunnel, `_next/*`, the three `public/` asset folders and three exact files (CLAUDE.md §7) — until Audit-2 any path ending in `.json`, `.png`, `.map`… skipped it (AUDIT.md F1). |
 | 7 | Row gating | RLS, via `private.is_member()` / `private.is_manager()` | Which rows that session sees, per table. |
 
 `/login` and `/offline` are the only public paths. `/offline` is public because the service worker
@@ -79,7 +79,12 @@ content-addressed key (`products/<id>/<sha256-8>.<ext>`), and never accepts SVG.
 the same 2 MB / JPEG-PNG-WebP-AVIF limits again. `img-src` allows only this bucket's public path, and
 the image optimizer (`images.remotePatterns`) fetches nothing else from the Supabase host.
 
-No policy anywhere targets `anon`, and `anon` holds no grant on any table. Writes that need to bypass
+No policy anywhere targets `anon`. `rate_limits` (0008), `allowed_users` and `access_audit` (0017)
+revoke every `anon` privilege; on the other public tables `anon` keeps whatever the project's default
+privileges gave it — on a fresh Supabase project, all of them. That is inert: RLS is enabled on every
+table and no policy names `anon`, so an anon-key request sees and changes nothing, and the privileges RLS
+does not cover (TRUNCATE, TRIGGER, REFERENCES) are not reachable through PostgREST, GraphQL or Realtime.
+Revoking them anyway is open item O1 in [AUDIT.md](AUDIT.md#b-findings-of-this-audit). Writes that need to bypass
 RLS (telemetry ingestion, the copilot log, the publish gate, the content loaders — and, since 0017, the
 Supabase Auth ban/unban behind `/admin/users`, which has no session-scoped equivalent) go through
 [lib/supabase/admin.ts](../lib/supabase/admin.ts) in server code only, and take the email from the
@@ -223,7 +228,10 @@ user under Authentication → Users.
 - Policies, grants and hook changes are a **new numbered migration** — never an edit to an applied file
   and never a change made by hand in the SQL editor (see [MIGRATIONS.md](MIGRATIONS.md)).
 - Re-run `supabase/tests/rls-checks.sql` on staging afterwards. It is the only executable check on this
-  model.
+  model. `supabase/tests/migration-status.sql` (read-only, safe on production) says which migrations a
+  project has had, since there is no migrations table.
+- The last audit of this model — what was verified, how, and what is still open — is
+  [AUDIT.md](AUDIT.md) (Audit-2).
 - Keep `private.is_member()` / `private.is_manager()` as the single spelling of both questions. A new
   policy that inlines `auth.jwt() -> 'app_metadata' ->> 'role'` re-introduces both the per-row cost and
   the chance of a table being left out of the next fix.

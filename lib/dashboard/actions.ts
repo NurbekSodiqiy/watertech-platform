@@ -1,16 +1,27 @@
 "use server";
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireManagerSession } from "@/lib/admin/actions/guard";
 import { actionErrorResult, actionFailed, actionOk, gateBlockedResult, type ActionResult } from "@/lib/admin/errors";
 import { isContentTable } from "@/lib/admin/registry";
+import { idSchema } from "@/lib/admin/schemas";
+import { adminErrorMap } from "@/lib/admin/validation";
 import { runPublishGate } from "@/lib/agents/publish-gate";
 import { updateWithVersion } from "@/lib/admin/actions/concurrency";
 import { revalidateContent } from "@/lib/content/revalidate";
 import { DASHBOARD_TABLE_KIND } from "@/lib/dashboard/content-health";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 import type { Json } from "@/lib/supabase/database.types";
+
+/** The row a quick action targets — the same shape factory.setStatus parses
+ * for a list-page publish. The arguments come from the browser, so the TS
+ * signatures below are not a check (CLAUDE.md §7). */
+const rowRefSchema = z.object({
+  id: idSchema,
+  expectedVersion: z.number().int().nonnegative(),
+});
 
 async function writeAndRevalidate(
   table: string,
@@ -20,12 +31,13 @@ async function writeAndRevalidate(
   session: { email: string }
 ): Promise<ActionResult> {
   if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
+  const ref = rowRefSchema.parse({ id, expectedVersion }, { errorMap: adminErrorMap });
   await updateWithVersion(
     createClient<DynamicTablesDatabase>(),
     table,
-    id,
+    ref.id,
     { ...patch, updated_by: session.email },
-    expectedVersion
+    ref.expectedVersion
   );
   revalidateContent(DASHBOARD_TABLE_KIND[table]);
   revalidatePath("/[locale]/dashboard/content", "page");
@@ -36,9 +48,12 @@ export async function publishFromDashboard(table: string, id: string, expectedVe
   try {
     const session = await requireManagerSession();
     if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
-    const gate = await runPublishGate({ table, id, actor: session.email });
+    // Before the gate: a gate run on a malformed id still writes a gate report
+    // and a "publish blocked" notification naming it.
+    const ref = rowRefSchema.parse({ id, expectedVersion }, { errorMap: adminErrorMap });
+    const gate = await runPublishGate({ table, id: ref.id, actor: session.email });
     if (!gate.passed) return gateBlockedResult(gate);
-    return await writeAndRevalidate(table, id, expectedVersion, { status: "published" }, session);
+    return await writeAndRevalidate(table, ref.id, ref.expectedVersion, { status: "published" }, session);
   } catch (e) {
     return actionErrorResult(e);
   }

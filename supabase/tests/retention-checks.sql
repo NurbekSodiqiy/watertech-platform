@@ -57,6 +57,17 @@ insert into public.content_versions (table_name, row_id, snapshot, op, created_a
   ('content_faqs', 'retention-del-181d', '{}', 'delete', now() - interval '181 days'),
   ('content_faqs', 'retention-del-179d', '{}', 'delete', now() - interval '179 days');
 
+-- Deleted 10 days ago, restored from the trash and edited 52 times since: its
+-- delete snapshot is older than every one of those edits but inside 180 days,
+-- so it stays. The newest-50 rule ranks update snapshots only — a ranking over
+-- every op would evict it as the row's 53rd-newest snapshot.
+insert into public.content_versions (table_name, row_id, snapshot, op, created_at)
+select 'content_faqs', 'retention-restored', jsonb_build_object('n', n), 'update', now() - make_interval(mins => n)
+from generate_series(1, 52) as n;
+
+insert into public.content_versions (table_name, row_id, snapshot, op, created_at) values
+  ('content_faqs', 'retention-restored', '{}', 'delete', now() - interval '10 days');
+
 -- === One run, as pg_cron would run it ==========================================
 
 do $$
@@ -130,6 +141,13 @@ begin
   end if;
   if not exists (select 1 from public.content_versions where row_id = 'retention-del-179d') then
     raise exception 'RETENTION FAIL: a 179-day-old delete snapshot was deleted';
+  end if;
+  if not exists (select 1 from public.content_versions where row_id = 'retention-restored' and op = 'delete') then
+    raise exception 'RETENTION FAIL: a 10-day-old delete snapshot was deleted because its row has 50+ newer edits';
+  end if;
+  select count(*) into n from public.content_versions where row_id = 'retention-restored' and op = 'update';
+  if n <> 50 then
+    raise exception 'RETENTION FAIL: % update snapshots kept for a restored row with 52 (expected 50)', n;
   end if;
 
   -- The counts cover at least the fixture (real staging rows may add to them).

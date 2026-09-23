@@ -373,6 +373,24 @@ OAuth and is not an operator route.
 Also in S14 (no bundle effect): the palette input is now a `combobox` (`CommandPalette`), the TopBar search is an
 icon-only button below `sm`, the nav badge text and lock icon colours changed. See `docs/AUDIT.md` #9-#14.
 
+## Measured at the Audit-2 release audit (2026-09-23, commit `4d832e3`)
+
+Operator routes are exactly the S14 figures above: every one ≤ 180 kB, `/company/onboarding` at 180 kB with no
+headroom. Shared by all routes: 89.4 kB. Manager routes grew with S12 (DataTable bulk, reorder, pagination) and
+S13 (activity feed, unified navigation); they are outside the operator budget:
+
+| Route | Last recorded here | Audit-2 |
+|---|---:|---:|
+| `/admin/<section>` (the ten lists) | 141 kB (S06) | 146 kB |
+| `/admin/<section>/[id]` (EntityForm editors) | 166-167 kB (S11) | 169-170 kB |
+| `/admin/scripts/[id]` | 175 kB (S11) | 178 kB |
+| `/admin/users`, `/admin/trash`, `/admin/activity` | — | 154 / 129 / 109 kB |
+| `/dashboard`, `/dashboard/quality` | 133 kB (S09) | 133 kB |
+| `/dashboard/content`, `/dashboard/copilot` (new in S13) | 140 kB (S09), — | 140 / 133 kB |
+
+The audit's fixes changed no route: the table before and after is identical, and the middleware bundle reads
+123 kB instead of 122 kB (its matcher literal is longer — AUDIT.md F1).
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
