@@ -9,6 +9,7 @@ manual, and the signed-in half of the e2e suite needs a session cookie captured 
 | End-to-end (Playwright, Chromium) | `npm run build && npm run e2e` | `tests/e2e/*.spec.ts` | yes, unauthenticated only |
 | Row Level Security | Supabase SQL editor | `supabase/tests/rls-checks.sql` | no — staging only |
 | Dashboard SQL parity + retention | Supabase SQL editor | `supabase/tests/dashboard-parity.sql`, `retention-checks.sql` | no — staging only (the TS half of the parity check runs in `npm test`) |
+| Storage policies + product photos | Supabase SQL editor | `supabase/tests/storage-checks.sql` | no — staging only (the limits' TS half runs in `npm test`) |
 | Accessibility (axe-core, in Playwright) | `npm run e2e` | `tests/e2e/a11y.spec.ts` | yes, public routes only |
 | Types + lint | `npm run typecheck && npm run lint` | — | yes |
 
@@ -185,6 +186,24 @@ single row (`Dashboard parity checks passed` / `Retention checks passed`), failu
 with `PARITY FAIL:` / `RETENTION FAIL:`. Both end in `ROLLBACK`. The parity fixture lives in March 2001,
 so no real event can fall into its windows; the retention check also prunes real staging rows inside
 the transaction, which the rollback restores.
+
+## Storage checks (staging only, after 0018)
+
+`supabase/tests/storage-checks.sql` asserts what 0018 promises about catalog photos: the `product-images`
+bucket is public with a 2 MB limit and exactly the JPEG/PNG/WebP/AVIF types; its four policies are
+authenticated-only, manager-gated and scoped to the bucket (and, for writes, to `products/`) — checked on
+the policy text too, because the manager-only SELECT policy would otherwise hide an over-wide UPDATE or
+DELETE policy; an operator can list, write, rename and delete nothing; a manager can do all four inside
+the bucket and nothing in another one; and `content_products.image_path` refuses a key that names another
+product, climbs out of `products/`, or has a disallowed extension.
+
+It inserts rows into `storage.objects` directly (catalog rows only — no file is written) and sets
+`storage.allow_delete_query` for its own transaction, which newer Storage versions require for a plain
+SQL delete. Run it like `rls-checks.sql`; pass is `storage checks passed`, failure an error starting with
+`STORAGE FAIL:`. It ends in `ROLLBACK`.
+
+The TS side of the same limits is `tests/unit/admin/product-image.test.ts`, which reads the migration
+file and fails if its size limit, MIME list or `image_path` pattern drift from `lib/admin/product-image.ts`.
 
 ## CI (`.github/workflows/ci.yml`)
 

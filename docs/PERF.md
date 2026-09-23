@@ -218,6 +218,41 @@ full stage tree of every script, to render a name. `tests/unit/admin/registry.te
 ever reappears in a list projection. Full rows are still one call away (`listFullRows`) for the two callers
 that map them through `lib/content/db` — the publish gate's bundle and the script editor's link pickers.
 
+## After 2026-09-23 (S11, uploaded product photos, migration 0018)
+
+Measured against a production build of the commit before S11, same machine, same env:
+
+| Route | Before | After |
+|---|---:|---:|
+| `/products` | 234 kB | 234 kB |
+| `/products/technical-docs` | 143 kB | 144 kB |
+| `/company/onboarding` | 249 kB | 250 kB |
+| `/admin/<section>/[id]` (the eight EntityForm editors) | 151 kB | 166-167 kB |
+| every other route | — | unchanged |
+
+- **`/products`.** `ProductsCatalog` now resolves every photo through `productImageSrc` in
+  `lib/content/products.ts` — the module that also holds the 28-product seed array. The first build of this
+  change shipped that array to the browser (+2 kB First Load, the product names visible in the page chunk);
+  the array is now built inside a `/* @__PURE__ */` IIFE, so a bundle that imports only the helpers drops it.
+  `grep -rl rakor-naruzhnoy-rezboy .next/static/chunks` finds nothing. `clientEnv` (for the Storage URL) was
+  already on the layout path through `SessionProvider`, so it costs nothing here.
+- **`/products/technical-docs`, `/company/onboarding` (+1 kB each).** No new code: the module lists of the
+  two page chunks show webpack's split-chunk grouping moving shared modules between them.
+- **Admin editors (+15-16 kB in the table, manager only).** The "before" figure measured pages that could not
+  render: every `EntityForm` editor passed its zod form schema from the Server Component page into the Client
+  Component, and React refuses to serialize a class instance ("Only plain objects … can be passed to Client
+  Components"). The editors are dynamic routes, so `next build` never renders them and the failure only showed
+  at request time. Each editor now has a `"use client"` wrapper (`components/admin/<X>EditorForm.tsx`) that
+  imports its schema and save action, so the pages reference zod's core (chunk `1351`, 11.7 kB gzip) and
+  `lib/admin/schemas.ts`. Most of the table's increase is its own blind spot (see "Reading the route table"): the
+  admin layout's `SessionProvider` already loads `1351` on every admin page, so the table now counts a chunk the
+  browser was downloading anyway. What is really new per editor is about 2-3 kB gzip: the shared schemas module,
+  and the `next/dynamic` runtime `EntityForm` uses to load the photo picker (`components/admin/ImageUploadField.tsx`)
+  only on `/admin/products/[id]`. Every admin route stays under 180 kB; `/admin/scripts/[id]` (175 kB) is still the
+  largest.
+
+The over-budget set is unchanged at the same six operator routes.
+
 ## Dashboard queries (S09, migration 0016)
 
 **Before.** Each dashboard tab ran one `select` of raw `telemetry_events` rows for the range plus the equal-length

@@ -8,7 +8,13 @@ export interface Product {
    * this catalog lives in content_products; telemetry doesn't reference
    * products today, but keep it stable regardless. */
   id: string;
-  filename: string;
+  /** Legacy photo: a file in public/products/. Every seeded product has one;
+   * a product created in the admin usually does not, and uses `image_path`. */
+  filename?: string;
+  /** Photo uploaded from /admin/products: the object key inside the
+   * `product-images` Storage bucket (`products/<id>/<sha256-8>.<ext>`). Wins
+   * over `filename` when both are set — see productImageSrc. */
+  image_path?: string;
   name_ru: string;
   /** Optional Uzbek override — product names are Russian by default (see
    * CLAUDE.md section 1); this is the one field where uz is the addition
@@ -21,11 +27,48 @@ export interface Product {
   material?: "latun";
 }
 
-function product(p: Omit<Product, "id">): Product {
+/** Storage bucket for uploaded catalog photos (0018_product_images.sql). */
+export const PRODUCT_IMAGES_BUCKET = "product-images";
+
+/** Path of a public object in PRODUCT_IMAGES_BUCKET, relative to the Supabase
+ * project URL. Public buckets are served from this endpoint without RLS — the
+ * same prefix the CSP img-src (lib/security/csp.ts), next.config.js
+ * images.remotePatterns and the service worker's product-images cache
+ * (lib/pwa/sw-routes.ts) are keyed on. */
+export const PRODUCT_IMAGES_PUBLIC_PATH = `/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/`;
+
+/** Public URL of one uploaded photo. `supabaseUrl` is NEXT_PUBLIC_SUPABASE_URL
+ * (clientEnv in lib/env.ts), passed in rather than imported so this module
+ * stays free of env parsing — the seed CLI and the unit tests import it too. */
+export function productStorageUrl(imagePath: string, supabaseUrl: string): string {
+  const base = supabaseUrl.replace(/\/+$/, "");
+  const key = imagePath.split("/").map(encodeURIComponent).join("/");
+  return `${base}${PRODUCT_IMAGES_PUBLIC_PATH}${key}`;
+}
+
+/** The one place that decides which file a product's photo is: the uploaded
+ * object when there is one, else the legacy file in public/products, else
+ * null (the catalog shows its "no image" placeholder). Every consumer — the
+ * catalog grid, its lightbox, the admin upload preview — goes through here. */
+export function productImageSrc(
+  product: Pick<Product, "filename" | "image_path">,
+  supabaseUrl: string
+): string | null {
+  if (product.image_path) return productStorageUrl(product.image_path, supabaseUrl);
+  if (product.filename) return `/products/${encodeURIComponent(product.filename)}`;
+  return null;
+}
+
+type SeedProduct = Omit<Product, "id" | "filename" | "image_path"> & { filename: string };
+
+function product(p: SeedProduct): Product {
   return { id: p.filename.replace(/\.[^.]+$/, ""), ...p };
 }
 
-export const products: Product[] = [
+// Built inside a pure IIFE so a bundle that imports only the helpers above
+// (the catalog grid, the admin editor) can drop the whole array: 28 calls to
+// product() are not provably side-effect free on their own.
+export const products: Product[] = /* @__PURE__ */ (() => [
   product({ filename: "truba-ppr.jpg", name_ru: "Труба ППР", sizes: ["Ø20","Ø25","Ø32","Ø40","Ø50","Ø63"], line: "ppr", category: "truba" }),
   product({ filename: "rakor-naruzhnoy-rezboy.jpg", name_ru: "Ракор с наружной резьбой", sizes: ["Ø20 1/2","Ø25*1/2","Ø25 3/4","Ø25 *1","Ø32 *1","Ø40*1/4","Ø50*1-1/2","Ø63 *2"], line: "ppr", category: "fiting" }),
   product({ filename: "truba-kanalizatsionnaya-premium-comfort.jpg", name_ru: "Труба канализационная тип 3х слойный PREMIUM и COMFORT", sizes: ["Ø50/250","Ø50/500","Ø50/1000","Ø50/2000","Ø50/3000"], line: "kanalizatsiya", category: "truba" }),
@@ -54,4 +97,4 @@ export const products: Product[] = [
   product({ filename: "sifon.jpg", name_ru: "Сифон", sizes: ["Ø100"], line: "kanalizatsiya", category: "aksessuar" }),
   product({ filename: "zaglushka-dlya-ppr-trub.jpg", name_ru: "Заглушка для ППР труб", sizes: ["Ø20","Ø25","Ø32","Ø40","Ø50","Ø63"], line: "ppr", category: "fiting" }),
   product({ filename: "reviziya.jpg", name_ru: "Ревизия", sizes: ["Ø50","Ø76","Ø100"], line: "kanalizatsiya", category: "aksessuar" }),
-];
+])();

@@ -235,7 +235,8 @@ export function rowToPackageGroup(groupRow: PackageGroupRow, packageRows: Packag
 export function rowToProduct(row: ProductRow): Product {
   return {
     id: row.id,
-    filename: row.filename,
+    filename: row.filename ?? undefined,
+    image_path: row.image_path ?? undefined,
     name_ru: row.name_ru,
     name_uz: row.name_uz ?? undefined,
     sizes: row.sizes,
@@ -387,10 +388,14 @@ export function packageToRow(pkg: Package, groupId: string) {
   };
 }
 
+/** No `image_path`: that column is written only by the upload action
+ * (lib/admin/actions/product-image.ts), so neither a form save nor the seed
+ * can clear a photo a manager uploaded. See MANAGED_COLUMNS in
+ * lib/admin/registry.ts. */
 export function productToRow(product: Product) {
   return {
     id: product.id,
-    filename: product.filename,
+    filename: product.filename ?? null,
     name_ru: product.name_ru,
     name_uz: ru(product.name_uz),
     sizes: product.sizes,

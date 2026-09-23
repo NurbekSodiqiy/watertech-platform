@@ -45,11 +45,19 @@ import type { Script } from "@/lib/content/types";
 /** Columns the database and the factory maintain, never a *ToRow mapper. */
 type BookkeepingColumn = "status" | "sort_order" | "version" | "created_at" | "updated_at" | "updated_by";
 
+/** Content columns with a writer of their own, outside the generic save:
+ * `content_products.image_path` is set only by the photo upload action
+ * (lib/admin/actions/product-image.ts), which also owns the Storage object it
+ * points at. Leaving them out of ContentRow is what keeps a form save — or the
+ * seed — from nulling a photo it never loaded; lib/admin/snapshot.ts keeps a
+ * version restore from pointing a row back at a photo that has been removed. */
+export type ManagedColumn = "image_path";
+
 /** What a `*ToRow` mapper in lib/content/db.ts produces: the table's own
  * content columns and nothing else. Identical to the row shape the publish
  * gate checks (lib/agents/publish-gate/types.ts), which is what lets a save
  * gate the values it is about to write. */
-export type ContentRow<T extends DashboardTableName> = Omit<Tables<T>, BookkeepingColumn>;
+export type ContentRow<T extends DashboardTableName> = Omit<Tables<T>, BookkeepingColumn | ManagedColumn>;
 
 export type ContentColumn<T extends DashboardTableName> = keyof Tables<T> & string;
 

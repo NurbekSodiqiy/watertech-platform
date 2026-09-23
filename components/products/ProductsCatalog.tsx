@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { m, useReducedMotion } from "framer-motion";
 import { Search, ImageOff, X, ZoomIn } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { Product } from "@/lib/content/products";
+import { productImageSrc, type Product } from "@/lib/content/products";
+import { clientEnv } from "@/lib/env";
 import { Dialog } from "@/components/ui/Dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { PinButton } from "@/components/ui/PinButton";
@@ -15,6 +16,12 @@ import { EMPTY_STATES } from "@/lib/empty-states";
 import { noTransition, springs } from "@/lib/motion/tokens";
 
 const LIGHTBOX_TITLE_ID = "product-lightbox-title";
+
+/** Uploaded photo, else the legacy /products file, else null — see
+ * productImageSrc. */
+function imageOf(product: Product): string | null {
+  return productImageSrc(product, clientEnv.NEXT_PUBLIC_SUPABASE_URL);
+}
 
 /** Sliding active mark, same pattern as Sidebar's ActivePill. Each group
  * passes its own layoutId so the line tabs and the category chips never
@@ -58,7 +65,7 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
     setActiveCategory("all");
   }
 
-  // Xato bo'lgan rasmlarni kuzatib borish (fallback uchun)
+  // Xato bo'lgan rasmlarni kuzatib borish (fallback uchun), mahsulot id si bo'yicha
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Kattalashtirilgan rasm ko'rinishi (lightbox)
@@ -76,7 +83,8 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
       const product = products.find((p) => p.id === id);
       if (!product) return;
       setActiveLine(product.line);
-      setLightbox({ id: product.id, src: `/products/${product.filename}`, alt: product.name_ru });
+      const src = imageOf(product);
+      if (src) setLightbox({ id: product.id, src, alt: product.name_ru });
     },
     [products]
   );
@@ -193,64 +201,65 @@ export function ProductsCatalog({ products }: { products: Product[] }) {
         />
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredProducts.map((product, idx) => (
-            <div
-              key={`${product.filename}-${idx}`}
-              className="relative flex flex-col rounded-2xl border border-border bg-surface overflow-hidden shadow-sm"
-            >
-              {/* Rasm qismi */}
-              <button
-                type="button"
-                onClick={() =>
-                  !imgErrors[product.filename] &&
-                  setLightbox({ id: product.id, src: `/products/${product.filename}`, alt: product.name_ru })
-                }
-                disabled={imgErrors[product.filename]}
-                className="group relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border cursor-zoom-in disabled:cursor-default"
-                aria-label={tCatalog("zoomLabel", { name: product.name_ru })}
+          {filteredProducts.map((product) => {
+            // null: no photo at all, or one that failed to load.
+            const src = imgErrors[product.id] ? null : imageOf(product);
+            return (
+              <div
+                key={product.id}
+                className="relative flex flex-col rounded-2xl border border-border bg-surface overflow-hidden shadow-sm"
               >
-                {imgErrors[product.filename] ? (
-                  <div className="flex flex-col items-center justify-center text-text-secondary gap-2">
-                    <ImageOff className="w-8 h-8 opacity-50" />
-                    <span className="text-xs">{tCatalog("imageMissing")}</span>
-                  </div>
-                ) : (
-                  <>
-                    <Image
-                      src={`/products/${product.filename}`}
-                      alt={product.name_ru}
-                      fill
-                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                      className="object-contain p-4"
-                      onError={() => setImgErrors(prev => ({ ...prev, [product.filename]: true }))}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-primary-dark/0 group-hover:bg-primary-dark/10 transition-none">
-                      <span className="rounded-full bg-surface/90 border border-border p-2 opacity-0 group-hover:opacity-100 shadow-sm">
-                        <ZoomIn className="w-4 h-4 text-primary-dark" />
-                      </span>
+                {/* Rasm qismi */}
+                <button
+                  type="button"
+                  onClick={() => src !== null && setLightbox({ id: product.id, src, alt: product.name_ru })}
+                  disabled={src === null}
+                  className="group relative h-48 w-full bg-surface-alt flex items-center justify-center p-4 border-b border-border cursor-zoom-in disabled:cursor-default"
+                  aria-label={tCatalog("zoomLabel", { name: product.name_ru })}
+                >
+                  {src === null ? (
+                    <div className="flex flex-col items-center justify-center text-text-secondary gap-2">
+                      <ImageOff className="w-8 h-8 opacity-50" />
+                      <span className="text-xs">{tCatalog("imageMissing")}</span>
                     </div>
-                  </>
-                )}
-                {/* Latun belgisi */}
-                {product.material === "latun" && (
-                  <div className="absolute top-3 right-3 bg-accent/10 border border-accent/20 text-accent text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                    {tCatalog("brass")}
-                  </div>
-                )}
-              </button>
+                  ) : (
+                    <>
+                      <Image
+                        src={src}
+                        alt={product.name_ru}
+                        fill
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                        className="object-contain p-4"
+                        onError={() => setImgErrors(prev => ({ ...prev, [product.id]: true }))}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary-dark/0 group-hover:bg-primary-dark/10 transition-none">
+                        <span className="rounded-full bg-surface/90 border border-border p-2 opacity-0 group-hover:opacity-100 shadow-sm">
+                          <ZoomIn className="w-4 h-4 text-primary-dark" />
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {/* Latun belgisi */}
+                  {product.material === "latun" && (
+                    <div className="absolute top-3 right-3 bg-accent/10 border border-accent/20 text-accent text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                      {tCatalog("brass")}
+                    </div>
+                  )}
+                </button>
 
-              <span className="absolute left-3 top-3 rounded-lg border border-border bg-surface/90">
-                <PinButton kind="product" id={product.id} />
-              </span>
+                <span className="absolute left-3 top-3 rounded-lg border border-border bg-surface/90">
+                  <PinButton kind="product" id={product.id} />
+                </span>
 
-              {/* Ma'lumot qismi */}
-              <div className="p-4 flex flex-col flex-1 gap-2">
-                <h3 className="text-[15px] font-semibold text-primary-dark leading-snug">
-                  {product.name_ru}
-                </h3>
+                {/* Ma'lumot qismi */}
+                <div className="p-4 flex flex-col flex-1 gap-2">
+                  <h3 className="text-[15px] font-semibold text-primary-dark leading-snug">
+                    {product.name_ru}
+                  </h3>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

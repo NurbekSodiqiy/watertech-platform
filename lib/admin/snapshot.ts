@@ -1,4 +1,5 @@
 import type { Json } from "@/lib/supabase/database.types";
+import type { ManagedColumn } from "@/lib/admin/registry";
 
 // A content row as plain JSON. Two places produce one: `to_jsonb(old)` in the
 // snapshot trigger (content_versions.snapshot, 0013_baseline_and_audit_integrity.sql)
@@ -41,6 +42,24 @@ export function snapshotId(row: SnapshotRow): string | null {
 export function snapshotText(row: SnapshotRow, column: string): string | null {
   const value = row[column];
   return typeof value === "string" ? value : null;
+}
+
+/** Columns a version restore leaves as they are on the live row — the
+ * ManagedColumn set of lib/admin/registry.ts. A photo upload removes the
+ * object the previous `image_path` named, so writing an old snapshot's
+ * `image_path` back would point the row at a file that no longer exists. The
+ * diff still shows them, and a restore from /admin/trash (a row with no live
+ * copy) still carries them: deleting a row leaves its photo in Storage. */
+export const MANAGED_COLUMNS: ReadonlySet<string> = new Set(["image_path"] satisfies ManagedColumn[]);
+
+/** `row` without its MANAGED_COLUMNS — the part of a snapshot a version
+ * restore may write onto a live row. */
+export function withoutManagedColumns(row: SnapshotRow): SnapshotRow {
+  const out: SnapshotRow = {};
+  for (const [column, value] of Object.entries(row)) {
+    if (!MANAGED_COLUMNS.has(column)) out[column] = value;
+  }
+  return out;
 }
 
 /** The row minus every bookkeeping column — the content a restore writes and

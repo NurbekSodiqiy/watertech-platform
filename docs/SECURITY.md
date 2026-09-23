@@ -67,6 +67,17 @@ Per table, since 0014:
 | `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never its own role/status, never the last active manager, and only while its own row is still an active manager; no delete | nothing |
 | `access_audit` (0017) | nothing | read — nobody writes it but the trigger, `service_role` included | nothing |
 | `rate_limits` | nothing | nothing | nothing — `service_role` only, through `rate_limit_hit()` |
+| `storage.objects`, bucket `product-images` (0018) | nothing through RLS | read, insert, update, delete — writes only under `products/` | nothing through RLS |
+
+**The `product-images` bucket is public on purpose.** Catalog photos are marketing material, so anyone
+holding a photo's URL can fetch it from `/storage/v1/object/public/product-images/…` — Storage serves
+public buckets without consulting RLS. What stays closed is everything else: no role but a manager can
+list, upload, replace or remove an object, and the policies are scoped to this bucket alone. Uploads go
+through `lib/admin/actions/product-image.ts` with the manager's own session client (never the service
+role), which checks the file's magic bytes against its declared type and extension, stores it under a
+content-addressed key (`products/<id>/<sha256-8>.<ext>`), and never accepts SVG. The bucket enforces
+the same 2 MB / JPEG-PNG-WebP-AVIF limits again. `img-src` allows only this bucket's public path, and
+the image optimizer (`images.remotePatterns`) fetches nothing else from the Supabase host.
 
 No policy anywhere targets `anon`, and `anon` holds no grant on any table. Writes that need to bypass
 RLS (telemetry ingestion, the copilot log, the publish gate, the content loaders — and, since 0017, the

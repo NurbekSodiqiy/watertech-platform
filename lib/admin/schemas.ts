@@ -146,7 +146,24 @@ export const packageWriteSchema = packageSchema.extend({
   groupId: idSchema,
   version: versionField,
 });
-export const productWriteSchema = productSchema.extend({ id: idSchema, status: statusSchema, version: versionField });
+/** A legacy photo in public/products: a bare file name with an image
+ * extension — no directory part, so the catalog's `/products/<filename>` can
+ * never point outside that folder. Optional since products got uploaded
+ * photos (image_path, 0018); the form's empty text input means "none". */
+const legacyFilenameField = z.preprocess(
+  (v) => (typeof v === "string" ? (v.trim() === "" ? undefined : v.trim()) : v),
+  z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9._-]*\.(?:jpe?g|png|webp|avif)$/i, "invalid")
+    .optional()
+);
+
+export const productWriteSchema = productSchema.extend({
+  id: idSchema,
+  status: statusSchema,
+  version: versionField,
+  filename: legacyFilenameField,
+});
 
 // === Form schemas — react-hook-form + zodResolver on the client. Array
 // fields are edited as one comma-separated text input and transformed here;

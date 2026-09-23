@@ -35,7 +35,9 @@ export type GateTable = DashboardTableName;
  * can gate the row it is about to write, and a test fixture needs only the
  * content columns. A full DB row still satisfies it. */
 type BookkeepingColumn = "status" | "sort_order" | "version" | "updated_at" | "updated_by" | "created_at";
-type ContentColumns<Row> = Omit<Row, BookkeepingColumn>;
+/** Written by their own action, not by a save — ManagedColumn in lib/admin/registry.ts. */
+type ManagedColumn = "image_path";
+type ContentColumns<Row> = Omit<Row, BookkeepingColumn | ManagedColumn>;
 
 export type GateTarget =
   | { table: "content_scripts"; row: ContentColumns<ScriptRow> }

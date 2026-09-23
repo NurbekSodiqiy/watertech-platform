@@ -335,7 +335,7 @@ export const schemaValid: GateCheck = (target) => {
       return schemaIssues(
         productSchema.safeParse({
           id: row.id,
-          filename: row.filename,
+          filename: row.filename ?? undefined,
           name_ru: row.name_ru,
           name_uz: row.name_uz ?? undefined,
           sizes: row.sizes,

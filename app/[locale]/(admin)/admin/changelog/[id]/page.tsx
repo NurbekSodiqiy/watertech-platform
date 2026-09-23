@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getChangelogRow } from "@/lib/admin/queries";
-import { changelogFormSchema, type ChangelogFormInput } from "@/lib/admin/schemas";
-import { upsertChangelog } from "@/lib/admin/actions/changelog";
-import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { ChangelogFormInput } from "@/lib/admin/schemas";
+import type { EntityFieldDef } from "@/components/admin/EntityForm";
+import { ChangelogEditorForm } from "@/components/admin/ChangelogEditorForm";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: Locale } }): Promise<Metadata> {
@@ -88,13 +88,7 @@ export default async function AdminChangelogEditPage({ params }: { params: { loc
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={changelogFormSchema}
-        defaultValues={defaultValues}
-        fields={fields}
-        onSubmit={upsertChangelog}
-        backHref="/admin/changelog"
-      />
+      <ChangelogEditorForm defaultValues={defaultValues} fields={fields} />
     </div>
   );
 }

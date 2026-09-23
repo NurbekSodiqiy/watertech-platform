@@ -34,22 +34,48 @@ export function isSalesProcessPath(pathname: string): boolean {
 
 const IMAGE_EXTENSION = /\.(?:avif|gif|ico|jpe?g|png|svg|webp)$/i;
 
-/** A catalog image requested straight from /public. Matching on the file
+/** Public object path of the product-images Storage bucket (0018) — the same
+ * prefix as PRODUCT_IMAGES_PUBLIC_PATH in lib/content/products.ts, spelled out
+ * so the worker bundle does not pull in the catalog data module
+ * (tests/unit/pwa/sw-routes.test.ts checks they agree). */
+export const STORAGE_PRODUCT_IMAGES_PREFIX = "/storage/v1/object/public/product-images/";
+
+/** An uploaded catalog photo, by path: a public object of the product-images
+ * bucket with an image extension. The key is content-addressed
+ * (`products/<id>/<sha256-8>.<ext>`), so a cached copy can never go stale. */
+export function isStorageProductImagePath(pathname: string): boolean {
+  return pathname.startsWith(STORAGE_PRODUCT_IMAGES_PREFIX) && IMAGE_EXTENSION.test(pathname);
+}
+
+/** A catalog image requested directly: a legacy file from /public/products,
+ * or an uploaded photo from the product-images bucket. Matching on the file
  * extension rather than `request.destination` keeps this true however the
  * request was issued (an <img>, a prefetch, a bare fetch) while still never
  * matching /products or /products/comparisons — app routes carry no
  * extension, and their HTML must not be served cache-first. */
 export function isProductImagePath(pathname: string): boolean {
-  return pathname.startsWith("/products/") && IMAGE_EXTENSION.test(pathname);
+  return (pathname.startsWith("/products/") && IMAGE_EXTENSION.test(pathname)) || isStorageProductImagePath(pathname);
 }
 
-/** True for `/_next/image?url=%2Fproducts%2F…`, i.e. a catalog image that went
- * through the Next image optimizer — which is what <Image src="/products/…">
- * actually emits, and therefore what the catalog page really requests. */
+/** True for `/_next/image?url=…` when the source is a catalog image — a legacy
+ * `/products/…` file, or an absolute https URL of an uploaded photo. That is
+ * what <Image src=…> actually emits, and therefore what the catalog page
+ * really requests. The optimizer itself only fetches remote sources that
+ * next.config.js images.remotePatterns allows (this project's Supabase host),
+ * so matching the path here does not widen what can be fetched. */
 export function isOptimizedProductImage(url: URL): boolean {
   if (url.pathname !== "/_next/image") return false;
   const source = url.searchParams.get("url");
-  return !!source && source.startsWith("/products/");
+  if (!source) return false;
+  if (source.startsWith("/products/")) return true;
+  let remote: URL;
+  try {
+    // Throws for a relative source, which is then not a catalog image.
+    remote = new URL(source);
+  } catch {
+    return false;
+  }
+  return (remote.protocol === "https:" || remote.protocol === "http:") && isStorageProductImagePath(remote.pathname);
 }
 
 /** The search index is safe to serve stale and revalidate in the background;

@@ -20,6 +20,9 @@ export const VALIDATION_KEYS = [
   "tooLong",
   "stageIdDuplicate",
   "minSteps",
+  // Product photo upload (lib/admin/product-image.ts).
+  "imageType",
+  "imageTooLarge",
 ] as const;
 
 export type ValidationKey = (typeof VALIDATION_KEYS)[number];

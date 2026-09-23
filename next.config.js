@@ -5,12 +5,15 @@
 function buildCsp(opts) {
   const { supabaseUrl, isDev } = opts;
   const supabaseWs = supabaseUrl.replace(/^https:/, "wss:");
+  const productImages = supabaseUrl
+    ? ` ${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/product-images/`
+    : "";
 
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    `img-src 'self' data: blob:${productImages}`,
     "font-src 'self'",
     `connect-src 'self' ${supabaseUrl} ${supabaseWs}`,
     "frame-ancestors 'none'",
@@ -26,6 +29,30 @@ function buildCsp(opts) {
   return directives.join("; ");
 }
 
+/** The image optimizer may fetch uploaded catalog photos — the public object
+ * path of the product-images bucket (0018) on this project's Supabase host,
+ * and nothing else there. Derived from NEXT_PUBLIC_SUPABASE_URL, the same
+ * variable lib/env.ts validates; unset or unparsable means no remote images
+ * (legacy /products files still work). Mirrors PRODUCT_IMAGES_PUBLIC_PATH in
+ * lib/content/products.ts — tests/unit/security/csp-parity.test.ts checks. */
+function productImageRemotePatterns(supabaseUrl) {
+  if (!supabaseUrl) return [];
+  let url;
+  try {
+    url = new URL(supabaseUrl);
+  } catch {
+    return [];
+  }
+  return [
+    {
+      protocol: url.protocol.replace(/:$/, ""),
+      hostname: url.hostname,
+      port: url.port,
+      pathname: "/storage/v1/object/public/product-images/**",
+    },
+  ];
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -33,9 +60,14 @@ const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    remotePatterns: productImageRemotePatterns(process.env.NEXT_PUBLIC_SUPABASE_URL),
   },
   experimental: {
     staleTimes: { dynamic: 30, static: 300 },
+    // The product photo upload (lib/admin/actions/product-image.ts) sends up
+    // to 2 MB of file inside a multipart Server Action body; Next's default
+    // cap is 1 MB. A larger body is refused before any action runs.
+    serverActions: { bodySizeLimit: "3mb" },
   },
   // No CSP nonce here on purpose: a nonce needs `headers()` in the root layout to
   // read the per-request value, which would force every operator page to render
@@ -166,3 +198,7 @@ module.exports = exportedConfig;
 // config validation (which walks the object's keys) doesn't flag it as an
 // unknown option.
 Object.defineProperty(module.exports, "buildCsp", { value: buildCsp, enumerable: false });
+Object.defineProperty(module.exports, "productImageRemotePatterns", {
+  value: productImageRemotePatterns,
+  enumerable: false,
+});

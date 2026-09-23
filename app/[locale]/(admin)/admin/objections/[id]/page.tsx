@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getObjectionRow } from "@/lib/admin/queries";
-import { objectionFormSchema, type ObjectionFormInput } from "@/lib/admin/schemas";
-import { upsertObjection } from "@/lib/admin/actions/objections";
-import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { ObjectionFormInput } from "@/lib/admin/schemas";
+import type { AdminTranslate, EntityFieldDef } from "@/components/admin/EntityForm";
+import { ObjectionEditorForm } from "@/components/admin/ObjectionEditorForm";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.objections" });
@@ -106,13 +106,7 @@ export default async function AdminObjectionEditPage({
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={objectionFormSchema}
-        defaultValues={defaultValues}
-        fields={buildFields(isNew, t, tShared)}
-        onSubmit={upsertObjection}
-        backHref="/admin/objections"
-      />
+      <ObjectionEditorForm defaultValues={defaultValues} fields={buildFields(isNew, t, tShared)} />
     </div>
   );
 }

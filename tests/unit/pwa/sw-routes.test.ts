@@ -9,9 +9,12 @@ import {
   isPurgeableCacheName,
   isSalesProcessPath,
   isSearchIndex,
+  isStorageProductImagePath,
   KEPT_CACHE_NAMES,
   PURGED_CACHE_NAMES,
+  STORAGE_PRODUCT_IMAGES_PREFIX,
 } from "@/lib/pwa/sw-routes";
+import { PRODUCT_IMAGES_PUBLIC_PATH, productStorageUrl } from "@/lib/content/products";
 
 describe("appPath", () => {
   it("strips the ru locale prefix", () => {
@@ -103,6 +106,46 @@ describe("product images", () => {
     expect(isOptimizedProductImage(certificate)).toBe(false);
     expect(isOptimizedProductImage(new URL("http://localhost/_next/image"))).toBe(false);
     expect(isOptimizedProductImage(new URL("http://localhost/products/filter-01.jpg"))).toBe(false);
+  });
+});
+
+describe("uploaded product photos (product-images bucket)", () => {
+  const photo = productStorageUrl("products/truba-ppr/0a1b2c3d.webp", "https://abcd.supabase.co");
+
+  it("uses the same public path as lib/content/products.ts", () => {
+    expect(STORAGE_PRODUCT_IMAGES_PREFIX).toBe(PRODUCT_IMAGES_PUBLIC_PATH);
+  });
+
+  it("recognises a public object of the bucket, by path", () => {
+    const { pathname } = new URL(photo);
+    expect(isStorageProductImagePath(pathname)).toBe(true);
+    expect(isProductImagePath(pathname)).toBe(true);
+    expect(isProductImagePath("/storage/v1/object/public/product-images/products/x/0a1b2c3d.AVIF")).toBe(true);
+  });
+
+  it("does not claim other buckets, signed or authenticated objects, or non-images", () => {
+    expect(isStorageProductImagePath("/storage/v1/object/public/other-bucket/products/x/0a1b2c3d.jpg")).toBe(false);
+    expect(isStorageProductImagePath("/storage/v1/object/sign/product-images/products/x/0a1b2c3d.jpg")).toBe(false);
+    expect(isStorageProductImagePath("/storage/v1/object/authenticated/product-images/products/x/0a1b2c3d.jpg")).toBe(
+      false
+    );
+    expect(isStorageProductImagePath("/storage/v1/object/public/product-images/products/x/notes.json")).toBe(false);
+    expect(isStorageProductImagePath("/storage/v1/object/public/product-images/")).toBe(false);
+  });
+
+  it("recognises optimizer URLs whose source is an uploaded photo", () => {
+    const optimized = new URL(`http://localhost/_next/image?url=${encodeURIComponent(photo)}&w=640&q=75`);
+    expect(isOptimizedProductImage(optimized)).toBe(true);
+  });
+
+  it("ignores optimizer URLs for other remote sources", () => {
+    const elsewhere = (source: string) =>
+      new URL(`http://localhost/_next/image?url=${encodeURIComponent(source)}&w=640&q=75`);
+    expect(isOptimizedProductImage(elsewhere("https://abcd.supabase.co/storage/v1/object/public/avatars/a.jpg"))).toBe(false);
+    expect(isOptimizedProductImage(elsewhere("https://abcd.supabase.co/rest/v1/content_products"))).toBe(false);
+    expect(isOptimizedProductImage(elsewhere("javascript:alert(1)"))).toBe(false);
+    expect(isOptimizedProductImage(elsewhere("not a url"))).toBe(false);
+    expect(isOptimizedProductImage(elsewhere("//evil.example/products/a.jpg"))).toBe(false);
   });
 });
 

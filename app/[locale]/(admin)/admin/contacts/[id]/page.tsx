@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getContactRow } from "@/lib/admin/queries";
-import { contactFormSchema, type ContactFormInput } from "@/lib/admin/schemas";
-import { upsertContact } from "@/lib/admin/actions/contacts";
-import { EntityForm, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { ContactFormInput } from "@/lib/admin/schemas";
+import type { EntityFieldDef } from "@/components/admin/EntityForm";
+import { ContactEditorForm } from "@/components/admin/ContactEditorForm";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: Locale } }): Promise<Metadata> {
@@ -83,13 +83,7 @@ export default async function AdminContactEditPage({ params }: { params: { local
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={contactFormSchema}
-        defaultValues={defaultValues}
-        fields={fields}
-        onSubmit={upsertContact}
-        backHref="/admin/contacts"
-      />
+      <ContactEditorForm defaultValues={defaultValues} fields={fields} />
     </div>
   );
 }

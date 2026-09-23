@@ -1,9 +1,11 @@
 "use server";
 import "server-only";
 import { CONTENT_REGISTRY } from "@/lib/admin/registry";
-import { actionsFor } from "./deps";
+import { actionsFor, liveProductImageDeps } from "./deps";
 import type { RemoveOptions } from "./factory";
+import { uploadProductImageWith } from "./product-image";
 import type { ActionResult } from "@/lib/admin/errors";
+import type { ImageUploadResult } from "@/lib/admin/product-image";
 import type { StatusValue } from "./status";
 
 // Thin Server Action surface over the shared factory (./factory.ts). The
@@ -28,4 +30,11 @@ export async function deleteProduct(
 
 export async function setProductStatus(id: string, status: StatusValue, expectedVersion: number): Promise<ActionResult> {
   return products.setStatus(id, status, expectedVersion);
+}
+
+/** Uploads a catalog photo for an existing product and points its
+ * `image_path` at it (see ./product-image.ts). FormData fields: `id`,
+ * `expectedVersion`, `file`. */
+export async function uploadProductImage(form: FormData): Promise<ImageUploadResult> {
+  return uploadProductImageWith(form, liveProductImageDeps);
 }

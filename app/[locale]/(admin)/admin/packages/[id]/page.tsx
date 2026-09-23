@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getPackageRow, listPackageGroupRows } from "@/lib/admin/queries";
-import { packageFormSchema, type PackageFormInput } from "@/lib/admin/schemas";
-import { upsertPackage } from "@/lib/admin/actions/packages";
-import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { PackageFormInput } from "@/lib/admin/schemas";
+import type { AdminTranslate, EntityFieldDef } from "@/components/admin/EntityForm";
+import { PackageEditorForm } from "@/components/admin/PackageEditorForm";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.packages" });
@@ -127,13 +127,7 @@ export default async function AdminPackageEditPage({
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={packageFormSchema}
-        defaultValues={defaultValues}
-        fields={buildFields(isNew, groupOptions, t, tShared)}
-        onSubmit={upsertPackage}
-        backHref="/admin/packages"
-      />
+      <PackageEditorForm defaultValues={defaultValues} fields={buildFields(isNew, groupOptions, t, tShared)} />
     </div>
   );
 }

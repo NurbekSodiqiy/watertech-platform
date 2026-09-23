@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getCompetitorRow } from "@/lib/admin/queries";
-import { competitorFormSchema, type CompetitorFormInput } from "@/lib/admin/schemas";
-import { upsertCompetitor } from "@/lib/admin/actions/competitors";
-import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { CompetitorFormInput } from "@/lib/admin/schemas";
+import type { AdminTranslate, EntityFieldDef } from "@/components/admin/EntityForm";
+import { CompetitorEditorForm } from "@/components/admin/CompetitorEditorForm";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.competitors" });
@@ -123,13 +123,7 @@ export default async function AdminCompetitorEditPage({
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={competitorFormSchema}
-        defaultValues={defaultValues}
-        fields={buildFields(isNew, t, tShared)}
-        onSubmit={upsertCompetitor}
-        backHref="/admin/competitors"
-      />
+      <CompetitorEditorForm defaultValues={defaultValues} fields={buildFields(isNew, t, tShared)} />
     </div>
   );
 }

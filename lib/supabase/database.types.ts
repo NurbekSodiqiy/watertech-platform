@@ -631,8 +631,9 @@ export type Database = {
         Row: {
           category: string
           created_at: string
-          filename: string
+          filename: string | null
           id: string
+          image_path: string | null
           line: string
           material: string | null
           name_ru: string
@@ -647,8 +648,9 @@ export type Database = {
         Insert: {
           category: string
           created_at?: string
-          filename: string
+          filename?: string | null
           id: string
+          image_path?: string | null
           line: string
           material?: string | null
           name_ru: string
@@ -663,8 +665,9 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
-          filename?: string
+          filename?: string | null
           id?: string
+          image_path?: string | null
           line?: string
           material?: string | null
           name_ru?: string

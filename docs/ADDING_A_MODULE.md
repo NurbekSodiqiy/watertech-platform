@@ -117,6 +117,11 @@ for you is the database, the content mappers, the pages, and the entry itself.
   - `page.tsx` — `DataTable<AdminListRow<"content_guides">>` list; pass `deleteGuide` and `setGuideStatus`
     straight through.
   - `[id]/page.tsx` — edit form (`id === "new"` creates), link to `/admin/versions/content_guides/<id>`.
+    The page renders `components/admin/GuideEditorForm.tsx`, never `EntityForm` directly: a zod schema is
+    a class instance, and React refuses to pass one from a Server Component into a Client Component. The
+    wrapper is `"use client"`, imports `guideFormSchema` and `upsertGuide` itself, and takes only
+    `defaultValues` and `fields` from the page — copy `FaqEditorForm.tsx`. `next build` does not catch a
+    mistake here (editor pages are dynamic and never prerendered); it fails when the page is opened.
   - Add the table to `TABLE_INFO` in `admin/versions/[table]/[id]/page.tsx`.
 
 ## 4. Operator app

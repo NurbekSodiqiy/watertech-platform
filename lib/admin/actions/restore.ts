@@ -10,7 +10,13 @@ import {
 } from "@/lib/admin/errors";
 import { adminErrorMap } from "@/lib/admin/validation";
 import { CONTENT_REGISTRY, gateTargetFor, isContentTable, type AdminDbClient } from "@/lib/admin/registry";
-import { contentColumns, isSnapshotRow, snapshotId, type SnapshotRow } from "@/lib/admin/snapshot";
+import {
+  contentColumns,
+  isSnapshotRow,
+  snapshotId,
+  withoutManagedColumns,
+  type SnapshotRow,
+} from "@/lib/admin/snapshot";
 import type { Json } from "@/lib/supabase/database.types";
 import { contentActionsFor, type ContentActionDeps } from "./factory";
 import { updateWithVersion } from "./concurrency";
@@ -130,7 +136,8 @@ export async function restoreContentVersion(
       return actionFailed("version_conflict");
     }
 
-    const restored = contentColumns(version.snapshot);
+    // Managed columns (a product's uploaded photo) keep their live value.
+    const restored = withoutManagedColumns(contentColumns(version.snapshot));
     if (live.status === "published") {
       // The row as it would be after the write, gated before anything is
       // written — a snapshot that was valid months ago can reference a

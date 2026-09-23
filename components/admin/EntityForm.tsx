@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "@/i18n/routing";
 import { useForm, type DefaultValues, type FieldValues, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,16 +15,43 @@ import { GateReportDialog } from "@/components/admin/GateReportDialog";
 import { useActionError } from "@/hooks/useActionError";
 import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import type { ActionResult } from "@/lib/admin/errors";
+import type { ImageUploadResult } from "@/lib/admin/product-image";
 import type { GateResult } from "@/lib/agents/publish-gate/types";
 
+// Only the product editor has an image field, so the picker is a chunk of its
+// own rather than part of every admin form. Server-rendered (the current
+// photo is worth showing at once); the placeholder is the field's height.
+const ImageUploadField = dynamic(
+  () => import("@/components/admin/ImageUploadField").then((m) => m.ImageUploadField),
+  { loading: () => <div className="h-[252px] rounded-xl bg-surface-alt" aria-hidden="true" /> }
+);
+
+/** Every entity form binds the row version to a hidden input of this name. */
+const VERSION_FIELD = "version";
+
 export type EntityFieldDef<TIn extends FieldValues> = (
-  | { kind: "text"; name: Path<TIn>; label: string; placeholder?: string; readOnly?: boolean }
+  | { kind: "text"; name: Path<TIn>; label: string; placeholder?: string; readOnly?: boolean; hint?: string }
   | { kind: "textarea"; name: Path<TIn>; label: string; rows?: number }
   | { kind: "number"; name: Path<TIn>; label: string; step?: string }
   | { kind: "checkbox"; name: Path<TIn>; label: string }
   | { kind: "select"; name: Path<TIn>; label: string; options: { value: string; label: string }[] }
   | { kind: "csv"; name: Path<TIn>; label: string; placeholder?: string; hint: string }
   | { kind: "hidden"; name: Path<TIn> }
+  | {
+      /** A photo uploaded on its own, not a form value: the upload Server
+       * Action writes the column itself and answers with the row's new
+       * version, which the form saves with from then on — so the next save
+       * does not conflict with the manager's own upload. `name` is only the
+       * field's key. */
+      kind: "image";
+      name: string;
+      label: string;
+      /** Absent while creating: there is no row to attach a photo to yet. */
+      rowId?: string;
+      currentSrc: string | null;
+      currentAlt: string;
+      upload: (form: FormData) => Promise<ImageUploadResult>;
+    }
 ) & {
   /** Renders under a collapsed "Ruscha (ixtiyoriy)" <details> instead of
    * inline with the main fields — every *_ru translation field sets this
@@ -48,12 +76,16 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   fields,
   onSubmit,
   backHref,
+  editAfterCreate = false,
 }: {
   schema: ZodType<TOut, ZodTypeDef, TIn>;
   defaultValues: DefaultValues<TIn>;
   fields: EntityFieldDef<TIn>[];
   onSubmit: (values: TOut) => Promise<ActionResult>;
   backHref: string;
+  /** After a create, open the new row's editor (`${backHref}/${id}`) instead
+   * of the list — for forms with parts that need a saved row, like a photo. */
+  editAfterCreate?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -71,6 +103,12 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   // button's `disabled` state (a fast double-click/double-Enter) — a ref
   // since it must be read/written synchronously, not through a re-render.
   const inFlightRef = useRef(false);
+  // A photo upload in flight bumps the row version when it lands; saving in
+  // the meantime would send the old one and conflict with it.
+  const [imageBusy, setImageBusy] = useState(false);
+  // The version an image upload answered with. submit() lays it over the
+  // hidden input's value, which still holds the version the page loaded.
+  const [uploadedVersion, setUploadedVersion] = useState<number | null>(null);
   // Opens the RU <details> when a dashboard "Tarjima qilish" quick action
   // links here with a #ru hash (lib/dashboard/content-health.ts's
   // adminEditHref) — a plain effect, not the details element's own `open`
@@ -86,6 +124,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<TIn>({
     // raw: true — zodResolver still runs `schema` for validation (so field
@@ -101,8 +140,17 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     defaultValues,
   });
 
+  /** The version the form stands on: the last upload's answer, else the one
+   * the page loaded. Null while creating. */
+  function currentVersion(): number | null {
+    if (uploadedVersion !== null) return uploadedVersion;
+    const loaded: unknown = getValues()[VERSION_FIELD];
+    const parsed = typeof loaded === "string" && loaded !== "" ? Number(loaded) : NaN;
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
   function submit(raw: TIn) {
-    if (inFlightRef.current) return;
+    if (inFlightRef.current || imageBusy) return;
     if (!online) {
       toast({ kind: "error", title: t("offline") });
       return;
@@ -112,7 +160,10 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
     setSuccess(false);
     startTransition(async () => {
       try {
-        const values = schema.parse(raw);
+        const isCreate = currentVersion() === null;
+        const values = schema.parse(
+          uploadedVersion === null ? raw : { ...raw, [VERSION_FIELD]: String(uploadedVersion) }
+        );
         const result = await onSubmit(values);
         if (!result.ok) {
           const { title, details, isConflict } = describeError(result);
@@ -127,7 +178,12 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         }
         setSuccess(true);
         toast({ kind: "success", title: t("saved") });
-        router.push(backHref);
+        const createdId: unknown = values["id"];
+        router.push(
+          editAfterCreate && isCreate && typeof createdId === "string"
+            ? `${backHref}/${encodeURIComponent(createdId)}`
+            : backHref
+        );
         router.refresh();
       } finally {
         inFlightRef.current = false;
@@ -137,6 +193,22 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
 
   function renderField(field: EntityFieldDef<TIn>) {
     if (field.kind === "hidden") return <input key={field.name} type="hidden" {...register(field.name)} />;
+    if (field.kind === "image") {
+      return (
+        <ImageUploadField
+          key={field.name}
+          inputId={field.name}
+          label={field.label}
+          rowId={field.rowId ?? null}
+          currentSrc={field.currentSrc}
+          currentAlt={field.currentAlt}
+          getVersion={currentVersion}
+          upload={field.upload}
+          onUploaded={({ version }) => setUploadedVersion(version)}
+          onBusyChange={setImageBusy}
+        />
+      );
+    }
 
     const fieldError = errors[field.name as string];
     const raw = typeof fieldError?.message === "string" ? fieldError.message : undefined;
@@ -160,16 +232,19 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
         )}
 
         {field.kind === "text" && (
-          <input
-            id={field.name}
-            type="text"
-            placeholder={field.placeholder}
-            readOnly={field.readOnly}
-            {...register(field.name)}
-            className={`w-full rounded-lg border border-border px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light ${
-              field.readOnly ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
-            }`}
-          />
+          <>
+            <input
+              id={field.name}
+              type="text"
+              placeholder={field.placeholder}
+              readOnly={field.readOnly}
+              {...register(field.name)}
+              className={`w-full rounded-lg border border-border px-3 py-2 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light ${
+                field.readOnly ? "bg-border/30 text-text-secondary" : "bg-surface-alt"
+              }`}
+            />
+            {field.hint && <p className="text-[11px] text-text-secondary">{field.hint}</p>}
+          </>
         )}
 
         {field.kind === "csv" && (
@@ -252,7 +327,7 @@ export function EntityForm<TIn extends FieldValues, TOut extends FieldValues>({
       )}
 
       <div className="flex items-center gap-2 pt-2">
-        <SubmitButton pending={pending} offlineBlocked={!online} pendingLabel={tForm("saving")}>
+        <SubmitButton pending={pending} disabled={imageBusy} offlineBlocked={!online} pendingLabel={tForm("saving")}>
           {tForm("save")}
         </SubmitButton>
         <button

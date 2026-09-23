@@ -11,6 +11,7 @@ import {
   isPurgeableCacheName,
   isSalesProcessPath,
   isSearchIndex,
+  isStorageProductImagePath,
 } from "@/lib/pwa/sw-routes";
 import {
   CacheFirst,
@@ -80,11 +81,18 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
-    // Catalog images, both as requested from /public and via the Next image
-    // optimizer. Both predicates exclude the /products app routes themselves,
-    // whose HTML must not be served CacheFirst.
+    // Catalog images: legacy files from /public, uploaded photos from the
+    // product-images Storage bucket, and either one via the Next image
+    // optimizer. The same-origin predicates exclude the /products app routes
+    // themselves, whose HTML must not be served CacheFirst. A photo loaded
+    // straight from Storage is cross-origin; it lands here rather than in the
+    // defaultCache "cross-origin" cache that a sign-out purges — it is public
+    // and content-addressed, like the rest of this cache. (CacheFirst stores
+    // only 200 responses, so an opaque no-cors response is not kept.)
     matcher: ({ sameOrigin, url }) =>
-      sameOrigin && (isOptimizedProductImage(url) || isProductImagePath(url.pathname)),
+      sameOrigin
+        ? isOptimizedProductImage(url) || isProductImagePath(url.pathname)
+        : isStorageProductImagePath(url.pathname),
     handler: new CacheFirst({
       cacheName: "product-images",
       plugins: [new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: THIRTY_DAYS_SECONDS })],

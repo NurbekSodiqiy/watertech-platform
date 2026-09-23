@@ -4,9 +4,9 @@ import { Link } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { History } from "lucide-react";
 import { getFaqRow } from "@/lib/admin/queries";
-import { faqFormSchema, type FaqFormInput } from "@/lib/admin/schemas";
-import { upsertFaq } from "@/lib/admin/actions/faq";
-import { EntityForm, type AdminTranslate, type EntityFieldDef } from "@/components/admin/EntityForm";
+import type { FaqFormInput } from "@/lib/admin/schemas";
+import type { AdminTranslate, EntityFieldDef } from "@/components/admin/EntityForm";
+import { FaqEditorForm } from "@/components/admin/FaqEditorForm";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.faq" });
@@ -90,13 +90,7 @@ export default async function AdminFaqEditPage({
           </Link>
         )}
       </div>
-      <EntityForm
-        schema={faqFormSchema}
-        defaultValues={defaultValues}
-        fields={buildFields(isNew, t, tShared)}
-        onSubmit={upsertFaq}
-        backHref="/admin/faq"
-      />
+      <FaqEditorForm defaultValues={defaultValues} fields={buildFields(isNew, t, tShared)} />
     </div>
   );
 }

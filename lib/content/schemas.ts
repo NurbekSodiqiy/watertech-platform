@@ -181,7 +181,8 @@ export const packageGroupSchema = z.object({
 
 export const productSchema = z.object({
   id: z.string(),
-  filename: z.string(),
+  filename: z.string().optional(),
+  image_path: z.string().optional(),
   name_ru: z.string(),
   name_uz: z.string().optional(),
   sizes: z.array(z.string()),

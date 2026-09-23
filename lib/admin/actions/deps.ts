@@ -5,8 +5,10 @@ import { revalidateContent } from "@/lib/content/revalidate";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
 import type { ContentColumn, ContentEntry, ContentWrite } from "@/lib/admin/registry";
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
+import { clientEnv } from "@/lib/env";
 import { contentActions, type ContentActionDeps, type ContentActions } from "./factory";
 import { requireManagerSession } from "./guard";
+import type { ProductImageDeps } from "./product-image";
 
 // What the action factory talks to in a real request. Kept out of factory.ts
 // so a unit test can import the factory without pulling in next/headers, the
@@ -21,6 +23,17 @@ export const liveDeps: ContentActionDeps = {
   runGate: runPublishGate,
   runGateOnCandidate: runPublishGateOnCandidate,
   revalidate: revalidateContent,
+};
+
+/** What the product photo upload (./product-image.ts) talks to in a real
+ * request: the same session guard, session client and cache tag as every
+ * content write — Storage RLS (0018) is what refuses a non-manager, and the
+ * service-role client is never used for it either. */
+export const liveProductImageDeps: ProductImageDeps = {
+  requireSession: liveDeps.requireSession,
+  client: liveDeps.client,
+  revalidate: liveDeps.revalidate,
+  supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
 };
 
 /** `contentActions` bound to the live request dependencies — what every

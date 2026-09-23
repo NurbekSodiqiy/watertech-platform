@@ -210,6 +210,41 @@ describe("restoreContentVersion onto a live row", () => {
     expect(result).toMatchObject({ ok: false, code: "version_conflict" });
     expect(revalidate).not.toHaveBeenCalled();
   });
+
+  it("keeps the live product photo: an old snapshot's image_path names a removed object", async () => {
+    const productSnapshot = {
+      id: "truba-ppr",
+      filename: "truba-ppr.jpg",
+      image_path: "products/truba-ppr/aaaaaaaa.jpg",
+      name_ru: "Труба ППР (старое)",
+      name_uz: null,
+      sizes: ["Ø20"],
+      line: "ppr",
+      category: "truba",
+      material: null,
+      status: "draft",
+      sort_order: 0,
+      version: 2,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-02-01T00:00:00Z",
+      updated_by: "someone@watertech.uz",
+    };
+    const live = { ...productSnapshot, name_ru: "Труба ППР", image_path: "products/truba-ppr/bbbbbbbb.webp", version: 5 };
+    const { deps, requests } = testDeps((request) => {
+      if (isVersionRead(request)) return { status: 200, body: [{ id: 7, op: "update", snapshot: productSnapshot }] };
+      if (request.method === "GET" && request.url.pathname === "/rest/v1/content_products") {
+        return { status: 200, body: [live] };
+      }
+      return { status: 200, body: [{ id: "truba-ppr" }] };
+    });
+
+    const result = await restoreContentVersion({ table: "content_products", versionId: 7, expectedVersion: 5 }, deps);
+
+    expect(result).toEqual({ ok: true });
+    const patch = requests.find((request) => request.method === "PATCH");
+    expect(patch?.body).toMatchObject({ name_ru: "Труба ППР (старое)", filename: "truba-ppr.jpg" });
+    expect(patch?.body).not.toHaveProperty("image_path");
+  });
 });
 
 describe("restoreContentVersion with no live row", () => {

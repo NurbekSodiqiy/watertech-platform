@@ -890,7 +890,7 @@
       "products": {
         "nav": "Mahsulotlar",
         "title": "Mahsulotlar",
-        "description": "Mahsulot katalogi — rasm fayllari public/products/ ichida.",
+        "description": "Mahsulot katalogi — rasmlar mahsulot sahifasida yuklanadi.",
         "columns": {
           "line": "Yo'nalish",
           "category": "Kategoriya"
@@ -901,6 +901,9 @@
           "idPlaceholder": "masalan: truba-ppr",
           "filename": "Fayl nomi",
           "filenamePlaceholder": "masalan: truba-ppr.jpg — public/products/ ichidagi fayl bilan bir xil bo'lishi kerak",
+          "image": "Rasm",
+          "filenameHint": "Faqat public/products/ ichidagi eski rasmlar uchun, ixtiyoriy. Yangi mahsulot rasmini saqlagandan keyin shu sahifada yuklang.",
+          "filenameLegacyHint": "public/products/ ichidagi eski fayl — o'zgartirilmaydi. Yangi rasm yuklansa, u ishlatiladi.",
           "nameRu": "Nomi (rus tilida)",
           "nameUz": "Nomi (o'zbek tilida, ixtiyoriy)",
           "sizes": "O'lchamlar",
@@ -1555,7 +1558,9 @@
       "tooShort": "Juda qisqa",
       "tooLong": "Juda uzun",
       "stageIdDuplicate": "Bosqich ID takrorlanmoqda",
-      "minSteps": "Kamida bitta qadam kerak"
+      "minSteps": "Kamida bitta qadam kerak",
+      "imageType": "Faqat JPG, PNG, WebP yoki AVIF rasm — fayl turi uning mazmuniga mos bo'lishi kerak",
+      "imageTooLarge": "Rasm hajmi 2 MB dan oshmasligi kerak"
     },
     "shell": {
       "title": "Kontent boshqaruvi",
@@ -1660,6 +1665,25 @@
       "minutes": "{count} daqiqa oldin",
       "hours": "{count} soat oldin",
       "days": "{count} kun oldin"
+    },
+    "image": {
+      "choose": "Rasm tanlash",
+      "replace": "Boshqa rasm tanlash",
+      "upload": "Yuklash",
+      "uploading": "Yuklanmoqda…",
+      "cancel": "Bekor qilish",
+      "uploaded": "Rasm yuklandi",
+      "current": "Joriy rasm",
+      "preview": "Yangi rasm (hali yuklanmagan)",
+      "none": "Rasm yo'q",
+      "dropHint": "Faylni shu yerga tashlang yoki tanlang",
+      "requirements": "JPG, PNG, WebP yoki AVIF · 2 MB gacha",
+      "selected": "{name} · {size}",
+      "sizeKb": "{value} KB",
+      "sizeMb": "{value} MB",
+      "savesImmediately": "Rasm darhol saqlanadi — «Saqlash» tugmasini bosish shart emas.",
+      "saveFirst": "Rasmni yuklash uchun avval mahsulotni saqlang — saqlangach, shu mahsulot sahifasi ochiladi.",
+      "busy": "Rasm yuklanishi tugashini kuting"
     },
     "scriptEditor": {
       "speakers": {

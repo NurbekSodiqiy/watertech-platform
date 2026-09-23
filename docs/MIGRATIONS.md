@@ -29,11 +29,12 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0015 | `reorder_rows.sql` | `public.reorder_content_rows(text, text[], int[])` — version-guarded, all-or-nothing `sort_order` write for a whole list | 0014 (`private.is_manager()`) |
 | 0016 | `dashboard_rpc_and_retention.sql` | seven `public.dashboard_*` aggregate functions (manager only), covering indexes on `telemetry_events`, `public.run_retention()` and its pg_cron job when pg_cron is enabled | 0014, 0006, 0007, 0013 |
 | 0017 | `user_admin_and_access_audit.sql` | managers write `allowed_users` (insert; update of `role`/`is_active`/`full_name` only); `private.allowed_users_guard` (stale-manager WT403, last manager WT460, self-change WT461); append-only `public.access_audit` written by trigger; `public.admin_user_last_activity()` | 0014, 0013, 0002 |
+| 0018 | `product_images.sql` | public Storage bucket `product-images` (2 MB, JPEG/PNG/WebP/AVIF); manager-only select/insert/update/delete policies on `storage.objects` for that bucket (writes under `products/` only); `content_products.image_path` with a shape check; `content_products.filename` nullable | 0014 (`private.is_manager()`), 0002, Storage enabled |
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015`, `0016` and then `0017` go last. `0013` through `0017` all abort with a clear message when an
+`0014`, `0015`, `0016`, `0017` and then `0018` go last. `0013` through `0018` all abort with a clear message when an
 earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
@@ -65,7 +66,8 @@ statements into their own file and run them concurrently, outside a transaction.
 7. **`0017`.** After `0016`. On a fresh project it notices that there is no active manager yet — add the
    first one by hand (the `insert` in [SECURITY.md §5](SECURITY.md#5-adding-removing-and-promoting-people));
    everyone after that is added at `/admin/users`.
-8. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+8. **`0018`.** After `0017` (it needs only `0014`'s `private.is_manager()`, and Storage enabled on the project).
+9. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -93,6 +95,11 @@ As of 2026-09-22 the live project is believed to be at **0007**. Tick these off 
       answers `unauthorized` (no write grant, no policy), and the "last activity" column is empty with a
       notice. Nothing else is affected. Also set `SUPABASE_SERVICE_ROLE_KEY` on the server if it is not
       already: without it the row changes but the Auth ban does not (`auth_sync_failed`).
+- [ ] **0018** product photos — requires 0014 first. **Apply it before deploying the code that uses it**: the admin
+      upload writes `image_path`, which answers `unknown` until the column exists, and `/admin/products/new` cannot
+      save a product without a `filename` until that column is nullable. The catalog is unaffected either way: a row
+      without `image_path` renders its legacy `/products/<filename>`. Then run `supabase/tests/storage-checks.sql`
+      on staging.
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -158,6 +165,17 @@ raises a notice saying exactly that when it finds no `user_state` table.
    Supabase Auth through the service-role client (docs/SECURITY.md §4).
 4. **No type regeneration strictly needed**; `access_audit` and `admin_user_last_activity` are
    hand-written in `lib/supabase/database.types.ts` — compare them with `npm run gen:types` when convenient.
+
+### After applying 0018
+
+1. **Run `supabase/tests/storage-checks.sql` on staging** — bucket settings, the four policies (by behaviour
+   and by text), and the `image_path` check.
+2. **Upload one photo** from `/admin/products/<id>` and open `/products`: the card must show it, and the
+   response for `/_next/image?url=https://<project>.supabase.co/storage/v1/object/public/product-images/…`
+   must be 200. A 400 "url parameter is not allowed" means `NEXT_PUBLIC_SUPABASE_URL` at build time does not
+   match the project the photo is in (`images.remotePatterns` is derived from it when the build starts).
+3. **No type regeneration strictly needed**; `image_path` and the nullable `filename` are hand-edited in
+   `lib/supabase/database.types.ts` — compare with `npm run gen:types` when convenient.
 
 ### Retention policy (0016)
 
@@ -301,6 +319,19 @@ A full rollback file drops the ten functions (`public.dashboard_kpis`, `_operato
 `create index telemetry_events_type_ts_idx on public.telemetry_events (type, ts);`) before dropping the
 `_cover_` pair. The dashboard code of S09 cannot run without the functions, so it goes back together
 with the app release that preceded it.
+
+### Rolling back 0018
+
+Photos already uploaded are the only data 0018 enables; decide about them first. To stop uploads without
+losing any: `drop policy if exists "product_images_manager_insert" on storage.objects;` and the same for
+`"product_images_manager_update"` — the admin upload then answers `unauthorized`, and every existing photo
+keeps rendering. A full rollback file also drops `"product_images_manager_select"` and
+`"product_images_manager_delete"`, runs `update public.content_products set image_path = null;` (the catalog
+falls back to `/products/<filename>`, or to its "no image" placeholder for products that never had a file),
+drops the `content_products_image_path_shape` constraint and the column, and deletes the bucket from the
+dashboard (Storage → product-images → Delete — it must be emptied first). `filename` can only become
+`not null` again once every row has one: `select id from public.content_products where filename is null;`
+lists the rows to fix or delete first.
 
 ### Rolling back 0017
 
