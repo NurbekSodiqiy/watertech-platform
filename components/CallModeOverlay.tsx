@@ -8,7 +8,7 @@ import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionChipRow } from "@/components/ObjectionChipRow";
 import { CopyButton } from "@/components/CopyButton";
-import { collectOperatorText } from "@/components/ScriptTurns";
+import { collectOperatorText, turnsCopyEntity } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
 import { buildSearchDocs, createSearcher, type SearchNav } from "@/lib/search";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
@@ -104,6 +104,7 @@ export function CallModeOverlay({
 
   const currentIndex = currentStage ? script.stages.findIndex((s) => s.id === currentStage.id) : -1;
   const nextStage = currentIndex >= 0 ? script.stages[currentIndex + 1] : undefined;
+  const copyEntity = turnsCopyEntity(currentObjection, currentStage);
 
   // Inline results only ever cover objections + stages of the script already
   // open in this Call Mode session — see searchCallMode's own comment for
@@ -194,10 +195,20 @@ export function CallModeOverlay({
               {currentObjection?.label || currentStage?.label}
             </h2>
             {turns.some((turn) => turn.speaker === "operator") && (
-              <CopyButton value={collectOperatorText(turns, clientName)} label={tCommon("copyAll")} />
+              <CopyButton
+                value={collectOperatorText(turns, clientName)}
+                label={tCommon("copyAll")}
+                entityType={copyEntity?.entityType}
+                entityId={copyEntity?.entityId}
+              />
             )}
           </div>
-          <ScriptTurnList turns={turns} large />
+          <ScriptTurnList
+            turns={turns}
+            large
+            copyEntityType={copyEntity?.entityType}
+            copyEntityId={copyEntity?.entityId}
+          />
           <ObjectionChipRow
             objections={objections}
             selectedObjectionId={currentObjection?.id}

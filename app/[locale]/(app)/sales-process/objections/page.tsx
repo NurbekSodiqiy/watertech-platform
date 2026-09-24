@@ -59,6 +59,7 @@ export default async function ObjectionsPage({ params: { locale } }: { params: {
       <DatabaseTemplate
         columns={columns}
         rows={rows}
+        copyEntityType="objection"
         emptyState={{
           stateKey: "objectionsNone",
           title: t("title"),

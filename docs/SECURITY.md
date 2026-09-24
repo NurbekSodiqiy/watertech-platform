@@ -89,9 +89,11 @@ policies still call `private.is_manager()` by name, which is `private.is_admin()
 | `rate_limits` | nothing | nothing | nothing — `service_role` only, through `rate_limit_hit()` |
 | `storage.objects`, bucket `product-images` (0018) | nothing through RLS | read, insert, update, delete — writes only under `products/` | nothing through RLS |
 
-The `dashboard_*` (0016), `copilot_*` (0019) and `admin_user_last_activity()` (0017) functions and
-`reorder_content_rows()` (0015) start with the same check and raise `WT403` for an operator and a sales
-manager — an explicit refusal, not a zero-filled answer.
+The `dashboard_*` (0016), `copilot_*` (0019) and `admin_user_last_activity()` (0017) functions,
+`reorder_content_rows()` (0015) and the people analytics functions `admin_people_overview`,
+`admin_person_summary` / `_daily` / `_sections` / `_recent_events` and `admin_top_content` (0021) start with
+the same check and raise `WT403` for an operator and a sales manager — an explicit refusal, not a
+zero-filled answer.
 
 **The `product-images` bucket is public on purpose.** Catalog photos are marketing material, so anyone
 holding a photo's URL can fetch it from `/storage/v1/object/public/product-images/…` — Storage serves

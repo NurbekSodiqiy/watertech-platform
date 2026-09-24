@@ -61,7 +61,12 @@ export function PackagesTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivE
                   <Star size={20} className="text-accent" fill="currentColor" aria-label={t("featured")} />
                 )}
               </h2>
-              <CopyButton value={packageSummaryText(selectedPackage, (key, values) => t(`summary.${key}`, values))} label={tCommon("copy")} />
+              <CopyButton
+                value={packageSummaryText(selectedPackage, (key, values) => t(`summary.${key}`, values))}
+                label={tCommon("copy")}
+                entityType="package"
+                entityId={selectedPackage.id}
+              />
             </div>
 
             <div className="space-y-4">

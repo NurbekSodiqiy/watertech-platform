@@ -5,11 +5,24 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { Copy, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTrack } from "@/hooks/useTrack";
+import type { ContentEntityType } from "@/lib/telemetry/types";
 import { durations, noTransition, tween } from "@/lib/motion/tokens";
 import { Pressable } from "@/components/motion/Pressable";
 
 const ICON_SWAP_FROM = { opacity: 0, scale: 0.8 };
 const ICON_SWAP_TO = { opacity: 1, scale: 1 };
+
+interface CopyButtonProps {
+  value: string;
+  label?: string;
+  className?: string;
+  /** The content item being copied, sent with the `copy` event when both are
+   * set — the same pair its view event sends (see ContentEntityType), so the
+   * admin panel can tell which content gets copied. Omit both where the
+   * copied text is not one content item. */
+  entityType?: ContentEntityType;
+  entityId?: string;
+}
 
 /** Copy-to-clipboard button — the same icon-only pattern DatabaseTemplate's
  * "longtext" cells have used since it was first added there (1.5s "copied"
@@ -17,15 +30,7 @@ const ICON_SWAP_TO = { opacity: 1, scale: 1 };
  * answers, package cards and "copy all" buttons reuse it instead of each
  * reimplementing their own. Pass `label` for a labeled variant (e.g.
  * "Barchasini nusxalash"); omit it for the original icon-only button. */
-export function CopyButton({
-  value,
-  label,
-  className,
-}: {
-  value: string;
-  label?: string;
-  className?: string;
-}) {
+export function CopyButton({ value, label, className, entityType, entityId }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const track = useTrack();
   const t = useTranslations("common");
@@ -39,7 +44,7 @@ export function CopyButton({
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
-          track("copy");
+          track("copy", entityType && entityId ? { entityType, entityId } : undefined);
           setTimeout(() => setCopied(false), 1500);
         } catch {
           // Clipboard API unavailable — nothing to fall back to silently

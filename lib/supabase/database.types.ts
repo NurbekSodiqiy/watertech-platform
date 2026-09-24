@@ -16,6 +16,10 @@
 // RETURNS TABLE function comes back from PostgREST as an array of rows; bigint
 // and numeric columns arrive as JSON numbers. `p_operator` / `p_limit` /
 // `p_skip_if_scheduled` have SQL defaults, hence optional.
+// admin_people_overview, admin_person_summary / _daily / _sections /
+// _recent_events and admin_top_content added by hand from 0021 on 2026-09-24,
+// same conventions (a `date` column arrives as "YYYY-MM-DD", jsonb as `Json`).
+// lib/admin/people.ts parses every row with zod before anything reads it.
 //
 // allowed_users and telemetry_events were created by hand before
 // supabase/migrations existed; 0013_baseline_and_audit_integrity.sql is their
@@ -900,6 +904,95 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_people_overview: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          active_days: number
+          active_ms: number
+          calls_logged: number
+          checklist_completed: number
+          content_views: number
+          copies: number
+          copilot_asks: number
+          daily: Json
+          first_seen_at: string | null
+          last_seen_at: string | null
+          member_added_at: string
+          member_email: string
+          member_full_name: string | null
+          member_is_active: boolean
+          member_role: string
+          searches: number
+          sessions: number
+          zero_result_searches: number
+        }[]
+      }
+      admin_person_daily: {
+        Args: { p_email: string; p_from: string; p_to: string }
+        Returns: {
+          active_ms: number
+          content_views: number
+          day: string
+          events: number
+        }[]
+      }
+      admin_person_recent_events: {
+        Args: { p_email: string; p_limit?: number }
+        Returns: {
+          event_entity_id: string | null
+          event_entity_type: string | null
+          event_meta: Json | null
+          event_path: string
+          event_ts: string
+          event_type: string
+        }[]
+      }
+      admin_person_sections: {
+        Args: { p_email: string; p_from: string; p_to: string }
+        Returns: {
+          active_ms: number
+          section: string
+          visits: number
+        }[]
+      }
+      admin_person_summary: {
+        Args: { p_email: string; p_from: string; p_to: string; p_prev_from: string }
+        Returns: {
+          active_days: number
+          active_days_prev: number
+          active_ms: number
+          active_ms_prev: number
+          calls_logged: number
+          calls_logged_prev: number
+          checklist_completed: number
+          checklist_completed_prev: number
+          content_views: number
+          content_views_prev: number
+          copies: number
+          copies_prev: number
+          copilot_asks: number
+          copilot_asks_prev: number
+          first_seen_at: string | null
+          last_seen_at: string | null
+          searches: number
+          searches_prev: number
+          sessions: number
+          sessions_prev: number
+          zero_result_searches: number
+          zero_result_searches_prev: number
+        }[]
+      }
+      admin_top_content: {
+        Args: { p_from: string; p_to: string; p_limit?: number }
+        Returns: {
+          copies: number
+          people: number
+          view_entity_id: string | null
+          view_path: string
+          view_type: string
+          views: number
+        }[]
+      }
       admin_user_last_activity: {
         Args: Record<PropertyKey, never>
         Returns: {

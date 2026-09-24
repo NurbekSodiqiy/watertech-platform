@@ -24,6 +24,14 @@ export const TELEMETRY_EVENT_TYPES = [
 
 export type TelemetryEventType = (typeof TELEMETRY_EVENT_TYPES)[number];
 
+/** `entityType` of a content item, as the view events send it (script_select →
+ * "script", stage_view → "stage", objection_view → "objection", faq_view →
+ * "faq", competitor_view → "competitor", package_view → "package"). A `copy`
+ * of the same item sends the same entityType/entityId pair, which is how
+ * admin_top_content (0021) files copies under the item's views. "contact" has
+ * no view event: its copies count per person but in no content ranking. */
+export type ContentEntityType = "script" | "stage" | "objection" | "faq" | "competitor" | "package" | "contact";
+
 export interface TelemetryEvent {
   sessionId: string;
   ts: number;

@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { EmptyState } from "./EmptyState";
 import { CopyButton } from "./CopyButton";
 import type { EmptyStateKey } from "@/lib/empty-states";
+import type { ContentEntityType } from "@/lib/telemetry/types";
 
 /** Content for the "there is no data at all" case — resolved by the Server
  * Component caller (getTranslations) from lib/empty-states.ts and passed
@@ -56,6 +57,7 @@ export function DatabaseTemplate<T extends { id: string }>({
   linkBase,
   linkKey,
   emptyState,
+  copyEntityType,
 }: {
   columns: DbColumn<T>[];
   rows: T[];
@@ -65,6 +67,10 @@ export function DatabaseTemplate<T extends { id: string }>({
   /** Shown instead of the generic filter-empty state when `rows` itself is
    * empty (no content published yet, not just filtered down to nothing). */
   emptyState?: DbEmptyState;
+  /** Set when each row is one content item whose `id` is its content id: the
+   * row's copy buttons then send that pair with the `copy` event
+   * (CopyButton's entityType/entityId). */
+  copyEntityType?: ContentEntityType;
 }) {
   const router = useRouter();
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
@@ -199,7 +205,11 @@ export function DatabaseTemplate<T extends { id: string }>({
                           <p className="flex-1 whitespace-pre-wrap text-[14px] leading-relaxed text-primary-dark">
                             {String(row[col.key] ?? "—")}
                           </p>
-                          <CopyButton value={String(row[col.key] ?? "")} />
+                          <CopyButton
+                            value={String(row[col.key] ?? "")}
+                            entityType={copyEntityType}
+                            entityId={copyEntityType ? row.id : undefined}
+                          />
                         </div>
                       ) : col.type === "stock" ? (
                         <span className={row[col.key] ? "font-medium text-status-ok" : "font-medium text-status-outdated"}>
@@ -219,7 +229,11 @@ export function DatabaseTemplate<T extends { id: string }>({
                             <a href={`tel:${String(row[col.key]).replace(/[^\d+]/g, "")}`} className="whitespace-nowrap text-primary hover:underline">
                               {String(row[col.key])}
                             </a>
-                            <CopyButton value={String(row[col.key])} />
+                            <CopyButton
+                              value={String(row[col.key])}
+                              entityType={copyEntityType}
+                              entityId={copyEntityType ? row.id : undefined}
+                            />
                           </div>
                         ) : (
                           <span className="text-text-secondary/50">—</span>

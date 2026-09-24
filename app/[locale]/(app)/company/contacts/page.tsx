@@ -30,6 +30,7 @@ export default async function ContactsPage({ params: { locale } }: { params: { l
         columns={columns}
         rows={contacts}
         filters={[{ key: "role", label: t("columns.role"), options: roles }]}
+        copyEntityType="contact"
         emptyState={{
           stateKey: "contactsNone",
           title: tEmpty("title"),

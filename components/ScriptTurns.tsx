@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Info, User, Headset, Package, Building2, HelpCircle, ChevronDown, ArrowUpRight } from "lucide-react";
-import type { ScriptTurn, ScriptTurnLink, Objection } from "@/lib/content/types";
+import type { ScriptTurn, ScriptTurnLink, Objection, Stage } from "@/lib/content/types";
 import type { ContentBundle } from "@/lib/content/loader";
+import type { ContentEntityType } from "@/lib/telemetry/types";
 import { useScriptsContent } from "@/components/scripts/ScriptsContentContext";
 import { CopyButton } from "@/components/CopyButton";
 import { useNow } from "@/hooks/useNow";
@@ -232,6 +233,18 @@ export function collectOperatorText(turns: ScriptTurn[], clientName?: string): s
     .join("\n\n");
 }
 
+/** The content item a turn list shows, for its copy buttons: the open
+ * objection, else the stage — the same precedence ScriptsWorkspace uses to
+ * pick the turns themselves. */
+export function turnsCopyEntity(
+  objection: Objection | null,
+  stage: Stage | null
+): { entityType: ContentEntityType; entityId: string } | null {
+  if (objection) return { entityType: "objection", entityId: objection.id };
+  if (stage) return { entityType: "stage", entityId: stage.id };
+  return null;
+}
+
 /** Turns carry no id of their own and the list is swapped wholesale (not
  * spliced) when the operator switches stage/objection, so the key is
  * derived from each turn's own content rather than its position — that way
@@ -241,17 +254,20 @@ function turnKey(turn: ScriptTurn, index: number): string {
   return `${index}:${turn.speaker}:${turn.text}`;
 }
 
-export function ScriptTurns({
-  turns,
-  clientName,
-  large = false,
-}: {
+interface ScriptTurnsProps {
   turns: ScriptTurn[];
   clientName?: string;
   /** Call Mode reads this at arm's length during a live call — roughly
    * 1.6x the normal turn text size, nothing else scales. */
   large?: boolean;
-}) {
+  /** The stage or objection these turns belong to, passed to each bubble's
+   * copy button (CopyButton's entityType/entityId). Two primitives rather
+   * than one object, so ScriptTurnList's memo still bails out. */
+  copyEntityType?: ContentEntityType;
+  copyEntityId?: string;
+}
+
+export function ScriptTurns({ turns, clientName, large = false, copyEntityType, copyEntityId }: ScriptTurnsProps) {
   const t = useTranslations("scripts");
   const slots = useSuggestedSlots();
 
@@ -294,6 +310,8 @@ export function ScriptTurns({
                   {isOperator && (
                     <CopyButton
                       value={withClientName(turn.text, clientName, slots)}
+                      entityType={copyEntityType}
+                      entityId={copyEntityId}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-alt hover:text-accent"
                     />
                   )}

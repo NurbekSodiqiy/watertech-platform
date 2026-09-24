@@ -10,6 +10,7 @@ manual, and the signed-in half of the e2e suite needs a session cookie captured 
 | Row Level Security | Supabase SQL editor | `supabase/tests/rls-checks.sql` | no — staging only |
 | Dashboard SQL parity + retention | Supabase SQL editor | `supabase/tests/dashboard-parity.sql`, `retention-checks.sql` | no — staging only (the TS half of the parity check runs in `npm test`) |
 | Copilot statistics | Supabase SQL editor | `supabase/tests/copilot-checks.sql` | no — staging only (the normalization corpus's TS half runs in `npm test`) |
+| People analytics | Supabase SQL editor | `supabase/tests/people-checks.sql` | no — staging only (its expected rows' TS half runs in `npm test`) |
 | Storage policies + product photos | Supabase SQL editor | `supabase/tests/storage-checks.sql` | no — staging only (the limits' TS half runs in `npm test`) |
 | Which migrations a project has had | Supabase SQL editor | `supabase/tests/migration-status.sql` | no — read-only, safe on any project (docs/MIGRATIONS.md) |
 | Accessibility (axe-core, in Playwright) | `npm run e2e` | `tests/e2e/a11y.spec.ts` | yes, public routes only |
@@ -226,6 +227,33 @@ The normalization corpus in that file (between the `$corpus$` markers) is shared
 `lib/search/normalize.ts` — the function `private.copilot_normalize_question()` mirrors. Change the corpus
 or either implementation and one of the two suites fails. Run it like `dashboard-parity.sql`; pass is
 `Copilot checks passed`, failure an error starting with `COPILOT FAIL:`. It ends in `ROLLBACK`.
+
+## People analytics checks (staging only, after 0021)
+
+`supabase/tests/people-checks.sql` adds six allow-list rows (`people-*@test`: two operators, a sales manager, an
+admin, an inactive operator with no events, and one active only after the window) and ~70 `telemetry_events` in
+March 2001, then asserts, as an admin, **every column** of the six 0021 functions against the expected rows of its
+`$people$` JSON document: the overview (only the fixture rows, in the function's order — real staging rows are left
+out of the comparison, but the row count must equal `allowed_users`'), the summary for a person, an admin, an unknown
+email and a removed one, the zero-filled daily series (also on a window not aligned to midnight), the sections, the
+three newest events, and the top content (whole, and cut at `p_limit => 3`). It also checks that each fixture
+person's active time, copies, checklist and zero-result count equal what `dashboard_operator_activity` and
+`dashboard_kpis` report for the same window; that an operator, a sales manager and a claim-less token get `WT403`
+from all six and from the re-created `dashboard_operator_activity`; that 15 bad arguments get `WT400` (and the
+93-day, `p_limit => 100` edges pass); and that only `authenticated` may execute the functions and their helpers.
+
+The fixture is built around the edges the definitions in 0021's header care about: events on `p_from` (in) and
+`p_to` (out, but still the person's last seen), both sides of a Tashkent midnight, idle longer than page time
+(clamped per day), call counts typed as a running value and cleared, `/ru`, `/uz` and `/ruxsat` paths, copies with and
+without an entity, an admin whose pre-0020 events must count nowhere, and a removed person whose views still count
+in the content ranking.
+
+`tests/unit/admin/people.test.ts` (in `npm test`) reads **the same document** and runs its expected rows through the
+mappers of `lib/admin/people.ts`, so a column renamed or retyped on either side fails one of the two suites. It also
+reads 0021 and fails if the longest window drifts from `MAX_RANGE_SPAN_DAYS` + 1 in `lib/dashboard/range.ts`. Run the
+SQL like `dashboard-parity.sql`; pass is `People checks passed`, failure an error starting with `PEOPLE FAIL:`. It
+ends in `ROLLBACK`; the allow-list rows are inserted before the role switch, because an admin row may only be written
+without a JWT (`WT462`, 0020).
 
 ## Storage checks (staging only, after 0018)
 

@@ -133,7 +133,7 @@ hooks/                             useTrack, useNow, useMounted, useSessionUser�
 supabase/
   migrations/*.sql                 every schema change is a numbered migration file — apply order in docs/MIGRATIONS.md
   seed/                            seed scripts (content TS files are the seed source); guard.ts refuses production (§7)
-  tests/*.sql                      SQL checks: rls, dashboard-parity, retention, storage, copilot (staging only,
+  tests/*.sql                      SQL checks: rls, dashboard-parity, retention, storage, copilot, people (staging only,
                                    they write rolled-back fixtures); migration-status.sql (read-only, any project)
 tests/
   unit/                            vitest unit tests mirror lib/ paths

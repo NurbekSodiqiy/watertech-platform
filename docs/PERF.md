@@ -326,7 +326,7 @@ literal bounds (the `with op_first as (…)` body) under the same role. In dev, 
 | Operator route First Load JS (`next build` table) | <= 180 kB |
 | Client message payload | only allow-listed namespaces (`lib/i18n/client-messages.ts`), enforced by vitest |
 | Modules mounted only after an interaction | `next/dynamic` when >= ~4 kB parsed or when they pull a dependency into first load |
-| Dashboard data | aggregates only: no dashboard code path selects rows from `telemetry_events`; a new widget is a new SQL function with a case in `supabase/tests/dashboard-parity.sql` |
+| Dashboard data | aggregates only: no dashboard code path selects rows from `telemetry_events`; a new widget is a new SQL function with a case in `supabase/tests/dashboard-parity.sql` (people analytics: `supabase/tests/people-checks.sql`) |
 | Dashboard ranked lists | capped by `p_limit` (<= 1000, PostgREST's `max-rows`); the pages send 100 / 100 / 10 |
 | Dashboard function latency (staging, native Postgres) | <= 300 ms per call at the default 7-day range; <= 2 s at the 93-day maximum — far inside the `authenticated` role's statement timeout (8 s on Supabase), which would turn an overrun into the widget's error state |
 
@@ -416,6 +416,71 @@ this path: import `lib/auth/claims.ts` for types only, and compare the role lite
 
 Admin routes: `/admin/users` 154 kB (its page chunk 8.35 → 8.81 kB: the Admin badge, the locked controls and
 their note); the rest unchanged.
+
+## People analytics queries (R3/S02, migration 0021)
+
+**Scan shape.** Like 0016, every function returns aggregates or a capped list — the person timeline's ≤ 100 events
+are the only raw rows that leave the database — and there is no per-person loop:
+
+- `admin_people_overview`: one scan of the window's events of the non-admin allow-list, collapsed to (person, day,
+  session) by a hash aggregate and then rolled up by GROUPING SETS into day rows and totals in the same pass; a small
+  second scan of `call_count_log`; 0016's helpers once each for everyone (active time index-only on the covering
+  `(type, ts)` index; zero-result searches by `(type, ts)` plus one primary-key probe per zero-result search to find
+  its person; the checklist); and two `(user_email, ts)` index probes per person for first/last seen.
+- One person (`admin_person_summary` / `_daily` / `_sections` / `_recent_events`): reads of every event type are range
+  scans of `telemetry_events_user_email_ts_idx` (the recent events a backward walk that stops after `p_limit`); page time
+  and idle pairs come index-only from the covering `(type, ts)` index. The summary also calls 0016's
+  `dashboard_active_ms` and `dashboard_zero_result_events` with the person's email, as the task asked (one definition);
+  their `(p_operator is null or user_email = p_operator)` filter reads the window's page_leave/idle and search events
+  for everyone and keeps the person's — the shape the dashboard's operator filter has had since S09.
+- `admin_top_content`: one scan of the window's six view events and attributed copies (heap fetches for
+  `entity_id`/`path`), one primary-key probe per listed item.
+
+**Generic plans.** Postgres ≤ 17 plans a SQL-function body once, without parameter values, and guesses a parameterized
+`ts` range at 0.5 % of the table — so `user_email = $1 and ts >= $2 and ts < $3` walks the `(ts)` index across
+everyone's events, and `user_email = any($array)` is costed as ten people. 0021 therefore splits one person from
+several behind one-time filters and writes the one-person range as a row comparison, `(user_email, ts) >= ($1, $2)`,
+which only the `(user_email, ts)` index can serve. With `plan_cache_mode = force_generic_plan`, a 93-day one-person
+scan went from 80 ms (the `(ts)` index) to 8 ms; the extracted checklist helper got the same treatment, which also
+speeds up `dashboard_operator_activity`'s one-operator card. `dashboard_zero_result_events` (0016) was left as it is.
+
+**Measured latency.** The S09 synthetic set (372 000 rows: 2 000 events a day for 186 days, 30 people, 16 event types,
+`vacuum analyze`d) in PGlite 0.5.8, as the admin, median of 3 warm calls. Default and forced-generic plans agree
+within noise. Upper bounds again — re-measure on staging.
+
+| Function | 7-day range | 93-day range | 93-day, before the access-path work |
+|---|---:|---:|---:|
+| `admin_people_overview` (31 rows) | 68 ms | 909 ms | 1 152 ms |
+| `admin_person_summary` (both windows) | 36 ms | 234 ms | 703 ms |
+| `admin_person_daily` | 10 ms | 36 ms | 201 ms |
+| `admin_person_sections` | 3 ms | 8 ms | 83 ms |
+| `admin_person_recent_events` (30) | 2 ms | 2 ms | 3 ms |
+| `admin_top_content` (10) | 19 ms | 286 ms | 265 ms |
+| `dashboard_operator_activity`, for scale (re-created, same numbers) | 33 ms | 511 ms | 505 ms |
+
+All inside the dashboard budget below. The overview at 93 days is the slowest call: it reads every tracked event
+of the window once, which is the price of listing everyone with their totals in one round trip.
+
+**Copy attribution (client).** `CopyButton` sends `entityType`/`entityId` with `copy` when its caller knows the item
+(two optional props, one `&&` at the click); the call sites pass primitives down, so `ScriptTurnList` stays
+memoized. Measured exactly (R3/S01's method: both trees built with CI's placeholder env, gzip level 9 over each
+route's `app-build-manifest.json` entry):
+
+| Route | Before (commit `f9b4125`) | After | `next build` table |
+|---|---:|---:|---:|
+| `/company/onboarding` | 180.468 kB | 180.446 kB | 180 kB |
+| `/sales-process/scripts` | 169.865 kB | 169.990 kB | 170 kB |
+| `/products` | 165.911 kB | 165.901 kB | 166 kB |
+| `/` | 160.476 kB | 160.454 kB | 160 kB |
+| `/sales-process/battle-cards/[slug]` | 156.368 kB | 156.367 kB | 156 kB |
+| `/sales-process/objections`, `/company/contacts` | 140.918 kB | 140.962 kB | 141 kB |
+| `/faq` | 141.198 kB | 141.242 kB | 141 kB |
+
+`/company/onboarding` loads none of the changed modules: its page chunk is byte-for-byte the same length with the
+same modules in another order (the order varies between builds), and the webpack runtime's chunk map changed hashes,
+so its −22 B is noise, not a saving. It keeps **54 bytes** before the table reads 181 kB. The real cost is on
+`/sales-process/scripts` (+125 B: CopyButton, ScriptTurns, the two call sites) and the three `DatabaseTemplate`
+pages (+44 B).
 
 ## Open items
 

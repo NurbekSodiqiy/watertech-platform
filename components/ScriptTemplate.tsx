@@ -54,7 +54,7 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
                       <p className="mb-3 text-sm font-bold uppercase tracking-wider text-primary border-b border-border pb-1 w-max">
                         {o.label}
                       </p>
-                      <ScriptTurns turns={objectionToTurns(o)} />
+                      <ScriptTurns turns={objectionToTurns(o)} copyEntityType="objection" copyEntityId={o.id} />
                     </div>
                   ))}
                   <Link
@@ -66,7 +66,7 @@ function StageSection({ stage, index, defaultOpen = false }: { stage: Stage; ind
                   </Link>
                 </div>
               ) : (
-                <ScriptTurns turns={stage.turns} />
+                <ScriptTurns turns={stage.turns} copyEntityType="stage" copyEntityId={stage.id} />
               )}
             </div>
           </m.div>

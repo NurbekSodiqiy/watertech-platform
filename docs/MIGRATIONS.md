@@ -32,12 +32,13 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0018 | `product_images.sql` | public Storage bucket `product-images` (2 MB, JPEG/PNG/WebP/AVIF); manager-only select/insert/update/delete policies on `storage.objects` for that bucket (writes under `products/` only); `content_products.image_path` with a shape check; `content_products.filename` nullable | 0014 (`private.is_manager()`), 0002, Storage enabled |
 | 0019 | `copilot_stats.sql` | `public.copilot_stats(p_from, p_to)` (request counts, no-hits / error rate, p50 / p95 latency) and `public.copilot_unanswered(p_from, p_to, p_limit)` (no-hits questions grouped by a normalized form; operator counts, never emails), both manager only (WT403); `private.copilot_normalize_question()` mirroring `lib/search/normalize.ts` | 0014 (`private.is_manager()`), 0006 |
 | 0020 | `roles_admin_manager.sql` | Role model v2: `private.is_admin()`; `private.is_manager()` becomes its deprecated alias, so every 0014–0019 policy and function body means "admin"; `private.is_member()` covers `operator`/`manager`/`admin`; `allowed_users_role_chk` accepts `admin` (validated); the guard gets admin semantics (last admin WT460, self WT461, admin rows SQL-editor-only WT462); every `manager` row becomes `admin`, on the first run only | 0014, 0017 (and, by apply order, 0019) |
+| 0021 | `people_analytics.sql` | People analytics for the admin panel (R3/S02): `public.admin_people_overview`, `admin_person_summary`, `admin_person_daily`, `admin_person_sections`, `admin_person_recent_events`, `admin_top_content` — admin only (WT403), WT400 for bad arguments, no admin's telemetry counted; private helpers; `dashboard_operator_activity`'s checklist logic moved into `private.dashboard_checklist_completed`, which it now calls (same numbers) | 0016, 0020 |
 
 ### Which files has a project had?
 
 There is no migrations table, so ask the catalog: paste
 [supabase/tests/migration-status.sql](../supabase/tests/migration-status.sql) into the SQL editor and run
-it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0020`, `true` when
+it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0021`, `true` when
 the object only that file creates exists) plus three facts that should all be `true` (RLS on every public
 table, no policy naming `anon`, the access-token hook executable by `supabase_auth_admin` only). The first
 `false` row is the next file to apply. Whether the hook is *enabled* is a dashboard setting no query can
@@ -53,15 +54,17 @@ roles, default privileges, `auth.jwt()` and Storage tables): both orders below a
 re-apply idempotently, and all five `supabase/tests/*-checks.sql` files pass on the result. `0020` was
 verified the same way (R3/S01, 2026-09-24) on both paths, with its re-run, every preflight abort, the
 first-run-only conversion and the rollback below exercised, and 25 injected faults in it each caught by the
-check files or those scenarios. PostgREST,
+check files or those scenarios. `0021` likewise (R3/S02, 2026-09-24): both paths, its re-run, a re-run of
+`0016` after it, both rollback levels below, and 46 injected faults each caught by `people-checks.sql`,
+`dashboard-parity.sql` or `rls-checks.sql`. PostgREST,
 GoTrue, pg_cron and Storage itself were not exercised — the staging runs are still the gate. The condensed
 production sequence, with the dashboard steps in place, is [AUDIT.md §F](AUDIT.md#f-production-apply-order).
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015`, `0016`, `0017`, `0018`, `0019` and then `0020` go last. `0013` through `0020` all abort with a clear message
-when an earlier file is missing, so the order is enforced rather than assumed.
+`0014`, `0015`, `0016`, `0017`, `0018`, `0019`, `0020` and then `0021` go last. `0013` through `0021` all abort with a clear
+message when an earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
 no effect until it is **enabled in the dashboard** (Authentication → Hooks). That step and the rest of
@@ -97,7 +100,8 @@ statements into their own file and run them concurrently, outside a transaction.
     admin by hand, as the notice says:
     `insert into public.allowed_users (email, role) values ('owner@gmail.com', 'admin');`
     Everyone after that (operators, sales managers) is added at `/admin/users`.
-11. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+11. **`0021`.** After `0020` (it checks for `private.is_admin()` and the 0016 functions).
+12. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -139,6 +143,10 @@ that is staging or the belief is stale. Tick these off as they are applied:
       that knows the three roles in one sitting, then every admin signs out and back in**: either half alone locks
       the owner out of the admin panel until the other lands (operators are unaffected). Owner steps and rollback:
       [After applying 0020](#after-applying-0020--owner-steps).
+- [ ] **0021** people analytics — requires 0016 and 0020. Nothing calls its functions until the people directory
+      and person page land (R3/S03–S04), so an unapplied 0021 breaks nothing today; once they land, their widgets
+      show error states until it is applied. Then run `supabase/tests/people-checks.sql` on staging. Owner steps:
+      [After applying 0021](#after-applying-0021--owner-steps).
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -263,6 +271,35 @@ Admin rows are SQL-editor-only from here on (`WT462` for any write that carries 
 direct PostgREST call, the service-role key). To hand admin to someone else: insert the new admin row
 first, then demote or deactivate the old one — the last active admin can never be removed (`WT460`, the SQL
 editor included).
+
+### After applying 0021 — Owner steps
+
+0021 adds the reads behind the people directory and person page (R3/S03–S04) and changes no data, table, policy or
+grant of an existing object. It re-creates one existing function, `public.dashboard_operator_activity`, so that it
+takes its "checklist completed" count from the new shared helper — the numbers stay the same, which
+`dashboard-parity.sql` checks.
+
+1. **Check the prerequisites.** `supabase/tests/migration-status.sql`: `0016` and `0020` must read `true`. 0021 aborts
+   with a message naming what is missing otherwise.
+2. **Apply 0021** in the SQL editor (as `postgres`, like every file). No notice is expected.
+3. **Run the checks on staging**: `supabase/tests/people-checks.sql` (every column of the six functions against a
+   hand-computed table, their agreement with the 0016 dashboard functions, WT403 for an operator / a sales manager /
+   a claim-less token, WT400 for bad arguments, the grants), then `dashboard-parity.sql` and `rls-checks.sql` again —
+   the first covers the re-created `dashboard_operator_activity`, the second now sweeps the six new functions too.
+   See [TESTING.md](TESTING.md#people-analytics-checks-staging-only-after-0021).
+4. **Verify** after the S03/S04 release: `/admin/users` lists every allow-list row, admins with "no telemetry";
+   `/dashboard` shows the same numbers as before.
+5. **No type regeneration strictly needed**; the six functions are hand-written in `lib/supabase/database.types.ts` —
+   compare with `npm run gen:types` when convenient.
+
+Re-running 0021 is safe. So is re-running `0016` after it (e.g. to move retention into pg_cron): that puts back 0016's
+own copy of the checklist logic inside `dashboard_operator_activity`, which computes the same thing.
+
+Two definitions the owner should know when reading the numbers (the full list is the header of 0021):
+**calls logged** is, per day and daily task, the *last* value typed into DailyTimeline's calls field — the field sends
+its whole value on every keystroke, so a sum of the events would count "2" and "25" as 27 calls; and **an admin's
+telemetry never counts** (an admin row reads zero, and the UI says "no telemetry"), including what the owner's email
+recorded before 0020 while the owner was still `manager`.
 
 ### Retention policy (0016)
 
@@ -421,7 +458,8 @@ A full rollback file drops the ten functions (`public.dashboard_kpis`, `_operato
 (`create index telemetry_events_ts_idx on public.telemetry_events (ts);`,
 `create index telemetry_events_type_ts_idx on public.telemetry_events (type, ts);`) before dropping the
 `_cover_` pair. The dashboard code of S09 cannot run without the functions, so it goes back together
-with the app release that preceded it.
+with the app release that preceded it. With 0021 applied, roll it back first — fully (below): its functions
+call 0016's helpers.
 
 ### After applying 0019
 
@@ -503,3 +541,38 @@ Nothing is stored: the three functions are the whole migration. `drop function p
 timestamptz); drop function public.copilot_unanswered(timestamptz, timestamptz, integer); drop function
 private.copilot_normalize_question(text);` removes it, and `/dashboard/copilot` then shows its widgets' error state
 until the app release that added the tab is rolled back with it.
+
+### Rolling back 0021
+
+Nothing is stored: functions are the whole migration. Roll the S03/S04 app release back with it — the people pages
+call these functions. Verified on PGlite: after either level, the other five check files pass.
+
+**Partial** (enough in practice) — drop what only the people pages use, one transaction:
+
+```sql
+begin;
+drop function if exists public.admin_people_overview(timestamptz, timestamptz);
+drop function if exists public.admin_person_summary(text, timestamptz, timestamptz, timestamptz);
+drop function if exists public.admin_person_daily(text, timestamptz, timestamptz);
+drop function if exists public.admin_person_sections(text, timestamptz, timestamptz);
+drop function if exists public.admin_person_recent_events(text, integer);
+drop function if exists public.admin_top_content(timestamptz, timestamptz, integer);
+drop function if exists private.people_activity(timestamptz, timestamptz, text[]);
+drop function if exists private.people_daily_active_ms(timestamptz, timestamptz, text[]);
+drop function if exists private.people_window_days(timestamptz, timestamptz);
+drop function if exists private.people_tracked_emails(text);
+drop function if exists private.people_check_window(text, timestamptz, timestamptz);
+drop function if exists private.people_check_email(text, text);
+drop function if exists private.people_check_limit(text, integer);
+notify pgrst, 'reload schema';
+commit;
+```
+
+`private.dashboard_checklist_completed` and 0021's version of `dashboard_operator_activity` stay: they compute
+what 0016's did.
+
+**Full** — after the partial step, **re-run `0016_dashboard_rpc_and_retention.sql`** (it puts back its own
+`dashboard_operator_activity`, with the checklist logic inline; the rest of the file is idempotent), and only then
+`drop function if exists private.dashboard_checklist_completed(timestamptz, timestamptz, text);` — in that order: a
+plpgsql body is not checked at drop time, so dropping the helper first would leave the dashboard's Faollik tab
+failing at run time.

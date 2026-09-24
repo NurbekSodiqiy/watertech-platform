@@ -11,7 +11,7 @@ import { ObjectionNavButtons } from "@/components/ObjectionNavButtons";
 import { ObjectionCompetitorSearch } from "@/components/ObjectionCompetitorSearch";
 import { ScriptTurnList } from "@/components/ScriptTurnList";
 import { CopyButton } from "@/components/CopyButton";
-import { collectOperatorText } from "@/components/ScriptTurns";
+import { collectOperatorText, turnsCopyEntity } from "@/components/ScriptTurns";
 import { useClientName } from "@/components/ClientNameContext";
 import { Pressable } from "@/components/motion/Pressable";
 import { PinButton } from "@/components/ui/PinButton";
@@ -78,6 +78,7 @@ export function SalesScriptsTab({
   const [isScriptDropdownOpen, setIsScriptDropdownOpen] = useState(false);
   const t = useTranslations("scripts");
   const tCommon = useTranslations("common");
+  const copyEntity = turnsCopyEntity(selectedObjection, selectedScriptStage);
 
   function toggleScriptStage(stageId: string) {
     setExpandedScriptStageId((prev) => (prev === stageId ? null : stageId));
@@ -119,6 +120,8 @@ export function SalesScriptsTab({
                     <CopyButton
                       value={collectOperatorText(currentTurns, clientName)}
                       label={tCommon("copyAll")}
+                      entityType={copyEntity?.entityType}
+                      entityId={copyEntity?.entityId}
                     />
                   )}
                   <Pressable
@@ -133,7 +136,13 @@ export function SalesScriptsTab({
               </div>
             </div>
             {selectedObjection && <ObjectionCompetitorSearch competitors={competitors} />}
-            {currentTurns && <ScriptTurnList turns={currentTurns} />}
+            {currentTurns && (
+              <ScriptTurnList
+                turns={currentTurns}
+                copyEntityType={copyEntity?.entityType}
+                copyEntityId={copyEntity?.entityId}
+              />
+            )}
           </div>
         )}
       </div>

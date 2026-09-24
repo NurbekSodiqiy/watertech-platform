@@ -84,7 +84,13 @@ export function FaqTab({ leftPanelRef }: { leftPanelRef: RefObject<HTMLDivElemen
               <h2 className="text-2xl font-bold text-primary-dark">{selectedFaqItem.question}</h2>
               <div className="flex items-center gap-2">
                 <PinButton kind="faq" id={selectedFaqItem.id} />
-                <CopyButton value={selectedFaqItem.answer} label={tCommon("copy")} />
+                {/* The question text as entityId: the key faq_view is tracked with. */}
+                <CopyButton
+                  value={selectedFaqItem.answer}
+                  label={tCommon("copy")}
+                  entityType="faq"
+                  entityId={selectedFaqItem.question}
+                />
               </div>
             </div>
             <div className="relative rounded-2xl rounded-tl-sm border border-primary/20 border-l-[3px] border-l-primary bg-primary-light/25 px-6 py-5">

@@ -394,6 +394,12 @@ begin
     ('public.copilot_stats(timestamptz, timestamptz)'),
     ('public.copilot_unanswered(timestamptz, timestamptz, integer)'),
     ('public.admin_user_last_activity()'),
+    ('public.admin_people_overview(timestamptz, timestamptz)'),
+    ('public.admin_person_summary(text, timestamptz, timestamptz, timestamptz)'),
+    ('public.admin_person_daily(text, timestamptz, timestamptz)'),
+    ('public.admin_person_sections(text, timestamptz, timestamptz)'),
+    ('public.admin_person_recent_events(text, integer)'),
+    ('public.admin_top_content(timestamptz, timestamptz, integer)'),
     ('public.reorder_content_rows(text, text[], integer[])')
   ) as t(sig)
   where to_regprocedure(t.sig) is not null;
@@ -442,6 +448,18 @@ begin
           'select * from public.copilot_unanswered(now() - interval ''1 day'', now())'),
         ('public.admin_user_last_activity()',
           'select * from public.admin_user_last_activity()'),
+        ('public.admin_people_overview(timestamptz, timestamptz)',
+          'select * from public.admin_people_overview(now() - interval ''1 day'', now())'),
+        ('public.admin_person_summary(text, timestamptz, timestamptz, timestamptz)',
+          'select * from public.admin_person_summary(''op@test'', now() - interval ''1 day'', now(), now() - interval ''2 days'')'),
+        ('public.admin_person_daily(text, timestamptz, timestamptz)',
+          'select * from public.admin_person_daily(''op@test'', now() - interval ''1 day'', now())'),
+        ('public.admin_person_sections(text, timestamptz, timestamptz)',
+          'select * from public.admin_person_sections(''op@test'', now() - interval ''1 day'', now())'),
+        ('public.admin_person_recent_events(text, integer)',
+          'select * from public.admin_person_recent_events(''op@test'')'),
+        ('public.admin_top_content(timestamptz, timestamptz, integer)',
+          'select * from public.admin_top_content(now() - interval ''1 day'', now())'),
         ('public.reorder_content_rows(text, text[], integer[])',
           'select public.reorder_content_rows(''content_faqs'', array[''rls-test-draft''], array[1])')
       ) as t(sig, sql)
