@@ -522,7 +522,7 @@ export async function listTrash({ offset = 0, pageSize = 25 } = {}): Promise<Tra
 }
 
 // === Allow-list (/admin/users) ======================================================
-// public.allowed_users under the manager's read policy (0014), joined in TS
+// public.allowed_users under the admin's read policy (0014/0020), joined in TS
 // with admin_user_last_activity() (0017). The two are read side by side and
 // the activity is optional: an unapplied 0017 or a failed call leaves the
 // "last activity" column empty, not the page.
@@ -551,9 +551,10 @@ export async function listAdminUsers(): Promise<AdminUserList> {
 
   const users: AdminUser[] = [];
   for (const row of rows.data) {
-    // allowed_users_role_chk is NOT VALID (0013): a legacy row may carry a
-    // role this page cannot offer, and the hook would stamp it verbatim —
-    // which roleFromClaims() then refuses. Logged, not rendered.
+    // allowed_users_role_chk was NOT VALID until 0020 validated it: a row
+    // with another role cannot exist after it, but if one ever did, the hook
+    // would stamp it verbatim — which roleFromClaims() then refuses. Logged,
+    // not rendered.
     if (!isUserRole(row.role)) {
       console.error("[admin] allowed_users row with an unknown role skipped");
       continue;

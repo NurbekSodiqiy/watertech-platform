@@ -4,6 +4,7 @@ import {
   actionErrorResult,
   actionFailed,
   actionOk,
+  allowListGuardCode,
   logDbError,
   PG_UNIQUE_VIOLATION,
   type ActionResult,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/admin/users";
 import type { SignInBlockResult } from "@/lib/auth/ban";
 import type { Database } from "@/lib/supabase/database.types";
-import type { ManagerSession } from "./guard";
+import type { AdminSession } from "./guard";
 
 // The allow-list writes behind /admin/users. Not a "use server" file, for the
 // same reason as factory.ts and restore.ts: the dependencies come in as an
@@ -30,20 +31,23 @@ import type { ManagerSession } from "./guard";
 // Every rule here is checked twice. First in TS, from one read of the rows
 // involved, so a refusal comes back as a precise code without a failed write;
 // then by the database, whatever the TS decided:
-//   * the allowed_users policies (0017) — manager JWT only, and column grants
-//     that allow role / is_active / full_name and nothing else;
+//   * the allowed_users policies (0017) — admin JWT only (is_manager() is
+//     is_admin() since 0020), and column grants that allow role / is_active /
+//     full_name and nothing else;
 //   * private.allowed_users_guard — WT403 when the caller's own row is no
-//     longer an active manager (a stale manager token), WT460 last manager,
-//     WT461 self-change, all under one advisory lock.
-// The write goes through the manager's own RLS-scoped session, never the
+//     longer an active admin (a stale admin token), WT460 last admin, WT461
+//     self-change, WT462 any write that creates, promotes, demotes,
+//     deactivates or removes an admin row (admin rows are SQL-editor-only),
+//     all under one advisory lock.
+// The write goes through the admin's own RLS-scoped session, never the
 // service role. Only the Supabase Auth ban needs that key, and it is a
 // dependency so this file never touches it.
 
 export type AccessDbClient = SupabaseClient<Database>;
 
 export interface UserAccessDeps {
-  /** Throws (AdminActionError "unauthorized") unless the caller is a manager. */
-  requireSession: () => Promise<ManagerSession>;
+  /** Throws (AdminActionError "unauthorized") unless the caller is an admin. */
+  requireSession: () => Promise<AdminSession>;
   /** RLS-scoped session client. */
   client: () => AccessDbClient;
   /** Bans (true) or unbans (false) every Supabase Auth account with this email. */
@@ -56,11 +60,9 @@ export interface UserAccessActions {
   setActive: (email: unknown, active: unknown) => Promise<ActionResult>;
 }
 
-/** SQLSTATEs private.allowed_users_guard raises (0017_user_admin_and_access_audit.sql). */
+/** Postgres states a refused allow-list write can carry besides the guard's
+ * own (lib/admin/errors.ts `allowListGuardCode`). */
 const SQLSTATE = {
-  notActiveManager: "WT403",
-  lastManager: "WT460",
-  selfChange: "WT461",
   insufficientPrivilege: "42501",
   checkViolation: "23514",
 } as const;
@@ -68,20 +70,18 @@ const SQLSTATE = {
 interface AccessSnapshot {
   /** The row being changed, or null when there is none (or RLS hides it). */
   target: AccessState | null;
-  /** Every active manager's email, lowercased. */
-  activeManagers: string[];
+  /** Every active admin's email, lowercased. */
+  activeAdmins: string[];
 }
 
 function writeFailure(scope: string, error: { message: string; code?: string }): ActionResult {
   logDbError(scope, error);
+  if (error.code === PG_UNIQUE_VIOLATION) return actionFailed("email_taken", { field: "email" });
+
+  const guarded = allowListGuardCode(error.code);
+  if (guarded) return actionFailed(guarded);
+
   switch (error.code) {
-    case PG_UNIQUE_VIOLATION:
-      return actionFailed("email_taken", { field: "email" });
-    case SQLSTATE.lastManager:
-      return actionFailed("last_manager");
-    case SQLSTATE.selfChange:
-      return actionFailed("self_change");
-    case SQLSTATE.notActiveManager:
     case SQLSTATE.insufficientPrivilege:
       return actionFailed("unauthorized");
     case SQLSTATE.checkViolation:
@@ -91,23 +91,23 @@ function writeFailure(scope: string, error: { message: string; code?: string }):
   }
 }
 
-async function activeManagerEmails(supabase: AccessDbClient): Promise<string[]> {
+async function activeAdminEmails(supabase: AccessDbClient): Promise<string[]> {
   const { data, error } = await supabase
     .from("allowed_users")
     .select("email")
-    .eq("role", "manager")
+    .eq("role", "admin")
     .eq("is_active", true);
   if (error) {
-    logDbError("allowed_users managers", error);
+    logDbError("allowed_users admins", error);
     throw new Error(error.message);
   }
   return data.map((row) => row.email.toLowerCase());
 }
 
 async function loadSnapshot(supabase: AccessDbClient, email: string): Promise<AccessSnapshot> {
-  const [target, activeManagers] = await Promise.all([
+  const [target, activeAdmins] = await Promise.all([
     supabase.from("allowed_users").select("role,is_active").eq("email", email).limit(1),
-    activeManagerEmails(supabase),
+    activeAdminEmails(supabase),
   ]);
   if (target.error) {
     logDbError("allowed_users select", target.error);
@@ -115,28 +115,29 @@ async function loadSnapshot(supabase: AccessDbClient, email: string): Promise<Ac
   }
 
   const row = target.data[0];
-  if (!row) return { target: null, activeManagers };
+  if (!row) return { target: null, activeAdmins };
   if (!isUserRole(row.role)) {
-    // allowed_users_role_chk is NOT VALID (0013), so a legacy row may hold
-    // anything. It is not a state this page can reason about.
+    // allowed_users_role_chk was NOT VALID until 0020, so a legacy row may
+    // hold anything. It is not a state this page can reason about.
     console.error("[admin] allowed_users row with an unknown role");
     throw new Error("allowed_users: unknown role");
   }
-  return { target: { role: row.role, isActive: row.is_active }, activeManagers };
+  return { target: { role: row.role, isActive: row.is_active }, activeAdmins };
 }
 
 /** The TS pre-check shared by setRole and setActive. Null means "go ahead". */
 function refusal(
-  session: ManagerSession,
+  session: AdminSession,
   email: string,
   snapshot: AccessSnapshot,
   change: (before: AccessState) => AccessState
 ): ActionResult | null {
   const actor = session.email.toLowerCase();
-  // The JWT said manager (requireSession); the allow-list has to agree right
-  // now. A manager demoted or deactivated in the last hour still holds a
-  // manager token — this is the guard's WT403, asked before the write.
-  if (!snapshot.activeManagers.includes(actor)) return actionFailed("unauthorized");
+  // The JWT said admin (requireSession); the allow-list has to agree right
+  // now. An admin demoted or deactivated in the SQL editor in the last hour
+  // still holds an admin token — this is the guard's WT403, asked before the
+  // write.
+  if (!snapshot.activeAdmins.includes(actor)) return actionFailed("unauthorized");
   if (!snapshot.target) return actionFailed("not_found");
 
   const violation = accessViolation({
@@ -144,7 +145,7 @@ function refusal(
     target: email,
     before: snapshot.target,
     after: change(snapshot.target),
-    activeManagers: snapshot.activeManagers,
+    activeAdmins: snapshot.activeAdmins,
   });
   return violation ? actionFailed(violation) : null;
 }
@@ -167,17 +168,19 @@ async function syncSignIn(deps: UserAccessDeps, email: string, blocked: boolean)
 }
 
 export function userAccessActions(deps: UserAccessDeps): UserAccessActions {
-  /** Adds an active row. Also lifts any Supabase Auth ban left on the email —
-   * a person removed by hand in the SQL editor after a deactivation would
-   * otherwise be allow-listed and still unable to sign in. */
+  /** Adds an active operator or sales manager row — `addUserSchema` accepts
+   * nothing else, and the database refuses an admin row anyway (WT462). Also
+   * lifts any Supabase Auth ban left on the email — a person removed by hand
+   * in the SQL editor after a deactivation would otherwise be allow-listed and
+   * still unable to sign in. */
   async function addUser(email: unknown, role: unknown, fullName: unknown): Promise<ActionResult> {
     try {
       const session = await deps.requireSession();
       const input = addUserSchema.parse({ email, role, fullName }, { errorMap: adminErrorMap });
       const supabase = deps.client();
 
-      const managers = await activeManagerEmails(supabase);
-      if (!managers.includes(session.email.toLowerCase())) return actionFailed("unauthorized");
+      const admins = await activeAdminEmails(supabase);
+      if (!admins.includes(session.email.toLowerCase())) return actionFailed("unauthorized");
 
       // `.insert()`, never an upsert: an existing row is somebody's current
       // access, and "add" must not quietly re-role or reactivate it.
@@ -193,7 +196,8 @@ export function userAccessActions(deps: UserAccessDeps): UserAccessActions {
   }
 
   /** Operator ↔ manager. Takes effect at the person's next token refresh —
-   * the claim in their current access token stays until it expires. */
+   * the claim in their current access token stays until it expires. An admin
+   * row is neither a source nor a target (`admin_locked`). */
   async function setRole(email: unknown, role: unknown): Promise<ActionResult> {
     try {
       const session = await deps.requireSession();
@@ -227,7 +231,9 @@ export function userAccessActions(deps: UserAccessDeps): UserAccessActions {
    * that failed to change must not leave someone banned or unbanned against it.
    *
    * The Auth half runs even when the row is already in the requested state,
-   * so repeating the action after an `auth_sync_failed` is the retry.
+   * so repeating the action after an `auth_sync_failed` is the retry. It only
+   * ever brings the ban in line with the row: deactivating or reactivating an
+   * admin row is refused before it (`admin_locked`).
    */
   async function setActive(email: unknown, active: unknown): Promise<ActionResult> {
     try {

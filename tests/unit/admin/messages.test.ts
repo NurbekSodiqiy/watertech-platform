@@ -4,7 +4,7 @@ import ru from "@/messages/ru.json";
 import { VALIDATION_KEYS } from "@/lib/admin/validation";
 
 // An admin write answers with a code, never a sentence (lib/admin/errors.ts),
-// so a code with no message is a manager staring at a raw key. The general
+// so a code with no message is an admin staring at a raw key. The general
 // uz ⇄ ru parity test cannot catch that: a key missing from *both* files is
 // still "in parity".
 
@@ -19,8 +19,9 @@ const ERROR_CODES = [
   "not_found",
   "reference_in_use",
   "email_taken",
-  "last_manager",
+  "last_admin",
   "self_change",
+  "admin_locked",
   "auth_sync_failed",
   "unknown",
 ] as const;

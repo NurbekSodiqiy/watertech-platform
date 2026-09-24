@@ -391,6 +391,32 @@ S13 (activity feed, unified navigation); they are outside the operator budget:
 The audit's fixes changed no route: the table before and after is identical, and the middleware bundle reads
 123 kB instead of 122 kB (its matcher literal is longer — AUDIT.md F1).
 
+## R3/S01 (2026-09-24, role model v2)
+
+Client-side additions on every operator route: the telemetry tracker's admin no-op (`lib/telemetry/client.ts`),
+the role handed to it by `SessionProvider`, and the avatar menu's "Admin panel" item (it reuses `Link` and the
+`Database` icon, both already in the operator shell). Measured exactly, because `/company/onboarding` had no
+headroom: both trees built with CI's placeholder env, then gzip (level 9) summed over each route's
+`app-build-manifest.json` entry — the number `next build` prints, before rounding.
+
+| Route | Before (commit `82765be`) | After | `next build` table |
+|---|---:|---:|---:|
+| `/company/onboarding` | 180.437 kB | 180.445 kB | 180 kB |
+| `/sales-process/scripts` | 169.798 kB | 169.833 kB | 170 kB |
+| `/products` | 165.881 kB | 165.900 kB | 166 kB |
+| `/` | 160.411 kB | 160.452 kB | 160 kB |
+| `/sales-process/battle-cards/[slug]` | 156.336 kB | 156.364 kB | 156 kB |
+
+`/company/onboarding` has **55 bytes** left before the table reads 181 kB. The first version of this change
+crossed it (180.596 kB): `lib/telemetry/client.ts` imported `isAdminRole` from `lib/auth/claims.ts` at runtime,
+which made webpack move the whole claims module into the shared chunk the tracker lives in (~150 B gzip), and a
+default parameter on `setTelemetryOwner` compiled to verbose `arguments` code. A type-only import, a literal
+`role === "admin"` and a required parameter brought it back to +8 B. The same applies to any client module on
+this path: import `lib/auth/claims.ts` for types only, and compare the role literal.
+
+Admin routes: `/admin/users` 154 kB (its page chunk 8.35 → 8.81 kB: the Admin badge, the locked controls and
+their note); the rest unchanged.
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.

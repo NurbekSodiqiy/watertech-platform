@@ -4,9 +4,10 @@
 -- Paste the whole file into the Supabase SQL editor and run it once. It
 -- inserts a fixed set of copilot_logs rows (marker `copilot-check` in `model`,
 -- all in March 2001, so no real request falls inside the window), calls
--- copilot_stats() and copilot_unanswered() as a manager and compares each result
--- to the hand-computed expectation below. Then it checks that an operator and a
--- token without a role claim are refused by the functions themselves (WT403),
+-- copilot_stats() and copilot_unanswered() as an admin and compares each result
+-- to the hand-computed expectation below. Then it checks that an operator, a
+-- sales manager (0020) and a token without a role claim are refused by the
+-- functions themselves (WT403),
 -- that bad arguments answer WT400, that no email leaves copilot_unanswered, and
 -- that only `authenticated` may execute the functions.
 -- Everything runs in one transaction that ends in ROLLBACK, and a failed
@@ -94,10 +95,10 @@ begin
   end if;
 end $$;
 
--- === Results, as a manager ====================================================
+-- === Results, as an admin =====================================================
 
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated","email":"copilot-manager@test","app_metadata":{"role":"manager"}}';
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated","email":"copilot-admin@test","app_metadata":{"role":"admin"}}';
 
 do $$
 declare
@@ -192,8 +193,9 @@ begin
 end $$;
 
 -- === Everyone else is refused =================================================
--- An operator and a claim-less token hold EXECUTE (they are `authenticated`) and
--- must be stopped by the is_manager() check inside the function (WT403) — not
+-- An operator, a sales manager and a claim-less token hold EXECUTE (they are
+-- `authenticated`) and must be stopped by the is_manager() check inside the
+-- function (WT403; the name is 0019's, it asks is_admin() since 0020) — not
 -- merely answered with zeros because RLS hid the rows.
 
 do $$
@@ -205,6 +207,8 @@ begin
     select * from (values
       ('an operator',
         '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated","email":"copilot-a@test","app_metadata":{"role":"operator"}}'),
+      ('a sales manager',
+        '{"sub":"00000000-0000-4000-8000-0000000000e4","role":"authenticated","email":"copilot-m@test","app_metadata":{"role":"manager"}}'),
       ('a token without a role claim',
         '{"sub":"00000000-0000-4000-8000-0000000000e3","role":"authenticated","email":"copilot-x@test"}')
     ) as t(label, claims)

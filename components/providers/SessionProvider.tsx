@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client-lazy";
+import type { Role } from "@/lib/auth/claims";
 import { purgeLocalUserData } from "@/lib/auth/purge";
 import { toSessionUser, type SessionUser } from "@/lib/auth/session-user";
 import { setTelemetryOwner } from "@/lib/telemetry/client";
@@ -52,9 +53,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let unsubscribe: (() => void) | null = null;
 
     /** Purges first when the account changed, then points the stores at the
-     * session that is current now. Every step re-checks that no newer auth
-     * event has overtaken it. */
-    async function apply(token: number, email: string | null, previousEmail: string | null | undefined) {
+     * session that is current now — telemetry learns its role too, since an
+     * admin session is never recorded (CLAUDE.md §9). Every step re-checks
+     * that no newer auth event has overtaken it. */
+    async function apply(
+      token: number,
+      email: string | null,
+      role: Role | null,
+      previousEmail: string | null | undefined
+    ) {
       if (previousEmail !== undefined) {
         // resumeSends: this tab is not navigating away, so the new session
         // has to be able to write once the old one's data is gone.
@@ -67,7 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       // Ahead of the store's own lazy resolution, so the owner guard has
       // already run by the time the first key hydrates.
-      setTelemetryOwner(ownerId);
+      setTelemetryOwner(ownerId, role);
       await setUserStateSession(email);
     }
 
@@ -83,14 +90,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       seen.current = true;
       owner.current = id ? { id, email } : null;
-      setValue({ user: toSessionUser(user), status: "ready" });
+      const sessionUser = toSessionUser(user);
+      setValue({ user: sessionUser, status: "ready" });
 
       // A purge needs both a reason — the account ended or changed — and an
       // account to scope it to. With no previous owner there is nothing of
       // anyone's in memory, and an unscoped sweep would take a colleague's
       // queued offline writes with it. `undefined` means "no purge".
       const leaving = previous !== null && (signedOut || changed);
-      void apply((generation.current += 1), email, leaving ? previous.email : undefined);
+      void apply((generation.current += 1), email, sessionUser?.role ?? null, leaving ? previous.email : undefined);
     }
 
     // The client is a lazy chunk (lib/supabase/client-lazy.ts), so the

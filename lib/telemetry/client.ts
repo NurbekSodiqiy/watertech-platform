@@ -1,3 +1,7 @@
+// Type-only on purpose: this module is in every page's first load, and a
+// runtime import of claims.ts would move that module into this chunk
+// (docs/PERF.md, R3/S01).
+import type { Role } from "@/lib/auth/claims";
 import { ownerBufferKey } from "@/lib/user-state/owner";
 import type { TelemetryEvent, TelemetryEventType } from "./types";
 
@@ -29,6 +33,13 @@ let sessionId: string | null = null;
  * stay in memory only, so nothing outlives the page under an unknown
  * account. */
 let bufferOwner: string | null = null;
+/** False while the session is the admin's: telemetry records operators and
+ * sales managers only (CLAUDE.md §9), so nothing is queued, persisted, restored
+ * or sent. True until SessionProvider names the role — what is queued before
+ * that stays in memory and is dropped then if the session turns out to be the
+ * admin's. /api/events refuses an admin's batch as well; this only keeps it
+ * from being built. */
+let recording = true;
 
 function getSessionId(): string {
   if (sessionId) return sessionId;
@@ -62,7 +73,8 @@ function persistBuffer() {
   cancelScheduledPersist();
   // Newest MAX_BUFFER events win — oldest are dropped first when full.
   if (queue.length > MAX_BUFFER) queue = queue.slice(queue.length - MAX_BUFFER);
-  if (!bufferOwner) return; // Unknown owner — in-memory only, never persisted.
+  // Unknown owner: in-memory only, never persisted. An admin: no buffer at all.
+  if (!bufferOwner || !recording) return;
   try {
     localStorage.setItem(ownerBufferKey(BUFFER_KEY, bufferOwner), JSON.stringify(queue));
   } catch {
@@ -199,6 +211,9 @@ function checkIdle() {
 }
 
 function enqueue(partial: Omit<TelemetryEvent, "sessionId" | "ts">) {
+  // Also stops idle_start / idle_end, which the activity listeners enqueue
+  // directly when they were installed before the role was known.
+  if (!recording) return;
   let meta = partial.meta;
   if (meta && JSON.stringify(meta).length > MAX_META_BYTES) {
     meta = { truncated: true };
@@ -234,13 +249,21 @@ function ensureInitialized() {
   });
 }
 
-/** Names the operator this page's events belong to. Called by
+/** Names the account this page's events belong to, and its role. Called by
  * SessionProvider on load and on every auth change, so a shared browser can
  * never carry one account's buffered events into the next one's session:
  * a different owner drops the in-memory queue first, then restores only that
  * owner's own buffer. The un-namespaced buffer from before namespacing is
- * deleted rather than restored — nothing proves who wrote it. */
-export function setTelemetryOwner(ownerId: string | null): void {
+ * deleted rather than restored — nothing proves who wrote it.
+ *
+ * An admin session is not recorded at all: whatever is queued goes, no buffer
+ * is restored or written, and track() does nothing until a recorded role is
+ * named again. The role is applied before the same-owner shortcut below,
+ * because one account's role can change at a token refresh. */
+export function setTelemetryOwner(ownerId: string | null, role: Role | null): void {
+  recording = role !== "admin";
+  if (!recording) queue = [];
+
   if (bufferOwner === ownerId) return;
 
   cancelScheduledPersist();
@@ -260,7 +283,7 @@ export function setTelemetryOwner(ownerId: string | null): void {
     // Never restored: the un-namespaced buffer predates namespacing, so
     // nothing proves whose events it holds.
     localStorage.removeItem(BUFFER_KEY);
-    if (!ownerId) return;
+    if (!ownerId || !recording) return;
     const saved = localStorage.getItem(ownerBufferKey(BUFFER_KEY, ownerId));
     if (!saved) return;
     const parsed: unknown = JSON.parse(saved);
@@ -319,9 +342,10 @@ export function purgeTelemetryBuffer(ownerId: string | null): void {
 }
 
 /** Queues a telemetry event (in memory + localStorage) for the next flush.
- * Safe to call from anywhere client-side; a no-op during SSR. */
+ * Safe to call from anywhere client-side; a no-op during SSR and for an admin
+ * session — which then installs no listeners and no flush timer either. */
 export function track(partial: Omit<TelemetryEvent, "sessionId" | "ts">) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !recording) return;
   ensureInitialized();
   markActivity();
   enqueue(partial);

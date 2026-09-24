@@ -25,9 +25,12 @@ for you is the database, the content mappers, the pages, and the entry itself.
       end loop;
     end $$;
     ```
-  - `alter table ... enable row level security;` + the four policies from **0014** (one membership-gated
-    `_member_select`, and `_manager_insert` / `_manager_update` / `_manager_delete` on
-    `(select private.is_manager())`) — not the two-policy 0002 shape, which 0014 replaced.
+  - `alter table ... enable row level security;` + the four policies of **0014**'s shape (one
+    membership-gated `_member_select`: `(select private.is_admin()) or (status = 'published' and (select
+    private.is_member()))`, and `_admin_insert` / `_admin_update` / `_admin_delete` on
+    `(select private.is_admin())`) — not the two-policy 0002 shape, which 0014 replaced. New SQL calls
+    `private.is_admin()`; 0014's own policies say `private.is_manager()`, its deprecated alias since 0020
+    (CLAUDE.md §7), which a new migration never uses.
   - GRANTs (RLS alone is not enough — see 0003): `select, insert, update, delete` to `authenticated`,
     `all` to `service_role`.
   - Add `'content_guides'` to the `allowed` array in `public.reorder_content_rows` (0015) — a
@@ -102,7 +105,7 @@ for you is the database, the content mappers, the pages, and the entry itself.
       ```
 
       A Server Action reference has to be an exported async function, which is the only reason this file
-      exists. Everything it does — `requireManagerSession()`, zod parse, reference check, publish gate,
+      exists. Everything it does — `requireAdminSession()`, zod parse, reference check, publish gate,
       insert-or-version-guarded-update, `revalidateContent` — lives in `lib/admin/actions/factory.ts`.
 - [ ] `lib/admin/queries.ts` — two one-line wrappers over the generic reads:
       `listGuideRows() → listRows("content_guides")` and `getGuideRow(id) → getRow("content_guides", id)`

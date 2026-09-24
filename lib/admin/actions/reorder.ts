@@ -3,7 +3,7 @@
 import "server-only";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession } from "./guard";
+import { requireAdminSession } from "./guard";
 import { actionErrorResult, actionFailed, actionOk, logDbError, type ActionResult } from "@/lib/admin/errors";
 import { adminErrorMap } from "@/lib/admin/validation";
 import { CONTENT_REGISTRY, isContentTable } from "@/lib/admin/registry";
@@ -29,15 +29,15 @@ const reorderSchema = z
   });
 
 /** SQLSTATEs public.reorder_content_rows raises (0015_reorder_rows.sql). */
-const SQLSTATE = { badArguments: "WT400", notManager: "WT403", conflict: "WT409" };
+const SQLSTATE = { badArguments: "WT400", notAdmin: "WT403", conflict: "WT409" };
 
 /** Writes a whole list's `sort_order` in one go: row i gets `sort_order = i`,
- * and only if its `version` still matches what the manager's page had. The
+ * and only if its `version` still matches what the admin's page had. The
  * loop runs inside a Postgres function so the whole reorder is one statement
  * — either every row moves or none does, which is what keeps a list from
- * ending up half-sorted when a second manager saved one of its rows.
+ * ending up half-sorted when someone else saved one of its rows meanwhile.
  *
- * SECURITY INVOKER, so the manager's own RLS update policy is still what
+ * SECURITY INVOKER, so the admin's own RLS update policy is still what
  * authorises each write. Called directly from DataTable's reorder mode (S12)
  * — table-generic already (validated against `isContentTable`), so there is
  * no per-table wrapper the way create/update/delete/setStatus each get.
@@ -48,7 +48,7 @@ export async function reorderRows(
   expectedVersions: number[]
 ): Promise<ActionResult> {
   try {
-    await requireManagerSession();
+    await requireAdminSession();
     if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
     const args = reorderSchema.parse({ orderedIds, expectedVersions }, { errorMap: adminErrorMap });
 
@@ -60,7 +60,7 @@ export async function reorderRows(
     if (error) {
       logDbError(`${table} reorder`, error);
       if (error.code === SQLSTATE.conflict) return actionFailed("version_conflict");
-      if (error.code === SQLSTATE.notManager) return actionFailed("unauthorized");
+      if (error.code === SQLSTATE.notAdmin) return actionFailed("unauthorized");
       if (error.code === SQLSTATE.badArguments) return actionFailed("validation");
       return actionFailed("unknown");
     }

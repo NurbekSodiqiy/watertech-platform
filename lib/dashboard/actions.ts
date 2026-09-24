@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession } from "@/lib/admin/actions/guard";
+import { requireAdminSession } from "@/lib/admin/actions/guard";
 import { actionErrorResult, actionFailed, actionOk, gateBlockedResult, type ActionResult } from "@/lib/admin/errors";
 import { isContentTable } from "@/lib/admin/registry";
 import { idSchema } from "@/lib/admin/schemas";
@@ -46,7 +46,7 @@ async function writeAndRevalidate(
 
 export async function publishFromDashboard(table: string, id: string, expectedVersion: number): Promise<ActionResult> {
   try {
-    const session = await requireManagerSession();
+    const session = await requireAdminSession();
     if (!isContentTable(table)) return actionFailed("validation", { field: "table" });
     // Before the gate: a gate run on a malformed id still writes a gate report
     // and a "publish blocked" notification naming it.
@@ -61,7 +61,7 @@ export async function publishFromDashboard(table: string, id: string, expectedVe
 
 export async function unpublishFromDashboard(table: string, id: string, expectedVersion: number): Promise<ActionResult> {
   try {
-    const session = await requireManagerSession();
+    const session = await requireAdminSession();
     return await writeAndRevalidate(table, id, expectedVersion, { status: "draft" }, session);
   } catch (e) {
     return actionErrorResult(e);
@@ -69,12 +69,12 @@ export async function unpublishFromDashboard(table: string, id: string, expected
 }
 
 /** No-op update — its only effect is `updated_by` (and, via the BEFORE
- * UPDATE trigger, `updated_at`/`version`) so a manager can clear an item off
+ * UPDATE trigger, `updated_at`/`version`) so the admin can clear an item off
  * the "stale" list after confirming its content is still accurate, without
  * having to open the editor and re-save every field. */
 export async function touchContent(table: string, id: string, expectedVersion: number): Promise<ActionResult> {
   try {
-    const session = await requireManagerSession();
+    const session = await requireAdminSession();
     return await writeAndRevalidate(table, id, expectedVersion, {}, session);
   } catch (e) {
     return actionErrorResult(e);

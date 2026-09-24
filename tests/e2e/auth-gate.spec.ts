@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { useSalesManagerSession } from "./session";
 
 // Unauthenticated: middleware must send every gated route to the login page of
 // the same locale, with no error query (that one is for signed-in users who
@@ -63,7 +64,7 @@ test.describe("auth gate without a session", () => {
   }
 });
 
-// Optional: a manager's session cookie captured locally (see docs/TESTING.md).
+// Optional: the admin's session cookie captured locally (see docs/TESTING.md).
 // Never set in CI — there is no automated Google sign-in.
 const sessionCookie = process.env.TEST_SESSION_COOKIE;
 
@@ -79,10 +80,10 @@ function parseCookieHeader(header: string): { name: string; value: string }[] {
 }
 
 async function expectStillOn(page: Page, path: RegExp): Promise<void> {
-  await expect(page, "redirected away — TEST_SESSION_COOKIE is expired or not a manager's").toHaveURL(path);
+  await expect(page, "redirected away — TEST_SESSION_COOKIE is expired or not the admin's").toHaveURL(path);
 }
 
-test.describe("manager session (TEST_SESSION_COOKIE)", () => {
+test.describe("admin session (TEST_SESSION_COOKIE)", () => {
   test.skip(!sessionCookie, "TEST_SESSION_COOKIE is not set");
 
   test.beforeEach(async ({ context, baseURL }) => {
@@ -105,13 +106,59 @@ test.describe("manager session (TEST_SESSION_COOKIE)", () => {
   });
 
   // Read-only: nothing here writes the allow-list.
-  test("/admin/users lists the allow-list and locks the manager's own row", async ({ page }) => {
+  test("/admin/users lists the allow-list and locks the admin's own row", async ({ page }) => {
     await page.goto("/admin/users");
     await expectStillOn(page, /\/admin\/users$/);
     await expect(page.getByRole("heading", { name: "Foydalanuvchilar va kirish huquqi" })).toBeVisible();
     const ownRow = page.getByRole("row").filter({ hasText: "Siz" });
     await expect(ownRow).toHaveCount(1);
+    // An admin row: badge, disabled controls, and the note they point at (0020).
+    // The badge sits next to the email; the select's own "Admin" option does not count.
+    await expect(ownRow.getByRole("cell").first().getByText("Admin", { exact: true })).toBeVisible();
     await expect(ownRow.getByRole("combobox")).toBeDisabled();
     await expect(ownRow.getByRole("button", { name: "To'xtatish" })).toBeDisabled();
+    await expect(page.getByText("Admin faqat SQL Editor orqali boshqariladi")).toBeVisible();
+  });
+
+  test("the add dialog offers Operator and Menejer, never Admin", async ({ page }) => {
+    await page.goto("/admin/users");
+    await expectStillOn(page, /\/admin\/users$/);
+    await page.getByRole("button", { name: "+ Foydalanuvchi qo'shish" }).click();
+    const role = page.getByRole("dialog").getByLabel("Rol", { exact: true });
+    await expect(role.getByRole("option")).toHaveText(["Operator", "Menejer"]);
+  });
+
+  // Preview: the admin may open the operator app, and the avatar menu leads back.
+  test("/ renders the operator app, and the avatar menu opens the admin panel", async ({ page }) => {
+    await page.goto("/");
+    await expectStillOn(page, /localhost:\d+\/$/);
+    await page.getByRole("button", { name: "Foydalanuvchi menyusi" }).click();
+    await page.getByRole("menuitem", { name: "Admin panel" }).click();
+    await expectStillOn(page, /\/admin$/);
+  });
+});
+
+// Optional: a sales manager's session (TEST_MANAGER_COOKIE, tests/e2e/session.ts).
+// Role model v2: the operator app, and nothing of the admin panel.
+test.describe("sales manager session (TEST_MANAGER_COOKIE)", () => {
+  useSalesManagerSession();
+
+  test("/ renders the operator app, with no admin panel entry", async ({ page }) => {
+    await page.goto("/");
+    await expect(page, "redirected away — TEST_MANAGER_COOKIE is expired").toHaveURL(/localhost:\d+\/$/);
+    await page.getByRole("button", { name: "Foydalanuvchi menyusi" }).click();
+    await expect(page.getByRole("menuitem", { name: "Admin panel" })).toHaveCount(0);
+  });
+
+  for (const path of ["/admin", "/admin/users", "/dashboard", "/dashboard/quality"]) {
+    test(`${path} sends a sales manager home`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/localhost:\d+\/$/);
+    });
+  }
+
+  test("/ru/admin/users sends a sales manager to the ru home", async ({ page }) => {
+    await page.goto("/ru/admin/users");
+    await expect(page).toHaveURL(/\/ru$/);
   });
 });

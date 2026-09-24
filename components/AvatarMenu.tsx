@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LogOut } from "lucide-react";
+import { Database, LogOut } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { signOutAndPurge } from "@/lib/auth/sign-out";
 
@@ -74,6 +75,20 @@ export function AvatarMenu() {
             </div>
           )}
           <div role="menu" aria-label={t("menuLabel")}>
+            {/* The admin previews the operator app from here; this is their
+                way back. Nobody else may open /admin (middleware), so nobody
+                else is offered it. */}
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-medium text-primary-dark hover:bg-surface-alt"
+              >
+                <Database size={15} aria-hidden="true" className="text-text-secondary" />
+                {t("adminPanel")}
+              </Link>
+            )}
             <button
               type="button"
               role="menuitem"

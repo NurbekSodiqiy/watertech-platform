@@ -31,12 +31,13 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0017 | `user_admin_and_access_audit.sql` | managers write `allowed_users` (insert; update of `role`/`is_active`/`full_name` only); `private.allowed_users_guard` (stale-manager WT403, last manager WT460, self-change WT461); append-only `public.access_audit` written by trigger; `public.admin_user_last_activity()` | 0014, 0013, 0002 |
 | 0018 | `product_images.sql` | public Storage bucket `product-images` (2 MB, JPEG/PNG/WebP/AVIF); manager-only select/insert/update/delete policies on `storage.objects` for that bucket (writes under `products/` only); `content_products.image_path` with a shape check; `content_products.filename` nullable | 0014 (`private.is_manager()`), 0002, Storage enabled |
 | 0019 | `copilot_stats.sql` | `public.copilot_stats(p_from, p_to)` (request counts, no-hits / error rate, p50 / p95 latency) and `public.copilot_unanswered(p_from, p_to, p_limit)` (no-hits questions grouped by a normalized form; operator counts, never emails), both manager only (WT403); `private.copilot_normalize_question()` mirroring `lib/search/normalize.ts` | 0014 (`private.is_manager()`), 0006 |
+| 0020 | `roles_admin_manager.sql` | Role model v2: `private.is_admin()`; `private.is_manager()` becomes its deprecated alias, so every 0014–0019 policy and function body means "admin"; `private.is_member()` covers `operator`/`manager`/`admin`; `allowed_users_role_chk` accepts `admin` (validated); the guard gets admin semantics (last admin WT460, self WT461, admin rows SQL-editor-only WT462); every `manager` row becomes `admin`, on the first run only | 0014, 0017 (and, by apply order, 0019) |
 
 ### Which files has a project had?
 
 There is no migrations table, so ask the catalog: paste
 [supabase/tests/migration-status.sql](../supabase/tests/migration-status.sql) into the SQL editor and run
-it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0019`, `true` when
+it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0020`, `true` when
 the object only that file creates exists) plus three facts that should all be `true` (RLS on every public
 table, no policy naming `anon`, the access-token hook executable by `supabase_auth_admin` only). The first
 `false` row is the next file to apply. Whether the hook is *enabled* is a dashboard setting no query can
@@ -49,15 +50,18 @@ adding a bootstrap first (AUDIT.md open item O6).
 
 **Verified (Audit-2, 2026-09-23)** in PGlite (PostgreSQL 18 in WebAssembly, with a stub of Supabase's
 roles, default privileges, `auth.jwt()` and Storage tables): both orders below apply cleanly, `0013`–`0019`
-re-apply idempotently, and all five `supabase/tests/*-checks.sql` files pass on the result. PostgREST,
+re-apply idempotently, and all five `supabase/tests/*-checks.sql` files pass on the result. `0020` was
+verified the same way (R3/S01, 2026-09-24) on both paths, with its re-run, every preflight abort, the
+first-run-only conversion and the rollback below exercised, and 25 injected faults in it each caught by the
+check files or those scenarios. PostgREST,
 GoTrue, pg_cron and Storage itself were not exercised — the staging runs are still the gate. The condensed
 production sequence, with the dashboard steps in place, is [AUDIT.md §F](AUDIT.md#f-production-apply-order).
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015`, `0016`, `0017`, `0018` and then `0019` go last. `0013` through `0019` all abort with a clear message when an
-earlier file is missing, so the order is enforced rather than assumed.
+`0014`, `0015`, `0016`, `0017`, `0018`, `0019` and then `0020` go last. `0013` through `0020` all abort with a clear message
+when an earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
 no effect until it is **enabled in the dashboard** (Authentication → Hooks). That step and the rest of
@@ -85,12 +89,15 @@ statements into their own file and run them concurrently, outside a transaction.
 4. **`0014`.** Once, after `0013`'s second pass.
 5. **`0015`.** After `0014` — it checks for `private.is_manager()` and aborts without it.
 6. **`0016`.** After `0015`, same check.
-7. **`0017`.** After `0016`. On a fresh project it notices that there is no active manager yet — add the
-   first one by hand (the `insert` in [SECURITY.md §5](SECURITY.md#5-adding-removing-and-promoting-people));
-   everyone after that is added at `/admin/users`.
+7. **`0017`.** After `0016`. On a fresh project it notices that there is no active manager yet — ignore
+   that notice: the first admin is added after `0020` (step 10).
 8. **`0018`.** After `0017` (it needs only `0014`'s `private.is_manager()`, and Storage enabled on the project).
 9. **`0019`.** After `0018` (it needs only `0014`'s `private.is_manager()` and `0006`'s `copilot_logs`).
-10. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+10. **`0020`.** After `0019`. It reports no `manager` row to convert and no active admin — add the first
+    admin by hand, as the notice says:
+    `insert into public.allowed_users (email, role) values ('owner@gmail.com', 'admin');`
+    Everyone after that (operators, sales managers) is added at `/admin/users`.
+11. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -128,6 +135,10 @@ that is staging or the belief is stale. Tick these off as they are applied:
 - [ ] **0019** copilot statistics — requires 0014 and 0006. Until it is applied `/dashboard/copilot` shows its error
       state in both widgets (the RPC is missing); nothing else is affected. Then run `supabase/tests/copilot-checks.sql`
       on staging.
+- [ ] **0020** role model v2 (admin · manager · operator) — requires 0014–0019. **Apply it and deploy the release
+      that knows the three roles in one sitting, then every admin signs out and back in**: either half alone locks
+      the owner out of the admin panel until the other lands (operators are unaffected). Owner steps and rollback:
+      [After applying 0020](#after-applying-0020--owner-steps).
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -205,6 +216,54 @@ raises a notice saying exactly that when it finds no `user_state` table.
 3. **No type regeneration strictly needed**; `image_path` and the nullable `filename` are hand-edited in
    `lib/supabase/database.types.ts` — compare with `npm run gen:types` when convenient.
 
+### After applying 0020 — Owner steps
+
+0020 is role model v2 (CLAUDE.md §7): the owner's role becomes `admin`, and `manager` means a sales manager,
+who gets exactly what an operator gets. The SQL and the app release that knows the three roles go out
+**together** — each half alone locks the owner out of the admin panel for the gap:
+
+| State | What the owner sees |
+| --- | --- |
+| 0020 applied, old release still deployed | Their current token still says `manager`: `/admin` opens, but RLS now treats `manager` as a sales manager, so drafts are invisible and every write answers `unauthorized`. After their next token refresh the claim says `admin`, which the old release does not know: `/login?error=not_allowed`. |
+| New release deployed, 0020 not applied | Their token says `manager`, which the new release treats as a sales manager: `/admin` and `/dashboard` send them to `/`. |
+
+Operators are unaffected either way. So, in one sitting:
+
+1. **Check the prerequisites.** Run `supabase/tests/migration-status.sql`: `0014`–`0019` must read `true`.
+   0020 aborts with a message naming what is missing otherwise, and also when (a) an `allowed_users` row
+   holds a role other than `operator`/`manager`/`admin`, (b) the SQL editor's role impersonation is on, or
+   (c) any policy compares the role claim to the literal `'manager'` — after 0020 such a policy would hand a
+   sales manager the owner's rows. For (c) the message says which fix applies: when a re-run of `0013` put
+   its two pre-0014 policies back (`allowed_users_manager_select_all`, `telemetry_events_manager_select_all`),
+   re-run `0014`; for any other such policy (one made by hand on the live tables), it ends with the exact
+   `drop policy …;` statements — 0014's `private.is_manager()` policies already cover the owner, so dropping
+   them loses nothing.
+2. **Apply 0020** in the SQL editor as `postgres`, with role impersonation off. Read the notices: the emails
+   converted `manager` → `admin` (today: the owner), and — only if there is no active admin afterwards —
+   the exact insert that creates one:
+   `insert into public.allowed_users (email, role) values ('owner@gmail.com', 'admin');`
+3. **Deploy** the app release with role model v2 right away.
+4. **Every admin signs out and back in.** The role claim is stamped when a token is issued, so the new
+   `admin` claim arrives with the next sign-in (or, on its own, within the access-token TTL — ≤ 1 h).
+5. **Verify.** Sign in as the owner: you land on `/admin`; `/`, `/products` open too (the preview), and the
+   avatar menu has "Admin panel". `/admin/users` shows your row with an Admin badge and disabled controls,
+   and the add dialog offers Operator and Menejer only. Then run `supabase/tests/rls-checks.sql` and the
+   other four check files on **staging**; a sales manager must behave exactly like an operator there.
+6. **No type regeneration needed.** Nothing PostgREST exposes changed shape.
+
+Re-running 0020 is safe: it converts rows only on its first application (it records whether
+`private.is_admin()` existed before it ran), so a re-run never promotes the sales managers added since.
+
+**Never re-run `0013` on its own after 0020.** Its baseline sections re-create the `allowed_users` and
+`telemetry_events` read policies with the literal `'manager'`, which from 0020 on would let every sales
+manager read the whole allow-list and all telemetry. If you do re-run it, re-run `0014` straight after —
+`rls-checks.sql` fails on any such policy until then, and a re-run of 0020 refuses to proceed.
+
+Admin rows are SQL-editor-only from here on (`WT462` for any write that carries a JWT — `/admin/users`, a
+direct PostgREST call, the service-role key). To hand admin to someone else: insert the new admin row
+first, then demote or deactivate the old one — the last active admin can never be removed (`WT460`, the SQL
+editor included).
+
 ### Retention policy (0016)
 
 `public.run_retention()` is the only place the numbers live (its `constant` declarations); this table
@@ -268,6 +327,21 @@ What it asserts about `0017` specifically:
 - a manager token whose row was demoted or deactivated can no longer write the allow-list (`WT403`);
 - `access_audit` is readable by managers only, writable by nobody (its owner included), and the grant
   matrix of both tables matches 0017.
+
+What it asserts about `0020` specifically:
+
+- a `manager` JWT (a sales manager) gets exactly what an operator gets — published content and its own
+  `user_state`; no drafts, no content writes, none of the admin tables, and `WT403` from every
+  `dashboard_*` / `copilot_*` / `admin_*` function and `reorder_content_rows()`; `private.is_manager()`
+  answers false for it;
+- an `admin` JWT keeps everything the pre-0020 manager had, and the hook stamps `admin` / `manager` rows
+  verbatim;
+- admin rows are SQL-editor-only: through the API — the admin's own session or the service-role key —
+  creating, promoting to, demoting, deactivating, reactivating, deleting or re-addressing one is `WT462`,
+  while the SQL editor can add and remove one; the last active admin cannot be demoted, deactivated or
+  deleted from anywhere (`WT460`, checked before `WT461` and `WT462`);
+- no policy compares the role claim to a literal, and the four `private` helpers are executable by
+  `authenticated` only.
 
 A failure of the `0013` block on a project where `0013` has not been applied means "apply 0013", not
 "the policies are wrong"; the `0014` blocks fail the same way with "is 0014 applied?", and a missing
@@ -385,6 +459,43 @@ A full rollback file also drops the four triggers on `allowed_users` (`trg_allow
 finally `private.access_audit_append_only()` with the table it protects. **Keep `public.access_audit`**
 unless the history is truly unwanted — it is the only record of who changed the allow-list. `anon`'s
 revoked privileges are not worth restoring.
+
+### Rolling back 0020
+
+Roll the app release back with it — the pre-0020 release does not know the `admin` claim. The pre-0020
+model has no sales-manager role, so every `manager` row must stop being one **before** `manager` means the
+owner again; otherwise each sales manager would come back with full CMS access. Three runs, in this order
+(each is one transaction; verified on PGlite — after them the pre-0020 check files all pass again):
+
+1. Sales managers become operators, under 0020's guard (no admin row is touched):
+
+   ```sql
+   update public.allowed_users set role = 'operator' where role = 'manager';
+   ```
+
+2. **Re-run `0017_user_admin_and_access_audit.sql`.** It restores the guard that counts managers, and is
+   idempotent otherwise. This must come before step 3: 0020's guard refuses to demote the last admin even
+   from the SQL editor (`WT460`).
+
+3. The owner goes back to `manager`, and the three helpers and the CHECK to their 0014 / 0013 shape:
+
+   ```sql
+   begin;
+   update public.allowed_users set role = 'manager' where role = 'admin';
+   create or replace function private.is_manager()
+   returns boolean language sql stable security invoker set search_path = ''
+   as $$ select private.app_role() = 'manager'; $$;
+   create or replace function private.is_member()
+   returns boolean language sql stable security invoker set search_path = ''
+   as $$ select private.app_role() in ('operator', 'manager'); $$;
+   drop function if exists private.is_admin();
+   alter table public.allowed_users drop constraint if exists allowed_users_role_chk;
+   alter table public.allowed_users add constraint allowed_users_role_chk check (role in ('operator', 'manager'));
+   commit;
+   ```
+
+Then deploy the previous release, and everyone signs out and back in. `access_audit` keeps a row for every
+change above, like for any other allow-list write.
 
 ### Rolling back 0019
 

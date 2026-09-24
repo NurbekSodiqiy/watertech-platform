@@ -5,18 +5,24 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
  * that needs a session reads a cookie header captured by hand and skips itself
  * when the matching variable is unset.
  *
- * There are two, because middleware.ts confines each role to its own area: a
- * manager is redirected off `/`, `/products` and every other operator route,
- * so the manager cookie cannot stand in for the operator one.
+ * One per role (role model v2, CLAUDE.md §7). middleware.ts keeps operators
+ * and sales managers out of /admin and /dashboard; the admin may open the
+ * operator routes too, but only as a preview (no telemetry, admin-only menu
+ * items), so operator specs still run as an operator.
  *
  *   TEST_OPERATOR_COOKIE — an operator's session; operator routes.
- *   TEST_SESSION_COOKIE  — a manager's session; /admin and /dashboard.
+ *   TEST_SESSION_COOKIE  — the admin's session; /admin and /dashboard. (The
+ *                          name predates the admin role and is kept so local
+ *                          setups keep working.)
+ *   TEST_MANAGER_COOKIE  — a sales manager's session, optional; the redirects
+ *                          that keep a manager out of the admin panel.
  *
- * Both are live sessions: treat them like passwords, never commit them, never
+ * All are live sessions: treat them like passwords, never commit them, never
  * put them in CI secrets.
  */
 export const operatorCookie = process.env.TEST_OPERATOR_COOKIE;
-export const managerCookie = process.env.TEST_SESSION_COOKIE;
+export const adminCookie = process.env.TEST_SESSION_COOKIE;
+export const salesManagerCookie = process.env.TEST_MANAGER_COOKIE;
 
 export function parseCookieHeader(header: string): { name: string; value: string }[] {
   return header
@@ -47,14 +53,23 @@ export function useOperatorSession(): void {
   });
 }
 
-/** The manager counterpart of `useOperatorSession` — skips when
+/** The admin counterpart of `useOperatorSession` — skips when
  * `TEST_SESSION_COOKIE` is unset. Call it at the top of a `test.describe()`
  * body for a spec that needs `/admin` or `/dashboard`. */
-export function useManagerSession(): void {
-  test.skip(!managerCookie, "TEST_SESSION_COOKIE is not set");
+export function useAdminSession(): void {
+  test.skip(!adminCookie, "TEST_SESSION_COOKIE is not set");
 
   test.beforeEach(async ({ context, baseURL }) => {
-    await applySession(context, managerCookie ?? "", baseURL);
+    await applySession(context, adminCookie ?? "", baseURL);
+  });
+}
+
+/** A sales manager's session — skips when `TEST_MANAGER_COOKIE` is unset. */
+export function useSalesManagerSession(): void {
+  test.skip(!salesManagerCookie, "TEST_MANAGER_COOKIE is not set");
+
+  test.beforeEach(async ({ context, baseURL }) => {
+    await applySession(context, salesManagerCookie ?? "", baseURL);
   });
 }
 

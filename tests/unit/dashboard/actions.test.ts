@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // "publish blocked" notification naming it.
 
 const mocks = vi.hoisted(() => ({
-  requireManagerSession: vi.fn(async () => ({ email: "boss@watertech.uz" })),
+  requireAdminSession: vi.fn(async () => ({ email: "boss@watertech.uz" })),
   runPublishGate: vi.fn(async () => ({ passed: true, issues: [] })),
   updateWithVersion: vi.fn(async () => undefined),
   revalidateContent: vi.fn(),
@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, unstable_cache: (fn: unknown) => fn }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => mocks.client }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(), createDynamicAdminClient: vi.fn() }));
-vi.mock("@/lib/admin/actions/guard", () => ({ requireManagerSession: mocks.requireManagerSession }));
+vi.mock("@/lib/admin/actions/guard", () => ({ requireAdminSession: mocks.requireAdminSession }));
 vi.mock("@/lib/agents/publish-gate", () => ({ runPublishGate: mocks.runPublishGate }));
 vi.mock("@/lib/admin/actions/concurrency", () => ({ updateWithVersion: mocks.updateWithVersion }));
 vi.mock("@/lib/content/revalidate", () => ({ revalidateContent: mocks.revalidateContent }));

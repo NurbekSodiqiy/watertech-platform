@@ -103,8 +103,8 @@ async function handlePost(request: Request): Promise<Response> {
     return NextResponse.json({ error: "copilot_disabled" }, { status: 503 });
   }
 
-  // Role: both operator and manager may ask the copilot — getServerSession()
-  // has already rejected any session without a valid allow-list role.
+  // Role: every allow-list role (operator, manager, admin) may ask the copilot
+  // — getServerSession() has already rejected any session without one.
 
   const rl = rateLimit(`copilot:${session.email}`, { limit: COPILOT_PER_MINUTE_LIMIT, windowMs: 60_000 });
   if (!rl.ok) {

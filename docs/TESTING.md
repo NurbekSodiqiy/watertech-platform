@@ -58,16 +58,17 @@ CI has no Google sign-in, so what runs there is what an anonymous visitor can re
 
 The rest need a session and skip themselves without one.
 
-### Optional: signed-in checks (`TEST_OPERATOR_COOKIE`, `TEST_SESSION_COOKIE`)
+### Optional: signed-in checks (`TEST_OPERATOR_COOKIE`, `TEST_SESSION_COOKIE`, `TEST_MANAGER_COOKIE`)
 
-There are **two** cookies, because `middleware.ts` confines each role to its own area: a manager is
-redirected off `/`, `/products` and every other operator route, so a manager cookie cannot stand in for
-an operator one.
+One cookie per role (role model v2, CLAUDE.md §7). `middleware.ts` keeps operators and sales managers out
+of `/admin` and `/dashboard`. The admin may open the operator routes too, but only as a preview (no
+telemetry, admin-only menu items), so the operator specs still run as an operator.
 
 | Variable | Role | Unlocks |
 | --- | --- | --- |
 | `TEST_OPERATOR_COOKIE` | operator | `story.spec.ts`, `pins.spec.ts`, `changelog.spec.ts`, `locale.spec.ts`, and the operator blocks of `a11y.spec.ts` and `mobile.spec.ts` |
-| `TEST_SESSION_COOKIE` | manager | the `manager session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`) |
+| `TEST_SESSION_COOKIE` | admin (the variable's name predates the role) | the `admin session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`, `/admin/users`, the operator-app preview and the avatar menu's way back to `/admin`) and `admin-bulk-reorder.spec.ts` |
+| `TEST_MANAGER_COOKIE` | manager (a sales manager) | the `sales manager session` block of `auth-gate.spec.ts`: `/` renders, and `/admin/**` and `/dashboard/**` send them home |
 
 1. `npm run build && npm run start`, open `http://localhost:3000`, sign in with an account of that role.
 2. DevTools → Application → Cookies → `http://localhost:3000`. Copy every `sb-<project-ref>-auth-token`
@@ -76,17 +77,20 @@ an operator one.
 
    ```powershell
    $env:TEST_OPERATOR_COOKIE = 'sb-abcd-auth-token.0=base64-…; sb-abcd-auth-token.1=…'
-   $env:TEST_SESSION_COOKIE  = 'sb-abcd-auth-token.0=…'   # a manager's, for auth-gate.spec.ts
+   $env:TEST_SESSION_COOKIE  = 'sb-abcd-auth-token.0=…'   # the admin's, for auth-gate.spec.ts
+   $env:TEST_MANAGER_COOKIE  = 'sb-abcd-auth-token.0=…'   # a sales manager's (optional)
    npm run e2e
    ```
 
-Both are live sessions: treat them like passwords. Never commit one, never add one to CI secrets. They
+All are live sessions: treat them like passwords. Never commit one, never add one to CI secrets. They
 expire with the session; a spec that fails with "redirected away — the session cookie is expired or has the
-wrong role" wants a fresh one (or the other role's).
+wrong role" wants a fresh one (or another role's).
 
-`tests/e2e/session.ts` holds the shared helpers: `useOperatorSession()` installs the cookie and skips the
-enclosing describe when it is unset, `expectSignedInAt()` fails with that message instead of an empty
-assertion, and `collectConsoleErrors()` backs the "no console errors" checks.
+`tests/e2e/session.ts` holds the shared helpers: `useOperatorSession()` / `useAdminSession()` /
+`useSalesManagerSession()` install the cookie and skip the enclosing describe when it is unset,
+`expectSignedInAt()` fails with that message instead of an empty assertion, and `collectConsoleErrors()`
+backs the "no console errors" checks. The role × route matrix itself is unit-tested without a session:
+`tests/unit/security/middleware-roles.test.ts` drives the real middleware with stubbed claims.
 
 ### Accessibility (`a11y.spec.ts`)
 
@@ -112,14 +116,19 @@ every painted element and fails on the widest one whose right edge is past the v
 
 | As | Must NOT see | Must see |
 | --- | --- | --- |
-| operator | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, `allowed_users`, `access_audit`, other operators' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
-| manager | `rate_limits` | all of the left column, read-only for `user_state` and `access_audit` |
+| operator, and sales manager (`manager`, 0020) — one loop, the same expectations for both | draft rows in every `content_*` table (including `content_changelog`, `content_contacts`, `content_sops`), `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `rate_limits`, `allowed_users`, `access_audit`, other members' `telemetry_events` and `user_state` | published content, and their own `user_state` rows (positive controls) |
+| admin | `rate_limits` | all of the left column, read-only for `user_state` and `access_audit` |
 | non-member × 3 | **every table, published content included** | nothing at all |
 
-It also asserts the write side: an operator may insert/update/delete only their own `user_state` rows, a
-manager may not write them at all, a non-member may not insert one, and no session role may select
-`rate_limits` or execute `rate_limit_hit()` — that counter belongs to the server's service-role client
-alone (migration 0008).
+It also asserts the write side: an operator or a sales manager may insert/update/delete only their own
+`user_state` rows and no content row at all, the admin may not write `user_state` rows, a non-member may not
+insert one, and no session role may select `rate_limits` or execute `rate_limit_hit()` — that counter
+belongs to the server's service-role client alone (migration 0008). Every `dashboard_*`, `copilot_*` and
+`admin_*` function, and `reorder_content_rows()`, refuses an operator and a sales manager itself (`WT403`);
+that list is compared with the catalog first, so a new such function cannot ship without a line in it. A
+catalog block fails if any policy compares the role claim to a literal instead of calling
+`private.is_member()` / `private.is_admin()` — after 0020 a leftover `= 'manager'` would hand a sales manager
+the owner's rows, and a re-run of 0013 on its own re-creates two such policies (re-run 0014 after it).
 
 The three non-member identities are the tokens migration 0014 exists to neutralize: `role: "none"` (what
 the old hook stamped for an unknown email), a token carrying no `app_metadata` at all, and a user whose
@@ -129,21 +138,26 @@ refused a token, with `{"error":{"http_code":403,"message":"not_allowed"}}`, whi
 email is matched case-insensitively and gets its role stamped. See [SECURITY.md](SECURITY.md) for the
 model this verifies and the dashboard steps it cannot.
 
-The last manager block covers the integrity rules migration 0013 moved into the database: a manager cannot
+The admin write block covers the integrity rules migration 0013 moved into the database: an admin cannot
 insert a fabricated `content_versions` row or update or delete an existing one, a content row inserted
 without a `status` lands as `draft`,
 `updated_by` is stamped from the JWT even when the payload sends another email, and a delete leaves a
 snapshot with `op = 'delete'` — including the `content_packages` row removed by the `on delete cascade`
 from its group.
 
-The allow-list blocks (migration 0017) run the statements `/admin/users` sends, as PostgREST would send
-them, and assert each refusal by SQLSTATE: an operator cannot insert, promote, deactivate or delete a row;
-a manager can add and re-role others (stamped and audited, a no-op update unaudited) but cannot touch
-`email`/`created_at`/`updated_at`/`updated_by`, delete, or demote/deactivate their own row (`WT461`); the
-last active manager cannot be demoted (`WT460`), whether by a manager, by `service_role` or in one
-whole-table `UPDATE`; a manager token whose row was demoted or deactivated is refused (`WT403`); and
-`access_audit` cannot be written by anyone, its owner included. To reach "last manager" through a manager
-session, the block deactivates every other manager on staging — inside the same rolled-back transaction.
+The allow-list blocks (migrations 0017 and 0020) run the statements `/admin/users` sends, as PostgREST
+would send them, and assert each refusal by SQLSTATE. An operator or a sales manager cannot insert, promote,
+deactivate or delete a row. The admin can add operators and turn them into sales managers and back
+(stamped and audited, a no-op update unaudited), but cannot touch `email`/`created_at`/`updated_at`/
+`updated_by`, delete, demote or deactivate their own row (`WT461`), or create, promote to, demote,
+deactivate or reactivate an admin row (`WT462` — renaming one is allowed); an admin token whose row was
+demoted or deactivated is refused (`WT403`). On the owner's side, the service-role key meets `WT462` on
+every admin-row change (email and delete included) while its other writes are audited; the SQL editor
+itself (no JWT) can add and remove an admin row, but the last active admin cannot be demoted, deactivated or
+deleted (`WT460`) — not from the SQL editor, not by the service role in a whole-table `UPDATE`, and not by
+that admin's own session, where `WT460` comes before `WT461` and `WT462`. To reach "last admin", the block
+deactivates every other admin on staging from the SQL editor — inside the same rolled-back transaction.
+`access_audit` cannot be written by anyone, its owner included.
 
 **Run it against the staging project only, never production.** It writes fixture rows. They are always
 rolled back, but while it runs it holds locks on live tables, and rolled-back inserts still consume
@@ -170,22 +184,23 @@ Re-run it after every migration that touches a policy or GRANT.
 
 ## Dashboard parity and retention checks (staging only)
 
-Migration 0016 moved the manager dashboard's aggregates into SQL functions. The TS aggregators
+Migration 0016 moved the admin dashboard's aggregates into SQL functions. The TS aggregators
 (`lib/telemetry/aggregate.ts`, `lib/dashboard/kpi.ts`, `lib/dashboard/quality.ts`) stay as the
 reference, and one expected table pins both sides:
 
 - `supabase/tests/dashboard-parity.sql` holds a JSON document (between the `$parity$` markers) with
   ~80 fixture events and every function's expected rows, for all operators and for one. It inserts the
-  events, calls each `dashboard_*` function as a manager and compares the result to those rows. It then
-  checks that an operator and a claim-less token are refused with `WT403` by the functions themselves,
-  and that only `authenticated` holds `EXECUTE` on them.
+  events, calls each `dashboard_*` function as an admin and compares the result to those rows. It then
+  checks that an operator, a sales manager and a claim-less token are refused with `WT403` by the
+  functions themselves, and that only `authenticated` holds `EXECUTE` on them.
 - `tests/unit/dashboard/parity.test.ts` (in `npm test`) reads **the same file**, runs the TS
   aggregators over the same events, and asserts that the expected rows mapped through
   `lib/dashboard/telemetry-rpc.ts` equal what the aggregators produce. Change an expectation and both
   suites see it; add a widget and it gets a fixture case in the document, not a second table.
 - `supabase/tests/retention-checks.sql` puts one row on each side of every horizon in
   `public.run_retention()`, runs it, asserts what is left, runs it again (nothing left to do), checks
-  the `p_skip_if_scheduled` switch against the pg_cron job, and that only `service_role` can execute it.
+  the `p_skip_if_scheduled` switch against the pg_cron job, and that only `service_role` can execute it —
+  no session role, the admin's included.
   One fixture is a row deleted 10 days ago and edited 52 times since its restore: its delete snapshot
   must survive the newest-50 rule, which ranks update snapshots only.
 
@@ -198,12 +213,12 @@ the transaction, which the rollback restores.
 ## Copilot checks (staging only, after 0019)
 
 `supabase/tests/copilot-checks.sql` inserts thirteen `copilot_logs` rows in March 2001 (marker `copilot-check` in
-`model`) and asserts, as a manager, what `copilot_stats()` and `copilot_unanswered()` promise: the counts per
+`model`) and asserts, as an admin, what `copilot_stats()` and `copilot_unanswered()` promise: the counts per
 status; the no-hits and error rates over *handled* requests (a `rate_limited` row is not one); p50 / p95 over the
 requests that answered (a 60 s error does not move them); a half-open window (a row exactly on `p_to` is out, one
 exactly on `p_from` is in); NULL rates and latencies for an empty window; a redacted (null) question never listed;
 two spellings of one question in one group with the most recent wording as the sample; ordering by count, then
-recency. It then checks that an operator and a claim-less token get `WT403`, bad arguments `WT400`, that no
+recency. It then checks that an operator, a sales manager and a claim-less token get `WT403`, bad arguments `WT400`, that no
 result column carries an email, and that only `authenticated` may execute the functions.
 
 The normalization corpus in that file (between the `$corpus$` markers) is shared with
@@ -216,10 +231,11 @@ or either implementation and one of the two suites fails. Run it like `dashboard
 
 `supabase/tests/storage-checks.sql` asserts what 0018 promises about catalog photos: the `product-images`
 bucket is public with a 2 MB limit and exactly the JPEG/PNG/WebP/AVIF types; its four policies are
-authenticated-only, manager-gated and scoped to the bucket (and, for writes, to `products/`) — checked on
-the policy text too, because the manager-only SELECT policy would otherwise hide an over-wide UPDATE or
-DELETE policy; an operator can list, write, rename and delete nothing; a manager can do all four inside
-the bucket and nothing in another one; and `content_products.image_path` refuses a key that names another
+authenticated-only, gated on `private.is_manager()` (an alias of `is_admin()` since 0020) and scoped to the
+bucket (and, for writes, to `products/`) — checked on the policy text too, because the admin-only SELECT
+policy would otherwise hide an over-wide UPDATE or DELETE policy; an operator and a sales manager can list,
+write, rename and delete nothing; the admin can do all four inside the bucket and nothing in another one;
+and `content_products.image_path` refuses a key that names another
 product, climbs out of `products/`, or has a disallowed extension.
 
 It inserts rows into `storage.objects` directly (catalog rows only — no file is written) and sets

@@ -155,6 +155,7 @@
   },
   "avatarMenu": {
     "menuLabel": "Foydalanuvchi menyusi",
+    "adminPanel": "Admin panel",
     "signOut": "Chiqish"
   },
   "emptyState": {
@@ -162,7 +163,7 @@
       "title": "Skriptlar — qo'ng'iroq davomida o'qiladigan matnlar",
       "reason": "Hali nashr qilingan skript yo'q",
       "cta": "Bosh sahifaga",
-      "ctaManager": "+ Yangi skript"
+      "ctaAdmin": "+ Yangi skript"
     },
     "scriptNotFound": {
       "title": "{type} topilmadi",
@@ -185,7 +186,7 @@
     },
     "contactsNone": {
       "title": "Kontaktlar hali qo'shilmagan",
-      "reason": "Menejer kontaktlarni qo'shgach, ular shu yerda ko'rinadi.",
+      "reason": "Kontaktlar qo'shilgach, ular shu yerda ko'rinadi.",
       "cta": "Bosh sahifaga"
     },
     "changelogNone": {
@@ -451,7 +452,7 @@
     "unpublished": "Qoralamaga o'tkazildi",
     "restored": "Versiya tiklandi",
     "offline": "Internet yo'q — amalni bajarib bo'lmadi",
-    "conflict": "Bu yozuvni boshqa menejer o'zgartirgan. Sahifani yangilang.",
+    "conflict": "Bu yozuvni boshqa birov o'zgartirgan. Sahifani yangilang.",
     "unknownError": "Kutilmagan xatolik",
     "backOnline": "Internet qaytdi",
     "refresh": "Yangilash"
@@ -518,7 +519,7 @@
       "month": "Oy boshidan"
     },
     "operatorFilter": {
-      "all": "Barcha operatorlar",
+      "all": "Barcha xodimlar",
       "apply": "Qo'llash"
     },
     "kpi": {
@@ -816,7 +817,8 @@
         },
         "roles": {
           "operator": "Operator",
-          "manager": "Menejer"
+          "manager": "Menejer",
+          "admin": "Admin"
         },
         "status": {
           "active": "Faol",
@@ -833,7 +835,8 @@
         },
         "you": "Siz",
         "roleSelectLabel": "{email} roli",
-        "selfLocked": "O'z rolingiz va holatingizni boshqa menejer o'zgartiradi",
+        "selfLocked": "O'z rolingiz va holatingizni bu yerda o'zgartirib bo'lmaydi",
+        "adminLocked": "Admin faqat SQL Editor orqali boshqariladi",
         "noActivity": "Faollik yo'q",
         "onboardingLink": "Onboarding holati",
         "deactivate": "To'xtatish",
@@ -854,7 +857,7 @@
           "fullName": "To'liq ism (ixtiyoriy)",
           "fullNamePlaceholder": "Masalan, Aziza Karimova",
           "role": "Rol",
-          "roleHint": "Menejer kontentni tahrirlaydi, foydalanuvchilarni boshqaradi va monitoringni ko'radi. Operator bilimlar bazasidan foydalanadi.",
+          "roleHint": "Operator va menejer (sotuv menejeri) bir xil bilimlar bazasi bilan ishlaydi. Admin faqat SQL Editor orqali qo'shiladi.",
           "cancel": "Bekor qilish",
           "submit": "Qo'shish",
           "submitting": "Qo'shilmoqda…"
@@ -1634,16 +1637,17 @@
   },
   "admin": {
     "errors": {
-      "unauthorized": "Ruxsat yo'q — bu amal uchun menejer huquqi kerak",
+      "unauthorized": "Ruxsat yo'q — bu amal uchun admin huquqi kerak",
       "validation": "Ma'lumotlar to'liq yoki to'g'ri emas",
       "id_taken": "Bunday ID allaqachon mavjud — boshqasini tanlang",
-      "version_conflict": "Bu yozuvni boshqa menejer o'zgartirgan. Sahifani yangilang.",
+      "version_conflict": "Bu yozuvni boshqa birov o'zgartirgan. Sahifani yangilang.",
       "gate_blocked": "Nashr qorovuli to'xtatdi",
       "not_found": "Yozuv topilmadi — u o'chirilgan bo'lishi mumkin",
       "reference_in_use": "Bu yozuvga boshqa yozuvlar bog'langan — avval ularni o'zgartiring",
       "email_taken": "Bu email allaqachon ro'yxatda — jadvaldan topib, kerak bo'lsa kirishni tiklang",
-      "last_manager": "Oxirgi faol menejerni olib tashlab bo'lmaydi — avval boshqa menejer qo'shing",
-      "self_change": "O'z rolingiz yoki holatingizni o'zgartira olmaysiz — buni boshqa menejer qilishi kerak",
+      "last_admin": "Oxirgi faol adminni olib tashlab bo'lmaydi — avval SQL Editor orqali boshqa admin qo'shing",
+      "self_change": "O'z rolingiz yoki holatingizni o'zgartira olmaysiz — admin qatori faqat SQL Editor orqali o'zgaradi",
+      "admin_locked": "Admin faqat SQL Editor orqali boshqariladi",
       "auth_sync_failed": "O'zgarish saqlandi, lekin kirish xizmati uni tasdiqlamadi — amalni yana bir bor bajaring",
       "unknown": "Kutilmagan xatolik — qaytadan urinib ko'ring"
     },

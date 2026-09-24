@@ -11,7 +11,7 @@ as typed TypeScript arrays in `lib/content/*.ts`, then flows to the app like thi
 ```
 lib/content/*.ts (TS arrays)
   --> npm run seed:content            (supabase/seed/seed-content.ts, *ToRow mappers)
-  --> content_* tables in Supabase    (RLS: authenticated read published rows, manager read/write all)
+  --> content_* tables in Supabase    (RLS: members read published rows, admin read/write all)
   --> lib/content/loader.ts getters   (unstable_cache, service-role client, filtered to status="published")
   --> Server Components / pages
 ```
@@ -59,7 +59,7 @@ placeholder URL is no longer sufficient.
 - **Publish gate** (`lib/agents/publish-gate/`): every move to `published` — the admin tables' status toggle,
   saving an edit form with status "Nashr etilgan", and the dashboard's "Nashr qilish" quick action — runs
   `runPublishGate` first. Error-severity issues block the write; warnings don't. Each run is logged to
-  `content_gate_reports`, and a blocked run also lands in the manager inbox (`/admin/notifications`).
+  `content_gate_reports`, and a blocked run also lands in the admin inbox (`/admin/notifications`).
 - **Daily scan** (`lib/agents/stale-scan.ts`, `GET /api/cron/content-scan`): flags published rows not updated
   for 90+ days and rows with empty `*_ru` columns, skipping any row that still has an unread notification of
   the same kind, then posts one summary notification.

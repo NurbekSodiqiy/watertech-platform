@@ -3,11 +3,11 @@
 -- Paste the whole file into the Supabase SQL editor and run it once, after
 -- 0016_dashboard_rpc_and_retention.sql. It inserts a fixed set of
 -- telemetry_events (emails `parity-*@test`, all in March 2001, so no real
--- event can fall inside the windows), calls every dashboard function as a
--- manager for all operators and for one operator, and compares each result to
--- the hand-computed expected table below. Then it checks that an operator and
--- a token without a role claim are refused by the functions themselves, and
--- that only `authenticated` holds EXECUTE on them.
+-- event can fall inside the windows), calls every dashboard function as an
+-- admin for all operators and for one operator, and compares each result to
+-- the hand-computed expected table below. Then it checks that an operator, a
+-- sales manager (0020) and a token without a role claim are refused by the
+-- functions themselves, and that only `authenticated` holds EXECUTE on them.
 -- Everything runs in one transaction that ends in ROLLBACK, and a failed
 -- assertion aborts it — either way no fixture row is ever committed.
 --
@@ -245,10 +245,10 @@ select
 from jsonb_array_elements(current_setting('dashboard_parity.doc')::jsonb -> 'events') with ordinality as f(ev, n)
 order by f.n;
 
--- === As a manager: every function against the expected table ===================
+-- === As an admin: every function against the expected table ====================
 
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d1","role":"authenticated","email":"parity-manager@test","app_metadata":{"role":"manager"}}';
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d1","role":"authenticated","email":"parity-admin@test","app_metadata":{"role":"admin"}}';
 
 do $$
 declare
@@ -261,8 +261,8 @@ declare
   actual jsonb;
   expected jsonb;
 begin
-  if current_user <> 'authenticated' or not private.is_manager() then
-    raise exception 'PARITY FAIL: setup — expected authenticated/manager, got %/% (is 0014 applied?)',
+  if current_user <> 'authenticated' or to_regprocedure('private.is_admin()') is null or not private.is_admin() then
+    raise exception 'PARITY FAIL: setup — expected authenticated/admin, got %/% (are 0014 and 0020 applied?)',
       current_user, private.app_role();
   end if;
 
@@ -341,8 +341,9 @@ begin
 end $$;
 
 -- === Everyone else is refused =================================================
--- An operator and a claim-less token hold EXECUTE (they are `authenticated`) and
--- must be stopped by the is_manager() check inside the function (WT403) — not
+-- An operator, a sales manager and a claim-less token hold EXECUTE (they are
+-- `authenticated`) and must be stopped by the is_manager() check inside the
+-- function (WT403; the name is 0016's, it asks is_admin() since 0020) — not
 -- merely answered with zeros because RLS hid the rows.
 
 do $$
@@ -354,6 +355,8 @@ begin
     select * from (values
       ('an operator',
         '{"sub":"00000000-0000-4000-8000-0000000000d2","role":"authenticated","email":"parity-a@test","app_metadata":{"role":"operator"}}'),
+      ('a sales manager',
+        '{"sub":"00000000-0000-4000-8000-0000000000d4","role":"authenticated","email":"parity-m@test","app_metadata":{"role":"manager"}}'),
       ('a token without a role claim',
         '{"sub":"00000000-0000-4000-8000-0000000000d3","role":"authenticated","email":"parity-x@test"}')
     ) as t(label, claims)

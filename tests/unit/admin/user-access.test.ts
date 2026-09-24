@@ -28,13 +28,17 @@ interface Row {
   is_active: boolean;
 }
 
-const ME = "manager@watertech.uz";
-const OTHER_MANAGER = "boss@watertech.uz";
+const ME = "owner@watertech.uz";
+const OTHER_ADMIN = "boss@watertech.uz";
+const INACTIVE_ADMIN = "former@watertech.uz";
+const MANAGER = "sales@watertech.uz";
 const OPERATOR = "aziza@watertech.uz";
 
 const BASE_ROWS: Row[] = [
-  { email: ME, role: "manager", is_active: true },
-  { email: OTHER_MANAGER, role: "manager", is_active: true },
+  { email: ME, role: "admin", is_active: true },
+  { email: OTHER_ADMIN, role: "admin", is_active: true },
+  { email: INACTIVE_ADMIN, role: "admin", is_active: false },
+  { email: MANAGER, role: "manager", is_active: true },
   { email: OPERATOR, role: "operator", is_active: true },
 ];
 
@@ -68,10 +72,12 @@ function setup(options: Setup = {}) {
 
     let response: MockResponse;
     if (request.method === "GET") {
+      // The two reads the actions make: one row by email, or every active
+      // admin (role=eq.admin&is_active=eq.true).
       const email = url.searchParams.get("email")?.replace(/^eq\./, "");
-      const onlyManagers = url.searchParams.get("role") === "eq.manager";
+      const onlyActiveAdmins = url.searchParams.get("role") === "eq.admin";
       const matching = rows.filter((row) =>
-        email !== undefined ? row.email === email : onlyManagers ? row.role === "manager" && row.is_active : true
+        email !== undefined ? row.email === email : onlyActiveAdmins ? row.role === "admin" && row.is_active : true
       );
       response = { status: 200, body: matching };
     } else {
@@ -112,7 +118,7 @@ function setup(options: Setup = {}) {
 }
 
 describe("every action", () => {
-  it("refuses a caller who is not a signed-in manager before any request", async () => {
+  it("refuses a caller who is not a signed-in admin before any request", async () => {
     const { actions, requests, setSignInBlocked } = setup({ session: "none" });
 
     await expect(actions.addUser(OPERATOR, "operator", null)).resolves.toEqual({ ok: false, code: "unauthorized" });
@@ -123,16 +129,12 @@ describe("every action", () => {
     expect(setSignInBlocked).not.toHaveBeenCalled();
   });
 
-  it("refuses a manager token whose allow-list row is no longer an active manager (stale JWT)", async () => {
-    const demoted: Row[] = [
-      { email: ME, role: "operator", is_active: true },
-      { email: OTHER_MANAGER, role: "manager", is_active: true },
-      { email: OPERATOR, role: "operator", is_active: true },
-    ];
+  it("refuses an admin token whose allow-list row is no longer an active admin (stale JWT)", async () => {
+    const demoted: Row[] = BASE_ROWS.map((row) => (row.email === ME ? { ...row, role: "manager" } : row));
     const { actions, writes, setSignInBlocked } = setup({ rows: demoted });
 
     await expect(actions.addUser("new@watertech.uz", "manager", null)).resolves.toMatchObject({ code: "unauthorized" });
-    await expect(actions.setRole(ME, "manager")).resolves.toMatchObject({ code: "unauthorized" });
+    await expect(actions.setRole(OPERATOR, "manager")).resolves.toMatchObject({ code: "unauthorized" });
     await expect(actions.setActive(OPERATOR, false)).resolves.toMatchObject({ code: "unauthorized" });
 
     expect(writes()).toEqual([]);
@@ -147,12 +149,25 @@ describe("every action", () => {
       code: "validation",
       field: "email",
     });
-    await expect(actions.setRole(OPERATOR, "admin")).resolves.toMatchObject({ code: "validation", field: "role" });
+    await expect(actions.setRole(OPERATOR, "owner")).resolves.toMatchObject({ code: "validation", field: "role" });
     await expect(actions.setActive(OPERATOR, "false")).resolves.toMatchObject({ code: "validation", field: "active" });
     await expect(actions.addUser(OPERATOR, "operator", "x".repeat(121))).resolves.toMatchObject({
       code: "validation",
       field: "fullName",
     });
+
+    expect(requests).toEqual([]);
+  });
+
+  it("never asks for the admin role: it is not assignable, so it is refused as validation", async () => {
+    const { actions, requests } = setup();
+
+    await expect(actions.addUser("new@watertech.uz", "admin", null)).resolves.toMatchObject({
+      code: "validation",
+      field: "role",
+    });
+    await expect(actions.setRole(OPERATOR, "admin")).resolves.toMatchObject({ code: "validation", field: "role" });
+    await expect(actions.setRole(MANAGER, "admin")).resolves.toMatchObject({ code: "validation", field: "role" });
 
     expect(requests).toEqual([]);
   });
@@ -174,15 +189,15 @@ describe("addUser", () => {
       full_name: "Yangi Xodim",
       is_active: true,
     });
-    // An upsert would re-role or reactivate an existing row behind the manager's back.
+    // An upsert would re-role or reactivate an existing row behind the admin's back.
     expect(insert?.url.searchParams.get("on_conflict")).toBeNull();
     expect(events).toEqual(["db:POST", "auth:unban:new.person@watertech.uz"]);
   });
 
-  it("stores an empty full name as null", async () => {
+  it("adds a sales manager, and stores an empty full name as null", async () => {
     const { actions, writes } = setup();
-    await actions.addUser("new@watertech.uz", "manager", "   ");
-    expect(writes()[0]?.body).toMatchObject({ full_name: null });
+    await expect(actions.addUser("new@watertech.uz", "manager", "   ")).resolves.toEqual({ ok: true });
+    expect(writes()[0]?.body).toMatchObject({ role: "manager", full_name: null });
   });
 
   it("answers email_taken on a duplicate, and does not touch Supabase Auth", async () => {
@@ -196,9 +211,15 @@ describe("addUser", () => {
     expect(setSignInBlocked).not.toHaveBeenCalled();
   });
 
-  it("maps the database guard's WT403 to unauthorized", async () => {
-    const { actions } = setup({ write: () => pgError("WT403") });
-    await expect(actions.addUser("new@watertech.uz", "operator", null)).resolves.toMatchObject({ code: "unauthorized" });
+  it("maps the database guard's WT403 to unauthorized and WT462 to admin_locked", async () => {
+    for (const [sqlstate, code] of [
+      ["WT403", "unauthorized"],
+      ["WT462", "admin_locked"],
+    ] as const) {
+      const { actions, setSignInBlocked } = setup({ write: () => pgError(sqlstate) });
+      await expect(actions.addUser("new@watertech.uz", "operator", null)).resolves.toEqual({ ok: false, code });
+      expect(setSignInBlocked).not.toHaveBeenCalled();
+    }
   });
 
   it("reports auth_sync_failed when the row was added but the unban failed", async () => {
@@ -212,7 +233,7 @@ describe("addUser", () => {
 });
 
 describe("setRole", () => {
-  it("updates only the role of that one row", async () => {
+  it("updates only the role of that one row — operator to manager", async () => {
     const { actions, writes, setSignInBlocked } = setup();
 
     await expect(actions.setRole(" Aziza@WaterTech.uz ", "manager")).resolves.toEqual({ ok: true });
@@ -225,19 +246,32 @@ describe("setRole", () => {
     expect(setSignInBlocked).not.toHaveBeenCalled();
   });
 
+  it("turns a sales manager back into an operator", async () => {
+    const { actions, writes } = setup();
+    await expect(actions.setRole(MANAGER, "operator")).resolves.toEqual({ ok: true });
+    expect(writes()[0]?.body).toEqual({ role: "operator" });
+  });
+
   it("refuses the caller's own demotion as self_change, with no write", async () => {
     const { actions, writes } = setup();
     await expect(actions.setRole(ME, "operator")).resolves.toEqual({ ok: false, code: "self_change" });
     expect(writes()).toEqual([]);
   });
 
-  it("refuses the last active manager's demotion as last_manager (checked before self)", async () => {
+  it("refuses the last active admin's demotion as last_admin (checked before self)", async () => {
     const alone: Row[] = [
-      { email: ME, role: "manager", is_active: true },
-      { email: OTHER_MANAGER, role: "manager", is_active: false },
+      { email: ME, role: "admin", is_active: true },
+      { email: OTHER_ADMIN, role: "admin", is_active: false },
     ];
     const { actions, writes } = setup({ rows: alone });
-    await expect(actions.setRole(ME, "operator")).resolves.toEqual({ ok: false, code: "last_manager" });
+    await expect(actions.setRole(ME, "operator")).resolves.toEqual({ ok: false, code: "last_admin" });
+    expect(writes()).toEqual([]);
+  });
+
+  it("refuses to demote another admin as admin_locked — admin rows are SQL-editor-only", async () => {
+    const { actions, writes } = setup();
+    await expect(actions.setRole(OTHER_ADMIN, "manager")).resolves.toEqual({ ok: false, code: "admin_locked" });
+    await expect(actions.setRole(INACTIVE_ADMIN, "operator")).resolves.toEqual({ ok: false, code: "admin_locked" });
     expect(writes()).toEqual([]);
   });
 
@@ -253,17 +287,28 @@ describe("setRole", () => {
     expect(writes()).toEqual([]);
   });
 
-  it("still maps the database's own refusals when the TS check passed (a concurrent change)", async () => {
+  it("still maps the database's own refusals by SQLSTATE when the TS check passed (a concurrent change)", async () => {
     for (const [sqlstate, code] of [
-      ["WT460", "last_manager"],
+      ["WT460", "last_admin"],
       ["WT461", "self_change"],
+      ["WT462", "admin_locked"],
       ["WT403", "unauthorized"],
       ["42501", "unauthorized"],
+      ["23514", "validation"],
       ["XX000", "unknown"],
     ] as const) {
       const { actions } = setup({ write: () => pgError(sqlstate) });
-      await expect(actions.setRole(OTHER_MANAGER, "operator")).resolves.toEqual({ ok: false, code });
+      await expect(actions.setRole(OPERATOR, "manager")).resolves.toEqual({ ok: false, code });
     }
+  });
+
+  it("never passes the database's message through", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { actions } = setup({ write: () => pgError("WT462", "allowed_users: admin rows are changed in the SQL editor only") });
+
+    const result = await actions.setRole(OPERATOR, "manager");
+    expect(JSON.stringify(result)).not.toContain("SQL editor only");
+    logged.mockRestore();
   });
 
   it("answers not_found when the update matched no row (RLS hid it, or it vanished)", async () => {
@@ -282,8 +327,14 @@ describe("setActive", () => {
     expect(events).toEqual(["db:PATCH", `auth:ban:${OPERATOR}`]);
   });
 
+  it("deactivates a sales manager the same way", async () => {
+    const { actions, events } = setup();
+    await expect(actions.setActive(MANAGER, false)).resolves.toEqual({ ok: true });
+    expect(events).toEqual(["db:PATCH", `auth:ban:${MANAGER}`]);
+  });
+
   it("reactivates the row first, then unbans", async () => {
-    const rows: Row[] = [...BASE_ROWS.slice(0, 2), { email: OPERATOR, role: "operator", is_active: false }];
+    const rows: Row[] = BASE_ROWS.map((row) => (row.email === OPERATOR ? { ...row, is_active: false } : row));
     const { actions, writes, events } = setup({ rows });
 
     await expect(actions.setActive(OPERATOR, true)).resolves.toEqual({ ok: true });
@@ -293,8 +344,8 @@ describe("setActive", () => {
   });
 
   it("does not ban when the database refused the deactivation", async () => {
-    const { actions, setSignInBlocked } = setup({ write: () => pgError("WT460") });
-    await expect(actions.setActive(OTHER_MANAGER, false)).resolves.toEqual({ ok: false, code: "last_manager" });
+    const { actions, setSignInBlocked } = setup({ write: () => pgError("WT462") });
+    await expect(actions.setActive(OPERATOR, false)).resolves.toEqual({ ok: false, code: "admin_locked" });
     expect(setSignInBlocked).not.toHaveBeenCalled();
   });
 
@@ -305,9 +356,19 @@ describe("setActive", () => {
     expect(setSignInBlocked).not.toHaveBeenCalled();
   });
 
-  it("lets a manager deactivate another manager while one active manager remains", async () => {
-    const { actions } = setup();
-    await expect(actions.setActive(OTHER_MANAGER, false)).resolves.toEqual({ ok: true });
+  it("never deactivates, bans or reactivates another admin (admin_locked)", async () => {
+    const { actions, writes, setSignInBlocked } = setup();
+    await expect(actions.setActive(OTHER_ADMIN, false)).resolves.toEqual({ ok: false, code: "admin_locked" });
+    await expect(actions.setActive(INACTIVE_ADMIN, true)).resolves.toEqual({ ok: false, code: "admin_locked" });
+    expect(writes()).toEqual([]);
+    expect(setSignInBlocked).not.toHaveBeenCalled();
+  });
+
+  it("on an admin row already in the requested state, only brings the ban in line with the row", async () => {
+    const { actions, writes, events } = setup();
+    await expect(actions.setActive(OTHER_ADMIN, true)).resolves.toEqual({ ok: true });
+    expect(writes()).toEqual([]);
+    expect(events).toEqual([`auth:unban:${OTHER_ADMIN}`]);
   });
 
   it("reports auth_sync_failed when the row changed but the ban did not", async () => {
@@ -326,7 +387,7 @@ describe("setActive", () => {
   });
 
   it("retries only the ban when the row is already inactive (the auth_sync_failed retry)", async () => {
-    const rows: Row[] = [...BASE_ROWS.slice(0, 2), { email: OPERATOR, role: "operator", is_active: false }];
+    const rows: Row[] = BASE_ROWS.map((row) => (row.email === OPERATOR ? { ...row, is_active: false } : row));
     const { actions, writes, events } = setup({ rows });
 
     await expect(actions.setActive(OPERATOR, false)).resolves.toEqual({ ok: true });

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
-import { redirect } from "@/i18n/routing";
-import { getServerSession } from "@/lib/auth/server-session";
+import { requireAdminPage } from "@/lib/auth/server-session";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { CopilotKpiGrid } from "@/components/dashboard/CopilotKpiGrid";
 import { CopilotUnansweredTable } from "@/components/dashboard/CopilotUnansweredTable";
@@ -25,8 +24,7 @@ export default async function DashboardCopilotPage({
 }) {
   unstable_setRequestLocale(locale);
 
-  const session = await getServerSession();
-  if (!session || session.role !== "manager") redirect({ href: "/", locale });
+  await requireAdminPage(locale);
 
   // The copilot log has no per-operator filter (an operator is only ever a
   // count here, never a name), so an ?op= left over from another tab is dropped.

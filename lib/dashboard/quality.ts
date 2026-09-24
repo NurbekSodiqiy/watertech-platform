@@ -1,6 +1,7 @@
 import "server-only";
 import { resolveEntityLabel, resolveAdminHref, type TelemetryRow, type EntityLabelMaps } from "@/lib/telemetry/aggregate";
 import { createClient } from "@/lib/supabase/server";
+import { TRACKED_ROLES } from "@/lib/auth/claims";
 import { ONBOARDING_KEY, onboardingStateSchema } from "@/lib/user-state/keys";
 import { onboardingSummaryChecklist } from "@/lib/content/onboarding";
 
@@ -141,16 +142,17 @@ export function aggregateOnboardingProgress(
     .sort((a, b) => a.completed - b.completed || a.email.localeCompare(b.email));
 }
 
-/** Manager-only read: the "user_state_manager_select_all" policy in
- * 0009_user_state.sql is what lets a manager's own session see every
- * operator's row, the same way OperatorFilter reads allowed_users under 0005.
- * The caller has already checked the role — a session without it simply gets
- * nothing back. */
+/** Admin-only read: the "user_state_manager_select_all" policy in
+ * 0009_user_state.sql (admin-only since 0020) is what lets the admin's own
+ * session see every row, the same way OperatorFilter reads allowed_users under
+ * 0005. Operators and sales managers both work through the checklist, so both
+ * are listed — the same people OperatorFilter offers. The caller has already
+ * checked the role — a session without it simply gets nothing back. */
 export async function fetchOnboardingProgress(operatorEmail: string | null): Promise<OnboardingProgressRow[]> {
   const supabase = createClient();
 
   const [operatorsResult, statesResult] = await Promise.all([
-    supabase.from("allowed_users").select("email").eq("role", "operator").order("email"),
+    supabase.from("allowed_users").select("email").in("role", TRACKED_ROLES).order("email"),
     supabase.from("user_state").select("user_email, value, updated_at").eq("key", ONBOARDING_KEY),
   ]);
 

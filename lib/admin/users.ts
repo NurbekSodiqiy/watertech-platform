@@ -6,8 +6,15 @@ import { z } from "zod";
 // No server imports — the dialog validates with the same schemas the action
 // re-validates with.
 
-export const USER_ROLES = ["operator", "manager"] as const;
+/** Every role an allow-list row can hold (allowed_users_role_chk, 0020). */
+export const USER_ROLES = ["operator", "manager", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+/** The roles /admin/users may give. An admin row is created, changed and
+ * removed in the Supabase SQL editor only — the database refuses any API
+ * write that touches one (WT462, 0020), so the page never offers it. */
+export const ASSIGNABLE_ROLES = ["operator", "manager"] as const satisfies readonly UserRole[];
+export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 /** RFC 5321's path limit; also what a CHECK-free text column should never
  * be asked to hold for an address. */
@@ -15,7 +22,11 @@ export const EMAIL_MAX_LENGTH = 254;
 export const FULL_NAME_MAX_LENGTH = 120;
 
 export function isUserRole(value: unknown): value is UserRole {
-  return value === "operator" || value === "manager";
+  return USER_ROLES.some((role) => role === value);
+}
+
+export function isAssignableRole(value: unknown): value is AssignableRole {
+  return ASSIGNABLE_ROLES.some((role) => role === value);
 }
 
 /** Trimmed and lowercased before it is checked: allowed_users stores
@@ -30,7 +41,8 @@ export const userEmailSchema = z
   .max(EMAIL_MAX_LENGTH, "tooLong")
   .email("invalid");
 
-export const userRoleSchema = z.enum(USER_ROLES);
+/** What /admin/users accepts as a role: operator or manager, never admin. */
+export const assignableRoleSchema = z.enum(ASSIGNABLE_ROLES);
 
 /** Optional: an empty field is stored as null, not as "". */
 export const fullNameSchema = z
@@ -42,11 +54,11 @@ export const fullNameSchema = z
 
 export const addUserSchema = z.object({
   email: userEmailSchema,
-  role: userRoleSchema,
+  role: assignableRoleSchema,
   fullName: fullNameSchema,
 });
 
-export const setRoleSchema = z.object({ email: userEmailSchema, role: userRoleSchema });
+export const setRoleSchema = z.object({ email: userEmailSchema, role: assignableRoleSchema });
 
 export const setActiveSchema = z.object({ email: userEmailSchema, active: z.boolean() });
 
@@ -69,38 +81,49 @@ export interface AccessState {
   isActive: boolean;
 }
 
-export function isActiveManager(state: AccessState): boolean {
-  return state.role === "manager" && state.isActive;
+export function isActiveAdmin(state: AccessState): boolean {
+  return state.role === "admin" && state.isActive;
 }
 
-export type AccessViolation = "last_manager" | "self_change";
+/** True when a change creates an admin, or changes the role or active flag of
+ * a row that is one — what the guard refuses through the API (WT462). */
+function touchesAdminRow(before: AccessState, after: AccessState): boolean {
+  if (before.role !== "admin") return after.role === "admin";
+  return after.role !== before.role || after.isActive !== before.isActive;
+}
+
+export type AccessViolation = "last_admin" | "self_change" | "admin_locked";
 
 /**
- * The TS half of private.allowed_users_guard (0017), in the same order:
- * losing the last active manager first — a sole manager demoting themselves
- * is told the thing they can act on ("add another manager") — then a manager
- * demoting or deactivating their own row. Renaming, or a change that keeps
- * the row an active manager, is never a violation.
+ * The TS half of private.allowed_users_guard (0017, admin semantics since
+ * 0020), in the same order: losing the last active admin first — a sole admin
+ * demoting themselves is told what holds even in the SQL editor — then an
+ * admin demoting or deactivating their own row, then any other change that
+ * promotes a row to admin or demotes, deactivates or reactivates one: admin
+ * rows are SQL-editor-only. Renaming, or a change that leaves the role and the
+ * active flag as they were, is never a violation.
  *
- * `activeManagers` is every active manager's email, lowercased, as read just
- * before the write. The database repeats both checks under a lock, so this
- * is the early, readable refusal — not the protection.
+ * `activeAdmins` is every active admin's email, lowercased, as read just
+ * before the write. The database repeats all three checks under a lock, so
+ * this is the early, readable refusal — not the protection.
  */
 export function accessViolation(args: {
   actor: string;
   target: string;
   before: AccessState;
   after: AccessState;
-  activeManagers: readonly string[];
+  activeAdmins: readonly string[];
 }): AccessViolation | null {
-  const staysActiveManager = isActiveManager(args.after);
+  const staysActiveAdmin = isActiveAdmin(args.after);
 
-  if (isActiveManager(args.before) && !staysActiveManager) {
-    const others = args.activeManagers.filter((email) => email !== args.target);
-    if (others.length === 0) return "last_manager";
+  if (isActiveAdmin(args.before) && !staysActiveAdmin) {
+    const others = args.activeAdmins.filter((email) => email !== args.target);
+    if (others.length === 0) return "last_admin";
   }
 
-  if (args.actor === args.target && !staysActiveManager) return "self_change";
+  if (args.actor === args.target && !staysActiveAdmin) return "self_change";
+
+  if (touchesAdminRow(args.before, args.after)) return "admin_locked";
 
   return null;
 }

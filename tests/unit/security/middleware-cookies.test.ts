@@ -68,9 +68,17 @@ describe("middleware — refreshed session cookies", () => {
   });
 
   it("keeps them on the role redirect, with the locale", async () => {
+    // A sales manager is kept out of the admin panel and sent home (0020).
     stub.claims = { email: "m@example.com", app_metadata: { role: "manager" } };
-    const res = await middleware(request("/ru/faq"));
-    expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/ru/dashboard");
+    const res = await middleware(request("/ru/dashboard"));
+    expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/ru");
+    expect(refreshedCookie(res)).toContain("refreshed-token");
+  });
+
+  it("keeps them on the admin's /login -> /admin redirect", async () => {
+    stub.claims = { email: "owner@example.com", app_metadata: { role: "admin" } };
+    const res = await middleware(request("/login"));
+    expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/admin");
     expect(refreshedCookie(res)).toContain("refreshed-token");
   });
 

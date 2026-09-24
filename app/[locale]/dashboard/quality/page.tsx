@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
-import { redirect } from "@/i18n/routing";
-import { getServerSession } from "@/lib/auth/server-session";
+import { requireAdminPage } from "@/lib/auth/server-session";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -28,8 +27,7 @@ export default async function DashboardQualityPage({
 }) {
   unstable_setRequestLocale(locale);
 
-  const session = await getServerSession();
-  if (!session || session.role !== "manager") redirect({ href: "/", locale });
+  await requireAdminPage(locale);
 
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Sifat render");
 
@@ -38,8 +36,9 @@ export default async function DashboardQualityPage({
     fetchDashboardKpis(range),
     fetchQualityTelemetry(range),
     // Not derived from telemetry like the quality lists — onboarding progress
-    // is the operators' own user_state rows, read here under the manager
-    // policy in 0009_user_state.sql. It honours the operator filter but not the
+    // is the people's own user_state rows, read here under the "select all"
+    // policy of 0009_user_state.sql (admin only since 0020). It honours the
+    // operator filter but not the
     // date range: the checklist is a running total, not an activity window.
     fetchOnboardingProgress(range.operatorEmail),
   ]);

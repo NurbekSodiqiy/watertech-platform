@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { ArrowUpDown, Search } from "lucide-react";
+import { ArrowUpDown, Lock, Search, ShieldCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { setActive, setRole } from "@/lib/admin/actions/users";
 import { formatRelative } from "@/lib/admin/format";
-import { USER_ROLES, isUserRole, type AdminUser, type UserRole } from "@/lib/admin/users";
+import {
+  ASSIGNABLE_ROLES,
+  USER_ROLES,
+  isAssignableRole,
+  isUserRole,
+  type AdminUser,
+  type AssignableRole,
+  type UserRole,
+} from "@/lib/admin/users";
 import type { ActionResult } from "@/lib/admin/errors";
 import { useActionError } from "@/hooks/useActionError";
 import { useMounted } from "@/hooks/useMounted";
@@ -25,7 +33,7 @@ type RoleFilter = "all" | UserRole;
 type StatusFilter = "all" | "active" | "inactive";
 type SortKey = "email" | "fullName" | "lastActivityAt";
 
-/** An activate/deactivate waiting for the manager's confirmation. */
+/** An activate/deactivate waiting for the admin's confirmation. */
 interface PendingToggle {
   email: string;
   name: string;
@@ -55,10 +63,12 @@ function compareUsers(a: AdminUser, b: AdminUser, key: SortKey): number {
 
 /**
  * The allow-list as a table: search, role and status filters, an inline role
- * select, and activate/deactivate behind a ConfirmDialog that says what
- * happens right away. The manager's own row is read-only here — the database
- * refuses a self-demotion anyway (0017, WT461), so offering it would only
- * produce an error.
+ * select (operator ↔ manager), and activate/deactivate behind a ConfirmDialog
+ * that says what happens right away. Admin rows — the caller's own included —
+ * are read-only here: they carry an Admin badge, their controls are disabled,
+ * and a note under the table says why. The database refuses any API change to
+ * an admin row anyway (0020, WT462), and a self-demotion too (0017, WT461), so
+ * offering either would only produce an error.
  *
  * Every write re-validates on the server and again in SQL; nothing this
  * component disables is a protection, only a courtesy.
@@ -75,6 +85,8 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
   const tFilter = useTranslations("common.table");
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const tRel = useTranslations("admin.relativeTime");
+  const adminNoteId = useId();
+  const selfNoteId = useId();
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -89,7 +101,7 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   // The role a select was just changed to, shown until the refreshed rows
   // arrive — otherwise the select snaps back to the old role mid-save.
-  const [roleOverrides, setRoleOverrides] = useState<Record<string, UserRole>>({});
+  const [roleOverrides, setRoleOverrides] = useState<Record<string, AssignableRole>>({});
 
   useEffect(() => {
     setRoleOverrides({});
@@ -108,6 +120,10 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
   }, [users, query, roleFilter, statusFilter, sort]);
 
   const filtersActive = query !== "" || roleFilter !== "all" || statusFilter !== "all";
+  // The notes the locked controls point at, rendered only while such a row is
+  // on screen so no aria-describedby names a missing element.
+  const showAdminNote = visible.some((user) => user.role === "admin");
+  const showSelfNote = visible.some((user) => user.role !== "admin" && user.email.toLowerCase() === currentEmail);
 
   function resetFilters() {
     setQuery("");
@@ -148,7 +164,7 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
   }
 
   function changeRole(user: AdminUser, value: string) {
-    if (!isUserRole(value) || value === user.role) return;
+    if (user.role === "admin" || !isAssignableRole(value) || value === user.role) return;
     if (!guardOnline()) return;
     setRoleOverrides((prev) => ({ ...prev, [user.email]: value }));
     run(user.email, () => setRole(user.email, value), {
@@ -274,6 +290,14 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
             <tbody>
               {visible.map((user) => {
                 const isSelf = user.email.toLowerCase() === currentEmail;
+                const isAdminRow = user.role === "admin";
+                // An admin row is SQL-editor-only (WT462); the caller's own row
+                // could not be demoted or deactivated here either (WT461).
+                const locked = isAdminRow || isSelf;
+                const lockNoteId = isAdminRow ? adminNoteId : isSelf ? selfNoteId : undefined;
+                const lockTitle = isAdminRow ? t("adminLocked") : isSelf ? t("selfLocked") : undefined;
+                // An admin row's select shows its role and nothing to change it to.
+                const roleOptions: readonly UserRole[] = isAdminRow ? [user.role] : ASSIGNABLE_ROLES;
                 const busy = pending && pendingEmail === user.email;
                 const displayName = user.fullName ?? user.email;
                 return (
@@ -285,18 +309,25 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
                           {t("you")}
                         </span>
                       )}
+                      {isAdminRow && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                          <ShieldCheck size={11} aria-hidden="true" />
+                          {t("roles.admin")}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-text-secondary">{user.fullName ?? "—"}</td>
                     <td className="px-4 py-2.5">
                       <select
-                        value={roleOverrides[user.email] ?? user.role}
+                        value={isAdminRow ? user.role : roleOverrides[user.email] ?? user.role}
                         onChange={(e) => changeRole(user, e.target.value)}
-                        disabled={isSelf || busy}
+                        disabled={locked || busy}
                         aria-label={t("roleSelectLabel", { email: user.email })}
-                        title={isSelf ? t("selfLocked") : undefined}
+                        aria-describedby={lockNoteId}
+                        title={lockTitle}
                         className="rounded-lg border border-border bg-surface-alt px-2 py-1 text-[12.5px] text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light disabled:opacity-60"
                       >
-                        {USER_ROLES.map((role) => (
+                        {roleOptions.map((role) => (
                           <option key={role} value={role}>
                             {t(`roles.${role}`)}
                           </option>
@@ -306,7 +337,7 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
                     <td className="px-4 py-2.5">
                       {/* text-primary-dark, not text-status-*: the tinted status
                           text is 2.9–3.1:1 in the light theme (docs/AUDIT.md,
-                          finding 9), and this word is what the manager reads. */}
+                          finding 9), and this word is what the admin reads. */}
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold text-primary-dark ${
                           user.isActive ? "bg-status-ok/15" : "bg-status-outdated/15"
@@ -323,7 +354,9 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
                           : t("noActivity")}
                     </td>
                     <td className="px-4 py-2.5">
-                      {user.role === "operator" ? (
+                      {/* Operators and sales managers work through the same
+                          onboarding checklist; the admin has none. */}
+                      {!isAdminRow ? (
                         <Link
                           href={`/dashboard/quality?op=${encodeURIComponent(user.email)}`}
                           className="font-medium text-primary hover:underline"
@@ -340,8 +373,9 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
                         onClick={() =>
                           setConfirm({ email: user.email, name: displayName, role: user.role, next: !user.isActive })
                         }
-                        disabled={isSelf || busy}
-                        title={isSelf ? t("selfLocked") : undefined}
+                        disabled={locked || busy}
+                        aria-describedby={lockNoteId}
+                        title={lockTitle}
                         className={`rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-text-secondary transition-colors disabled:opacity-50 ${
                           user.isActive
                             ? "hover:bg-status-outdated/10 hover:text-status-outdated"
@@ -357,6 +391,18 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
             </tbody>
           </table>
         </div>
+      )}
+
+      {showAdminNote && (
+        <p id={adminNoteId} className="flex items-center gap-1.5 text-[12px] text-text-secondary">
+          <Lock size={12} aria-hidden="true" className="shrink-0" />
+          {t("adminLocked")}
+        </p>
+      )}
+      {showSelfNote && (
+        <span id={selfNoteId} className="sr-only">
+          {t("selfLocked")}
+        </span>
       )}
 
       <ConfirmDialog

@@ -325,8 +325,10 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - `homeForRole`: `admin` → `/admin`, `manager` / `operator` → `/`. Admin areas are `ADMIN_AREAS =
   ["/admin", "/dashboard"]` (`lib/auth/claims.ts`); `isAdminArea()` is the only path check.
 - Admin rows in `allowed_users` are managed **only in the Supabase SQL editor** (the guard trigger raises
-  `WT462` for any API write that creates, promotes, demotes or deactivates an `admin` row). The UI assigns
-  `operator` / `manager` only (`ASSIGNABLE_ROLES` in `lib/admin/users.ts`).
+  `WT462` for any write carrying a JWT — a session or the service-role key — that creates, promotes,
+  demotes, deactivates, reactivates, deletes or re-addresses (changes the `email` of) an `admin` row;
+  `full_name` stays editable). The UI assigns `operator` / `manager` only (`ASSIGNABLE_ROLES` in
+  `lib/admin/users.ts`).
 - SQL helpers: `private.is_member()` = any of the three roles; `private.is_admin()` = `admin` — the one
   to use in every new policy and function. `private.is_manager()` survives only as a **deprecated alias of
   `is_admin()`** because the 0014–0019 policies and function bodies call it by name. Never use it in new SQL

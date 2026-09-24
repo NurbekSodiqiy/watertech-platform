@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
-import { redirect } from "@/i18n/routing";
-import { getServerSession } from "@/lib/auth/server-session";
+import { requireAdminPage } from "@/lib/auth/server-session";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -27,8 +26,7 @@ export default async function DashboardContentPage({
 }) {
   unstable_setRequestLocale(locale);
 
-  const session = await getServerSession();
-  if (!session || session.role !== "manager") redirect({ href: "/", locale });
+  await requireAdminPage(locale);
 
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Kontent render");
 

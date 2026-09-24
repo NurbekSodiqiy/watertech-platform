@@ -29,7 +29,7 @@ import {
 import { contentColumns, type SnapshotRow } from "@/lib/admin/snapshot";
 import { idSchema, statusSchema } from "@/lib/admin/schemas";
 import { updateWithVersion } from "./concurrency";
-import type { ManagerSession } from "./guard";
+import type { AdminSession } from "./guard";
 import type { StatusValue } from "./status";
 
 // The create/update/delete/publish body every content table used to carry its
@@ -44,8 +44,8 @@ import type { StatusValue } from "./status";
 // the pages bind to.
 
 export interface ContentActionDeps {
-  /** Throws (AdminActionError "unauthorized") unless the caller is a manager. */
-  requireSession: () => Promise<ManagerSession>;
+  /** Throws (AdminActionError "unauthorized") unless the caller is an admin. */
+  requireSession: () => Promise<AdminSession>;
   /** RLS-scoped session client — never the service role, for any content write. */
   client: () => AdminDbClient;
   /** Gates a stored row before its status flips to "published". */

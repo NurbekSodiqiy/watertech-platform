@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
   if (!role) {
     console.warn(
-      "[auth/callback] session has no operator/manager role claim — is the Custom Access Token hook enabled?"
+      "[auth/callback] session has no operator/manager/admin role claim — is the Custom Access Token hook enabled?"
     );
     await supabase.auth.signOut();
     return redirectTo("/login", "?error=not_allowed");

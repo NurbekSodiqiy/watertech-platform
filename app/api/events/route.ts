@@ -27,6 +27,16 @@ async function handlePost(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Telemetry records operators and sales managers only (CLAUDE.md §9): an
+  // admin's batch — the owner previewing the operator app — is accepted and
+  // dropped unread, before the rate limiter, the body and the insert. 204, not
+  // an error, so the client does not queue it for a retry. The client tracker
+  // sends nothing for an admin in the first place; this is the server's own
+  // refusal.
+  if (session.role === "admin") {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_CONTENT_LENGTH_BYTES) {
     return NextResponse.json({ error: "payload too large" }, { status: 413 });

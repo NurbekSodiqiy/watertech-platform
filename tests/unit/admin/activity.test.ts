@@ -29,7 +29,7 @@ function version(id: number, at: string, overrides: Partial<VersionActivity> = {
     kind: "version",
     id,
     at,
-    actor: "manager@test",
+    actor: "admin@test",
     table: "content_faqs",
     rowId: `faq-${id}`,
     title: `FAQ ${id}`,
@@ -39,11 +39,11 @@ function version(id: number, at: string, overrides: Partial<VersionActivity> = {
 }
 
 function gate(id: number, at: string, overrides: Partial<GateActivity> = {}): GateActivity {
-  return { kind: "gate", id, at, actor: "manager@test", table: "content_faqs", rowId: `faq-${id}`, title: null, passed: true, ...overrides };
+  return { kind: "gate", id, at, actor: "admin@test", table: "content_faqs", rowId: `faq-${id}`, title: null, passed: true, ...overrides };
 }
 
 function access(id: number, at: string, overrides: Partial<AccessActivity> = {}): AccessActivity {
-  return { kind: "access", id, at, actor: "manager@test", targetEmail: "op@test", action: "update", changes: [], ...overrides };
+  return { kind: "access", id, at, actor: "admin@test", targetEmail: "op@test", action: "update", changes: [], ...overrides };
 }
 
 const keys = (items: readonly ActivityItem[]): string[] => items.map(activityKey);
@@ -235,6 +235,14 @@ describe("describeAccessChange", () => {
       { field: "is_active", from: true, to: false },
     ]);
     expect(describeAccessChange("update", { role: "operator", is_active: true }, { role: "operator", is_active: true })).toEqual([]);
+  });
+
+  it("describes the 0020 conversion of the owner's row like any role change", () => {
+    // 0020 turns every pre-existing 'manager' row (the CMS owner) into 'admin';
+    // the audit trigger records it as an ordinary update, actor = the DB login.
+    expect(describeAccessChange("update", { role: "manager", is_active: true }, { role: "admin", is_active: true })).toEqual([
+      { field: "role", from: "manager", to: "admin" },
+    ]);
   });
 
   it("lists what an insert started with and what a delete had", () => {

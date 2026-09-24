@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
-import { getServerSession } from "@/lib/auth/server-session";
+import { requireAdminPage } from "@/lib/auth/server-session";
 import { listAdminUsers } from "@/lib/admin/queries";
 import { UsersTable } from "@/components/admin/UsersTable";
 
@@ -10,13 +10,13 @@ export async function generateMetadata({ params: { locale } }: { params: { local
 }
 
 /** Who may sign in, and as what. The admin layout has already refused
- * anyone who is not a manager; the session is read again here only for the
- * caller's own email, which marks their row read-only in the table. */
+ * anyone who is not the admin; the gate runs again here for the caller's own
+ * email, which marks their row in the table. */
 export default async function AdminUsersPage({ params: { locale } }: { params: { locale: string } }) {
   unstable_setRequestLocale(locale);
   const [t, session, list] = await Promise.all([
     getTranslations("pages.admin.users"),
-    getServerSession(),
+    requireAdminPage(locale),
     listAdminUsers(),
   ]);
 
@@ -33,7 +33,7 @@ export default async function AdminUsersPage({ params: { locale } }: { params: {
         </p>
       )}
 
-      <UsersTable users={list.users} currentEmail={session?.email.toLowerCase() ?? ""} />
+      <UsersTable users={list.users} currentEmail={session.email.toLowerCase()} />
     </div>
   );
 }

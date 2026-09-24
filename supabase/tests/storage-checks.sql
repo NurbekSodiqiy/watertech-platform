@@ -3,8 +3,10 @@
 --
 -- Paste the whole file into the Supabase SQL editor and run it once. Like
 -- rls-checks.sql it inserts its own fixtures (ids prefixed `rls-test`), switches
--- to the `authenticated` role with an operator's and then a manager's JWT
--- claims, and asserts what each may do to storage.objects. Everything runs in
+-- to the `authenticated` role with an operator's, a sales manager's (0020) and
+-- then an admin's JWT claims, and asserts what each may do to storage.objects.
+-- The policies still call private.is_manager() by its 0014 name; since 0020 it
+-- answers is_admin(), so a sales manager is refused like an operator. Everything runs in
 -- one transaction that ends in ROLLBACK, and a failed assertion aborts it —
 -- no fixture row or object row is ever committed, and no file is written: the
 -- rows here are catalog entries only, Storage's file backend is never called.
@@ -50,7 +52,7 @@ begin
       and policyname like 'product\_images\_%'
       and (roles <> '{authenticated}' or coalesce(qual, '') || coalesce(with_check, '') not like '%is_manager()%')
   ) then
-    raise exception 'STORAGE FAIL: a product_images_* policy is not authenticated-only and manager-gated';
+    raise exception 'STORAGE FAIL: a product_images_* policy is not authenticated-only and gated on private.is_manager() (= is_admin() since 0020)';
   end if;
   if (select count(*) from pg_policies
       where schemaname = 'storage' and tablename = 'objects' and policyname like 'product\_images\_%') <> 4 then
@@ -59,7 +61,7 @@ begin
   -- Every expression scoped to the bucket, and every write held to products/.
   -- Checked on the text as well as by behaviour below: Postgres applies the
   -- SELECT policy to rows an UPDATE or DELETE reads, so while it stays
-  -- manager-and-bucket-only it would hide an over-wide UPDATE/DELETE policy
+  -- admin-and-bucket-only it would hide an over-wide UPDATE/DELETE policy
   -- from the behavioural checks.
   if exists (
     select 1 from pg_policies
@@ -114,53 +116,59 @@ begin
 end
 $$;
 
--- === As an operator ===========================================================
+-- === As an operator, and as a sales manager (0020) ===========================
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000aaaa","email":"rls-op@test","role":"authenticated","app_metadata":{"role":"operator"}}';
-
-do $$
-declare
-  n bigint;
-begin
-  -- No listing: the catalog reads photos by public URL, which needs no policy.
-  select count(*) into n from storage.objects where bucket_id in ('product-images', 'rls-test-other');
-  if n <> 0 then
-    raise exception 'STORAGE FAIL: an operator can list % storage object(s)', n;
-  end if;
-
-  begin
-    insert into storage.objects (bucket_id, name) values ('product-images', 'products/rls-test-photo/11111111.jpg');
-    raise exception 'STORAGE FAIL: an operator uploaded into product-images';
-  exception when insufficient_privilege then
-    null;
-  end;
-
-  update storage.objects set name = 'products/rls-test-photo/22222222.jpg'
-    where bucket_id = 'product-images' and name = 'products/rls-test-photo/00000000.jpg';
-  get diagnostics n = row_count;
-  if n <> 0 then
-    raise exception 'STORAGE FAIL: an operator renamed a product photo';
-  end if;
-end
-$$;
-
 set local storage.allow_delete_query = 'true';
+
 do $$
 declare
+  ident record;
   n bigint;
 begin
-  delete from storage.objects where bucket_id = 'product-images' and name = 'products/rls-test-photo/00000000.jpg';
-  get diagnostics n = row_count;
-  if n <> 0 then
-    raise exception 'STORAGE FAIL: an operator deleted a product photo';
-  end if;
+  for ident in
+    select * from (values
+      ('an operator',
+        '{"sub":"00000000-0000-0000-0000-00000000aaaa","email":"rls-op@test","role":"authenticated","app_metadata":{"role":"operator"}}'),
+      ('a sales manager',
+        '{"sub":"00000000-0000-0000-0000-00000000cccc","email":"rls-sales@test","role":"authenticated","app_metadata":{"role":"manager"}}')
+    ) as t(label, claims)
+  loop
+    perform set_config('request.jwt.claims', ident.claims, true);
+
+    -- No listing: the catalog reads photos by public URL, which needs no policy.
+    select count(*) into n from storage.objects where bucket_id in ('product-images', 'rls-test-other');
+    if n <> 0 then
+      raise exception 'STORAGE FAIL: % can list % storage object(s)', ident.label, n;
+    end if;
+
+    begin
+      insert into storage.objects (bucket_id, name) values ('product-images', 'products/rls-test-photo/11111111.jpg');
+      raise exception 'STORAGE FAIL: % uploaded into product-images', ident.label;
+    exception when insufficient_privilege then
+      null;
+    end;
+
+    update storage.objects set name = 'products/rls-test-photo/22222222.jpg'
+      where bucket_id = 'product-images' and name = 'products/rls-test-photo/00000000.jpg';
+    get diagnostics n = row_count;
+    if n <> 0 then
+      raise exception 'STORAGE FAIL: % renamed a product photo', ident.label;
+    end if;
+
+    delete from storage.objects where bucket_id = 'product-images' and name = 'products/rls-test-photo/00000000.jpg';
+    get diagnostics n = row_count;
+    if n <> 0 then
+      raise exception 'STORAGE FAIL: % deleted a product photo', ident.label;
+    end if;
+  end loop;
 end
 $$;
 
--- === As a manager =============================================================
+-- === As an admin ==============================================================
 
-set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000bbbb","email":"rls-manager@test","role":"authenticated","app_metadata":{"role":"manager"}}';
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000bbbb","email":"rls-admin@test","role":"authenticated","app_metadata":{"role":"admin"}}';
 
 do $$
 declare
@@ -169,25 +177,25 @@ begin
   -- Visible in this bucket (remove() and upsert need it), nowhere else.
   select count(*) into n from storage.objects where bucket_id = 'product-images' and name like 'products/rls-test-photo/%';
   if n <> 1 then
-    raise exception 'STORAGE FAIL: a manager sees % product-images object(s), expected 1', n;
+    raise exception 'STORAGE FAIL: an admin sees % product-images object(s), expected 1', n;
   end if;
   select count(*) into n from storage.objects where bucket_id = 'rls-test-other';
   if n <> 0 then
-    raise exception 'STORAGE FAIL: the product_images policies let a manager see another bucket';
+    raise exception 'STORAGE FAIL: the product_images policies let an admin see another bucket';
   end if;
 
   insert into storage.objects (bucket_id, name) values ('product-images', 'products/rls-test-photo/33333333.jpg');
 
   begin
     insert into storage.objects (bucket_id, name) values ('product-images', 'elsewhere/rls-test-photo/44444444.jpg');
-    raise exception 'STORAGE FAIL: a manager wrote outside products/';
+    raise exception 'STORAGE FAIL: an admin wrote outside products/';
   exception when insufficient_privilege then
     null;
   end;
 
   begin
     insert into storage.objects (bucket_id, name) values ('rls-test-other', 'products/rls-test-photo/55555555.jpg');
-    raise exception 'STORAGE FAIL: the product_images policies let a manager write another bucket';
+    raise exception 'STORAGE FAIL: the product_images policies let an admin write another bucket';
   exception when insufficient_privilege then
     null;
   end;
@@ -196,13 +204,13 @@ begin
     where bucket_id = 'product-images' and name = 'products/rls-test-photo/33333333.jpg';
   get diagnostics n = row_count;
   if n <> 1 then
-    raise exception 'STORAGE FAIL: a manager could not update a product photo (upsert needs it)';
+    raise exception 'STORAGE FAIL: an admin could not update a product photo (upsert needs it)';
   end if;
 
   begin
     update storage.objects set bucket_id = 'rls-test-other'
       where bucket_id = 'product-images' and name = 'products/rls-test-photo/66666666.jpg';
-    raise exception 'STORAGE FAIL: a manager moved a product photo into another bucket';
+    raise exception 'STORAGE FAIL: an admin moved a product photo into another bucket';
   exception when insufficient_privilege then
     null;
   end;
@@ -211,19 +219,19 @@ begin
     where bucket_id = 'rls-test-other';
   get diagnostics n = row_count;
   if n <> 0 then
-    raise exception 'STORAGE FAIL: the product_images policies let a manager update another bucket';
+    raise exception 'STORAGE FAIL: the product_images policies let an admin update another bucket';
   end if;
 
   delete from storage.objects where bucket_id = 'rls-test-other';
   get diagnostics n = row_count;
   if n <> 0 then
-    raise exception 'STORAGE FAIL: the product_images policies let a manager delete from another bucket';
+    raise exception 'STORAGE FAIL: the product_images policies let an admin delete from another bucket';
   end if;
 
   delete from storage.objects where bucket_id = 'product-images' and name = 'products/rls-test-photo/66666666.jpg';
   get diagnostics n = row_count;
   if n <> 1 then
-    raise exception 'STORAGE FAIL: a manager could not remove a product photo';
+    raise exception 'STORAGE FAIL: an admin could not remove a product photo';
   end if;
 end
 $$;

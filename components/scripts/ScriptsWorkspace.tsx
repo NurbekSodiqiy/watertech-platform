@@ -75,8 +75,10 @@ function ScriptsPageContent() {
           title={t("title")}
           reason={t("reason")}
           action={
-            user?.role === "manager"
-              ? { label: t("ctaManager"), href: "/admin/scripts/new" }
+            // Only the admin can open the editor — for an operator or a sales
+            // manager, middleware would bounce /admin straight back home.
+            user?.role === "admin"
+              ? { label: t("ctaAdmin"), href: "/admin/scripts/new" }
               : { label: t("cta"), href: "/" }
           }
         />

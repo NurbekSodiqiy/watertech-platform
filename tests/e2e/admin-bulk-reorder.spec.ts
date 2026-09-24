@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { expectSignedInAt, useManagerSession } from "./session";
+import { expectSignedInAt, useAdminSession } from "./session";
 
 /**
  * S12: DataTable's status tabs, bulk-action bar and reorder mode. Exercises
@@ -9,11 +9,11 @@ import { expectSignedInAt, useManagerSession } from "./session";
  * data. A full publish/reorder round-trip belongs in a project with its own
  * disposable database, which this repo does not have (see docs/TESTING.md).
  *
- * Requires TEST_SESSION_COOKIE (a manager session) — skips itself otherwise,
- * same as every other manager-only spec (tests/e2e/session.ts).
+ * Requires TEST_SESSION_COOKIE (the admin's session) — skips itself otherwise,
+ * same as every other admin-only spec (tests/e2e/session.ts).
  */
 test.describe("admin DataTable bulk actions and reorder mode", () => {
-  useManagerSession();
+  useAdminSession();
 
   test("status tabs and search render, and bulk-select opens the delete confirmation", async ({ page }) => {
     await page.goto("/admin/faq");

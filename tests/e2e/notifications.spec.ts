@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Smoke only: the notifications inbox sits behind the same manager gate.
+// Smoke only: the notifications inbox sits behind the same admin gate.
 
 test("/admin/notifications redirects to /login without a session", async ({ page }) => {
   await page.goto("/admin/notifications");

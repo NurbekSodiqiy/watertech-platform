@@ -1,4 +1,4 @@
--- Which of supabase/migrations/0001-0019 has this project had?
+-- Which of supabase/migrations/0001-0020 has this project had?
 --
 -- READ-ONLY. Safe on any project, production included: it reads the system
 -- catalog and writes nothing. There is no migrations table in this project —
@@ -82,7 +82,10 @@ with marker (migration, applied, evidence) as (
      'column content_products.image_path'),
     ('0019', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                      where n.nspname = 'public' and p.proname = 'copilot_stats'),
-     'function public.copilot_stats')
+     'function public.copilot_stats'),
+    ('0020', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                     where n.nspname = 'private' and p.proname = 'is_admin'),
+     'function private.is_admin')
 ),
 fact (migration, applied, evidence) as (
   -- Each of these should read `true` on a correctly configured project.

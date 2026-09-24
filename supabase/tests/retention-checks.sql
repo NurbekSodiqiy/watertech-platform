@@ -201,14 +201,30 @@ begin
   end if;
 end $$;
 
+-- No session role may run it — the admin's included (0020).
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated","email":"retention-manager@test","app_metadata":{"role":"manager"}}';
 
 do $$
+declare
+  ident record;
 begin
-  perform public.run_retention();
-  raise exception 'RETENTION FAIL: a manager session can execute run_retention()';
-exception when insufficient_privilege then null; -- EXECUTE revoked, as intended
+  for ident in
+    select * from (values
+      ('an admin',
+        '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated","email":"retention-admin@test","app_metadata":{"role":"admin"}}'),
+      ('a sales manager',
+        '{"sub":"00000000-0000-4000-8000-0000000000e2","role":"authenticated","email":"retention-manager@test","app_metadata":{"role":"manager"}}'),
+      ('an operator',
+        '{"sub":"00000000-0000-4000-8000-0000000000e3","role":"authenticated","email":"retention-operator@test","app_metadata":{"role":"operator"}}')
+    ) as t(label, claims)
+  loop
+    perform set_config('request.jwt.claims', ident.claims, true);
+    begin
+      perform public.run_retention();
+      raise exception 'RETENTION FAIL: % session can execute run_retention()', ident.label;
+    exception when insufficient_privilege then null; -- EXECUTE revoked, as intended
+    end;
+  end loop;
 end $$;
 
 rollback;

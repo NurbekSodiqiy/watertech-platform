@@ -7,12 +7,12 @@ import { useRouter } from "@/i18n/routing";
 import { Dialog } from "@/components/ui/Dialog";
 import { addUser } from "@/lib/admin/actions/users";
 import {
+  ASSIGNABLE_ROLES,
   EMAIL_MAX_LENGTH,
   FULL_NAME_MAX_LENGTH,
-  USER_ROLES,
   addUserSchema,
-  isUserRole,
-  type UserRole,
+  isAssignableRole,
+  type AssignableRole,
 } from "@/lib/admin/users";
 import { adminErrorMap, validationText } from "@/lib/admin/validation";
 import { useActionError } from "@/hooks/useActionError";
@@ -34,7 +34,8 @@ const INPUT_CLASS =
  * here with the same zod schema the Server Action parses with (the email is
  * trimmed and lowercased by it), then written by `addUser`, which answers
  * `email_taken` for an address that already has a row — shown on the field,
- * since the fix is in the manager's hands.
+ * since the fix is in the admin's hands. The role is operator or manager only:
+ * an admin is added in the SQL editor (ASSIGNABLE_ROLES, WT462).
  */
 export function AddUserDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
@@ -53,7 +54,7 @@ export function AddUserDialog({ open, onClose }: { open: boolean; onClose: () =>
 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<UserRole>("operator");
+  const [role, setRole] = useState<AssignableRole>("operator");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -217,12 +218,12 @@ export function AddUserDialog({ open, onClose }: { open: boolean; onClose: () =>
                 value={role}
                 onChange={(e) => {
                   const value = e.target.value;
-                  if (isUserRole(value)) setRole(value);
+                  if (isAssignableRole(value)) setRole(value);
                 }}
                 aria-describedby={`${roleId}-hint`}
                 className={INPUT_CLASS}
               >
-                {USER_ROLES.map((option) => (
+                {ASSIGNABLE_ROLES.map((option) => (
                   <option key={option} value={option}>
                     {t(`roles.${option}`)}
                   </option>

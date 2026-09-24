@@ -7,7 +7,7 @@ import { VALIDATION_DETAIL_LIMIT } from "@/lib/admin/validation";
  * messages/ru.json), which is what makes the Russian admin read Russian —
  * a Server Action has no business picking the locale's wording.
  *
- * - `unauthorized`      — not a signed-in manager (requireManagerSession threw).
+ * - `unauthorized`      — not a signed-in admin (requireAdminSession threw).
  * - `validation`        — zod rejected the input; see `field` / `details`.
  * - `id_taken`          — creating a row whose id already exists (Postgres 23505).
  * - `version_conflict`  — someone saved first; the write matched no row.
@@ -15,8 +15,10 @@ import { VALIDATION_DETAIL_LIMIT } from "@/lib/admin/validation";
  * - `not_found`         — the row (or version snapshot) is gone.
  * - `reference_in_use`  — another row still points at this one (delete guard, S07).
  * - `email_taken`       — adding an allow-list email that already has a row (/admin/users).
- * - `last_manager`      — the change would leave no active manager (SQL WT460, 0017).
- * - `self_change`       — a manager demoting or deactivating their own row (SQL WT461, 0017).
+ * - `last_admin`        — the change would leave no active admin (SQL WT460, 0017/0020).
+ * - `self_change`       — an admin demoting or deactivating their own row (SQL WT461, 0017).
+ * - `admin_locked`      — the change creates, promotes, demotes, deactivates or removes an
+ *                         admin row; admin rows are SQL-editor-only (SQL WT462, 0020).
  * - `auth_sync_failed`  — the allow-list row was written, but Supabase Auth did not confirm
  *                         the matching ban / unban; repeating the action retries it.
  * - `unknown`           — anything else; the real cause is in the server log.
@@ -30,21 +32,22 @@ export type AdminErrorCode =
   | "not_found"
   | "reference_in_use"
   | "email_taken"
-  | "last_manager"
+  | "last_admin"
   | "self_change"
+  | "admin_locked"
   | "auth_sync_failed"
   | "unknown";
 
 /** Why a delete was refused or needs confirming. `block`: live rows point at
  * this one through an id with no foreign key behind it, so deleting would
  * leave them dangling. `cascade`: the database deletes those rows along with
- * this one, which the manager confirms explicitly (see `ContentActions.remove`). */
+ * this one, which the admin confirms explicitly (see `ContentActions.remove`). */
 export type ReferenceMode = "block" | "cascade";
 
 /** The rows behind a `reference_in_use`, per referencing table — what the
  * delete dialog names. `titles` is capped by the guard that produced it
  * (REFERENCE_TITLE_LIMIT in lib/admin/registry.ts); `count` is how many there
- * really are. Row titles are content a manager wrote, never database error
+ * really are. Row titles are content an admin wrote, never database error
  * text. */
 export interface ReferenceSummary {
   table: string;
@@ -54,7 +57,7 @@ export interface ReferenceSummary {
 }
 
 /** What every admin Server Action returns. There is deliberately no `message`
- * field: a raw Postgres error tells an attacker the schema and tells a manager
+ * field: a raw Postgres error tells an attacker the schema and tells an admin
  * nothing, so it goes to console.error (see `logDbError`) and never to the
  * browser.
  *
@@ -133,6 +136,24 @@ export function logDbError(scope: string, error: { message: string; code?: strin
 export const PG_UNIQUE_VIOLATION = "23505";
 /** Postgres foreign-key violation — a delete another table still references. */
 export const PG_FOREIGN_KEY_VIOLATION = "23503";
+
+/** The refusals of private.allowed_users_guard (0017, admin semantics since
+ * 0020), mapped by SQLSTATE — never by message, which stays in the server log.
+ * Null for any other state: the caller decides what that means. */
+export function allowListGuardCode(sqlstate: string | undefined): AdminErrorCode | null {
+  switch (sqlstate) {
+    case "WT403": // the JWT's email is no longer an active admin row (a stale token)
+      return "unauthorized";
+    case "WT460":
+      return "last_admin";
+    case "WT461":
+      return "self_change";
+    case "WT462":
+      return "admin_locked";
+    default:
+      return null;
+  }
+}
 
 function zodResult(error: ZodError): ActionResult {
   const [first] = error.issues;

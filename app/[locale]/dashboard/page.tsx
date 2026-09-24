@@ -1,7 +1,7 @@
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
-import { Link, redirect } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { Clock, Copy, ListChecks } from "lucide-react";
-import { getServerSession } from "@/lib/auth/server-session";
+import { requireAdminPage } from "@/lib/auth/server-session";
 import { EmptyState } from "@/components/EmptyState";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
@@ -30,10 +30,8 @@ export default async function DashboardPage({
   ]);
 
   // Access check happens here, in the page itself — role comes from the
-  // JWT claim (no DB round trip). Not a manager -> home, no error shown
-  // (this route also isn't linked from the sidebar yet).
-  const session = await getServerSession();
-  if (!session || session.role !== "manager") redirect({ href: "/", locale });
+  // JWT claim (no DB round trip). Not the admin -> their home, no error shown.
+  await requireAdminPage(locale);
 
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Faollik render");
 

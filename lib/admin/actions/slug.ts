@@ -1,7 +1,7 @@
 "use server";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { requireManagerSession } from "./guard";
+import { requireAdminSession } from "./guard";
 import { isContentTable } from "@/lib/admin/registry";
 import { idSchema } from "@/lib/admin/schemas";
 import type { DynamicTablesDatabase } from "@/lib/supabase/typed";
@@ -11,14 +11,14 @@ export interface IdAvailability {
 }
 
 /** The debounced hint next to a new row's id field (auto-filled from the
- * title by lib/admin/slug.ts's `toSlug`) — manager-gated like every other
+ * title by lib/admin/slug.ts's `toSlug`) — admin-gated like every other
  * admin read. An unauthenticated caller, an unknown table or an id that
  * doesn't match `idSchema` all answer "not available" rather than throwing:
  * a hint has no error state to show, and none of those are things the id
  * field would ever legitimately hold long enough to debounce-check. */
 export async function checkContentIdAvailable(table: string, id: string): Promise<IdAvailability> {
   try {
-    await requireManagerSession();
+    await requireAdminSession();
   } catch {
     return { available: false };
   }

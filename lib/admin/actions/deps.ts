@@ -7,7 +7,7 @@ import type { ContentColumn, ContentEntry, ContentWrite } from "@/lib/admin/regi
 import type { DashboardTableName } from "@/lib/dashboard/content-health";
 import { clientEnv } from "@/lib/env";
 import { contentActions, type ContentActionDeps, type ContentActions } from "./factory";
-import { requireManagerSession } from "./guard";
+import { requireAdminSession } from "./guard";
 import type { ProductImageDeps } from "./product-image";
 
 // What the action factory talks to in a real request. Kept out of factory.ts
@@ -15,9 +15,9 @@ import type { ProductImageDeps } from "./product-image";
 // publish gate and the Supabase clients behind them.
 
 export const liveDeps: ContentActionDeps = {
-  requireSession: requireManagerSession,
+  requireSession: requireAdminSession,
   // Session client under RLS, per CLAUDE.md §7: a content write is the
-  // manager's own write and must be refused by the database, not just by this
+  // admin's own write and must be refused by the database, not just by this
   // code, when it isn't. The service-role client is never used here.
   client: () => createClient<DynamicTablesDatabase>(),
   runGate: runPublishGate,
@@ -27,8 +27,8 @@ export const liveDeps: ContentActionDeps = {
 
 /** What the product photo upload (./product-image.ts) talks to in a real
  * request: the same session guard, session client and cache tag as every
- * content write — Storage RLS (0018) is what refuses a non-manager, and the
- * service-role client is never used for it either. */
+ * content write — Storage RLS (0018, admin-only since 0020) is what refuses
+ * anyone else, and the service-role client is never used for it either. */
 export const liveProductImageDeps: ProductImageDeps = {
   requireSession: liveDeps.requireSession,
   client: liveDeps.client,

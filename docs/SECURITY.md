@@ -15,6 +15,23 @@ There are exactly two ways to hold data from this project: a session belonging t
 *which routes* that token opens; RLS decides *which rows*. No layer trusts a client-supplied identity —
 not an email in a request body, not a role in a payload.
 
+### Role model v2 (migration 0020)
+
+| Role | Who | Operator app (`/`, `(app)/**`) | Admin panel (`/admin/**`, `/dashboard/**`) | Telemetry |
+| --- | --- | --- | --- | --- |
+| `admin` | the owner | yes — a preview | **yes, everything** | never recorded |
+| `manager` | a sales manager | yes (the operator's UI, for now) | **no** → sent to `/` | recorded |
+| `operator` | an operator | yes | **no** → sent to `/` | recorded |
+
+The admin panel refuses an operator and a sales manager at **every layer on its own**: `middleware.ts`
+(`isAdminArea()` → `homeForRole()`), the page gate (`requireAdminPage()` in the admin layout and in every
+`/dashboard` page), the Server Action guard (`requireAdminSession()`), and the database (RLS through
+`private.is_admin()`, and a `WT403` from every admin function). **Admin rows are SQL-editor-only**: the
+allow-list guard refuses any write that carries a JWT and creates, promotes, demotes, deactivates,
+reactivates, deletes or re-addresses an admin row (`WT462`), so `/admin/users` assigns `operator` and
+`manager` only. An admin's session records no telemetry — the client tracker does nothing and
+`/api/events` answers `204` without inserting.
+
 ## 2. Sign-in, end to end
 
 | # | Step | Where | What it decides |
@@ -23,9 +40,9 @@ not an email in a request body, not a role in a payload.
 | 2 | Google authenticates the person | accounts.google.com | Identity only. Any Google account can get this far. |
 | 3 | Google → `https://<ref>.supabase.co/auth/v1/callback` → back to `<origin>/auth/callback?code=…&locale=…` | Supabase Auth | The `code` is single-use and bound to the PKCE verifier in the browser. |
 | 4 | `exchangeCodeForSession(code)` | [app/auth/callback/route.ts](../app/auth/callback/route.ts) | **The gate.** GoTrue mints the access token here, and minting runs the hook in step 5. |
-| 5 | `public.custom_access_token_hook(event)` | [0014_role_gated_rls.sql](../supabase/migrations/0014_role_gated_rls.sql) | Active `allowed_users` row → stamps `app_metadata.role` = `operator` \| `manager`. Otherwise returns the Auth Hooks error response and **no token exists**. |
-| 6 | Route gating | [middleware.ts](../middleware.ts) | Reads the role off the locally verified JWT. Operators are confined to operator routes, managers to `/dashboard` and `/admin`, each direction enforced by the same check. Network-free (CLAUDE.md §4). It runs on every path except `api/*`, `auth/callback`, the Sentry tunnel, `_next/*`, the three `public/` asset folders and three exact files (CLAUDE.md §7) — until Audit-2 any path ending in `.json`, `.png`, `.map`… skipped it (AUDIT.md F1). |
-| 7 | Row gating | RLS, via `private.is_member()` / `private.is_manager()` | Which rows that session sees, per table. |
+| 5 | `public.custom_access_token_hook(event)` | [0014_role_gated_rls.sql](../supabase/migrations/0014_role_gated_rls.sql) | Active `allowed_users` row → stamps `app_metadata.role` = `operator` \| `manager` \| `admin`, verbatim from the row. Otherwise returns the Auth Hooks error response and **no token exists**. |
+| 6 | Route gating | [middleware.ts](../middleware.ts) | Reads the role off the locally verified JWT. The admin panel (`/admin`, `/dashboard`) is the admin's alone: an operator or a sales manager is sent to `/`. One-directional — the admin may open the operator routes too (a preview). Network-free (CLAUDE.md §4). It runs on every path except `api/*`, `auth/callback`, the Sentry tunnel, `_next/*`, the three `public/` asset folders and three exact files (CLAUDE.md §7) — until Audit-2 any path ending in `.json`, `.png`, `.map`… skipped it (AUDIT.md F1). |
+| 7 | Row gating | RLS, via `private.is_member()` / `private.is_admin()` (`is_manager()` is its deprecated alias since 0020) | Which rows that session sees, per table. |
 
 `/login` and `/offline` are the only public paths. `/offline` is public because the service worker
 precaches it without necessarily sending the session cookie; it holds no user data.
@@ -52,28 +69,35 @@ learns nothing about *why*.
 
 ### What the role claim means to the database
 
-`private.app_role()`, `private.is_member()` and `private.is_manager()` (schema `private`, not exposed
-by PostgREST, `USAGE` granted to `authenticated` alone) are the only readers of the claim. Because
-step 5 refuses everyone else, `is_member()` is a sufficient membership test — the database does not
-re-read `allowed_users` per request, and does not need to.
+`private.app_role()`, `private.is_member()`, `private.is_admin()` and its deprecated alias
+`private.is_manager()` (schema `private`, not exposed by PostgREST, `USAGE` granted to `authenticated`
+alone) are the only readers of the claim. Because step 5 refuses everyone else, `is_member()` is a
+sufficient membership test — the database does not re-read `allowed_users` per request, and does not need
+to. The one exception is the allow-list guard, which reads the caller's current row before any
+allow-list write (`WT403` for a stale admin token).
 
-Per table, since 0014:
+Per table, since 0014 (the `admin` column is what the `manager` column said before 0020; the 0014–0019
+policies still call `private.is_manager()` by name, which is `private.is_admin()` under its old name):
 
-| Table(s) | `operator` | `manager` | anyone else |
+| Table(s) | `operator` / `manager` (sales manager) | `admin` | anyone else |
 | --- | --- | --- | --- |
 | the 10 `content_*` tables | published rows | every row, plus insert/update/delete | nothing |
-| `user_state` | own rows, read + write | every row, read only | nothing, and no insert |
+| `user_state` | own rows, read + write | own rows read + write; every row, read only | nothing, and no insert |
 | `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `telemetry_events` | nothing | read (plus the `read_at` flip on `admin_notifications`) | nothing |
-| `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never its own role/status, never the last active manager, and only while its own row is still an active manager; no delete | nothing |
+| `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never an admin row's role or status (SQL editor only, 0020), never its own role/status, never the last active admin, and only while its own row is still an active admin; no delete | nothing |
 | `access_audit` (0017) | nothing | read — nobody writes it but the trigger, `service_role` included | nothing |
 | `rate_limits` | nothing | nothing | nothing — `service_role` only, through `rate_limit_hit()` |
 | `storage.objects`, bucket `product-images` (0018) | nothing through RLS | read, insert, update, delete — writes only under `products/` | nothing through RLS |
 
+The `dashboard_*` (0016), `copilot_*` (0019) and `admin_user_last_activity()` (0017) functions and
+`reorder_content_rows()` (0015) start with the same check and raise `WT403` for an operator and a sales
+manager — an explicit refusal, not a zero-filled answer.
+
 **The `product-images` bucket is public on purpose.** Catalog photos are marketing material, so anyone
 holding a photo's URL can fetch it from `/storage/v1/object/public/product-images/…` — Storage serves
-public buckets without consulting RLS. What stays closed is everything else: no role but a manager can
+public buckets without consulting RLS. What stays closed is everything else: no role but the admin can
 list, upload, replace or remove an object, and the policies are scoped to this bucket alone. Uploads go
-through `lib/admin/actions/product-image.ts` with the manager's own session client (never the service
+through `lib/admin/actions/product-image.ts` with the admin's own session client (never the service
 role), which checks the file's magic bytes against its declared type and extension, stores it under a
 content-addressed key (`products/<id>/<sha256-8>.<ext>`), and never accepts SVG. The bucket enforces
 the same 2 MB / JPEG-PNG-WebP-AVIF limits again. `img-src` allows only this bucket's public path, and
@@ -132,10 +156,10 @@ take effect: without it the hook never runs and no role is ever stamped.**
       then verifies the JWT locally in middleware instead of calling the Auth API on every request.
       `middleware.ts` logs a one-time development warning while the project is still on HS256.
 - [ ] **6. Confirm the allow-list.** `/admin/users`, or `select email, role, is_active from
-      public.allowed_users;` — every active row is a person who should have access today, and exactly
-      the right people have `role = 'manager'`. This table is the whole authorization model. Since 0017
-      managers edit it at `/admin/users` (§5); before 0017, `authenticated` had `SELECT` only and it was
-      edited in the SQL editor.
+      public.allowed_users;` — every active row is a person who should have access today, exactly the
+      owner has `role = 'admin'`, and exactly the sales managers have `role = 'manager'`. This table is
+      the whole authorization model. The admin edits operator and manager rows at `/admin/users` (§5);
+      admin rows are edited in the SQL editor only (0020).
 
 After 1–6: run [supabase/tests/rls-checks.sql](../supabase/tests/rls-checks.sql) on **staging**. Its
 first block calls the hook directly and asserts the refusals; its non-member block asserts that a
@@ -153,7 +177,7 @@ takes effect like this:
 | --- | --- |
 | **Deactivate at `/admin/users`** (0017 + `lib/admin/actions/user-access.ts`) | Two steps, in this order. (1) `is_active = false`: the access-token hook refuses every new token. (2) A Supabase Auth **ban** (`auth.admin.updateUserById(id, { ban_duration: "876000h" })`): GoTrue refuses the refresh-token grant ("Invalid Refresh Token: User Banned") and any new Google sign-in (403 "User is banned") at once, **whether or not the hook is enabled**. The access token already in their browser keeps working until it expires; after that, middleware's refresh fails and they land on `/login`. |
 | `is_active = false` by hand in the SQL editor, or deleting the row | Step (1) only: refused at their next token issuance (every refresh included), but **no ban**. If the hook is disabled, nothing stops the refresh. Prefer the page, or ban the user under Authentication → Users as well. |
-| Changing `role` (operator ↔ manager), at `/admin/users` or by hand | Their next refresh carries the new role. Until then the old role stays in force, in middleware *and* in RLS — with one exception since 0017: a demoted or deactivated manager can no longer **write the allow-list** with their old token (the guard trigger reads their current row, WT403), so they cannot restore themselves. |
+| Changing `role` (operator ↔ manager at `/admin/users`; anything involving `admin` in the SQL editor) | Their next refresh carries the new role. Until then the old role stays in force, in middleware *and* in RLS — with one exception since 0017: a demoted or deactivated admin can no longer **write the allow-list** with their old token (the guard trigger reads their current row, WT403), so they cannot restore themselves. |
 | Revoking sessions (Authentication → Users → the user → sign out / revoke) | Kills the refresh token, so no new access token can be minted. Does **not** invalidate the access token already in their browser. |
 
 **The window is the remaining TTL of the access token they are holding — at most the JWT expiry set in
@@ -162,7 +186,7 @@ a user while their access token is valid, and making middleware do so would brea
 (CLAUDE.md §4). Shortening the JWT expiry setting shortens the window proportionally; it is the only lever
 short of rotating the project's JWT signing key, which invalidates every session at once and is the
 break-glass option for a real compromise. The deactivate dialog on `/admin/users` says this in the
-manager's language ("open pages may keep working until the access token expires, usually up to an hour").
+admin's language ("open pages may keep working until the access token expires, usually up to an hour").
 
 If the ban step fails (GoTrue unreachable, the service-role key missing from the server's environment),
 the row is already inactive and the page reports `auth_sync_failed` instead of success. Pressing
@@ -183,27 +207,31 @@ Two smaller residual notes:
 
 ## 5. Adding, removing and promoting people
 
-**`/admin/users`** (managers only, since 0017): add a person (email, optional name, role), change a role
-inline, deactivate or reactivate behind a confirmation. There is no delete — deactivating keeps the row,
-because `telemetry_events` and `copilot_logs` still reference the email and the dashboard's operator
-filter reads this table.
+**`/admin/users`** (the admin only, since 0017; admin semantics since 0020): add a person (email,
+optional name, role `operator` or `manager`), switch a role between the two inline, deactivate or
+reactivate behind a confirmation. Admin rows are listed with an Admin badge and disabled controls: they
+are managed in the SQL editor only. There is no delete — deactivating keeps the row, because
+`telemetry_events` and `copilot_logs` still reference the email and the dashboard's operator filter reads
+this table.
 
 The rules, and where each is enforced (the UI enforces none of them; it only avoids offering what would
-be refused):
+be refused). The TS and SQL checks run in the same order, so both give the same answer:
 
-| Rule | TS (`lib/admin/actions/user-access.ts`) | Database (0017) |
+| Rule | TS (`lib/admin/actions/user-access.ts`) | Database (0017, guard body from 0020) |
 | --- | --- | --- |
-| Caller is a manager | `requireManagerSession()` | `allowed_users_manager_insert` / `_update` policies |
-| …and their row still says so (not a stale manager token) | pre-read of the active managers → `unauthorized` | `private.allowed_users_guard`, SQLSTATE `WT403` |
+| Caller is an admin | `requireAdminSession()` | `allowed_users_manager_insert` / `_update` policies (`is_manager()` = `is_admin()`) |
+| …and their row still says so (not a stale admin token) | pre-read of the active admins → `unauthorized` | `private.allowed_users_guard`, SQLSTATE `WT403` |
 | Email valid, stored lowercase | zod (`lib/admin/users.ts`) | `allowed_users_email_lowercase_chk` |
 | Only `role`, `is_active`, `full_name` change | the update payloads | column-level `GRANT UPDATE (role, is_active, full_name)` |
-| Never zero active managers | `accessViolation()` → `last_manager` | guard, `WT460` — also for `service_role` and the SQL editor |
-| No manager demotes or deactivates their own row | `accessViolation()` → `self_change` | guard, `WT461` |
+| The role given is `operator` or `manager` | `ASSIGNABLE_ROLES` in the zod schemas → `validation` | `allowed_users_role_chk` (all three roles), then the next rows |
+| Never zero active admins | `accessViolation()` → `last_admin` | guard, `WT460` — also for `service_role` and the SQL editor |
+| No admin demotes or deactivates their own row | `accessViolation()` → `self_change` | guard, `WT461` |
+| Admin rows are SQL-editor-only: nothing with a JWT creates, promotes to, demotes, deactivates, reactivates, deletes or re-addresses one | `accessViolation()` → `admin_locked` | guard, `WT462` — the service-role key included; `full_name` stays editable |
 | No delete from a session | no action exists | no `DELETE` grant, and the guard checks deletes too |
 
-The guard serialises every write to the table on a transaction-scoped advisory lock, so two managers
-deactivating each other at the same moment cannot both succeed: the second one re-counts after the
-first commits and is refused.
+The guard serialises every write to the table on a transaction-scoped advisory lock, so two concurrent
+writes that would each leave one admin cannot both succeed: the second one re-counts after the first
+commits and is refused.
 
 Every effective insert, update and delete — from the page, the SQL editor or `service_role` — appends one
 row to **`public.access_audit`** (`actor`, `target_email`, `action`, the whole row `before` and `after`).
@@ -211,14 +239,18 @@ The table is append-only: no API role can write it, and a trigger refuses `UPDAT
 even from its owner. `actor` is the caller's JWT email, else the JWT role (`service_role`), else the
 database login (`postgres` in the SQL editor).
 
-The SQL editor still works — it is how the **first** manager is created on a new project, since nothing
-can create one otherwise:
+The SQL editor is where **admin rows** live — it has no JWT, so `WT462` does not apply there, while the
+last-admin rule (`WT460`) still does. The first admin on a new project is created this way, since nothing
+else can create one:
 
 ```sql
--- add (lowercase email — allowed_users_email_lowercase_chk)
-insert into public.allowed_users (email, role, full_name)
-values ('someone@company.uz', 'manager', 'Someone');
+-- the first admin (lowercase email — allowed_users_email_lowercase_chk)
+insert into public.allowed_users (email, role) values ('owner@gmail.com', 'admin');
 ```
+
+To hand admin to someone else, insert the new admin row first, then demote or deactivate the old one.
+Run it with the SQL editor's role impersonation off: with it on, the session carries a JWT and the guard
+treats the write as an API write.
 
 A deactivation done there does not ban the account in Supabase Auth (§4); use the page, or also ban the
 user under Authentication → Users.
@@ -232,7 +264,11 @@ user under Authentication → Users.
   project has had, since there is no migrations table.
 - The last audit of this model — what was verified, how, and what is still open — is
   [AUDIT.md](AUDIT.md) (Audit-2).
-- Keep `private.is_member()` / `private.is_manager()` as the single spelling of both questions. A new
-  policy that inlines `auth.jwt() -> 'app_metadata' ->> 'role'` re-introduces both the per-row cost and
-  the chance of a table being left out of the next fix.
+- Keep `private.is_member()` / `private.is_admin()` as the single spelling of both questions (the 0014–0019
+  policies say `private.is_manager()`, its deprecated alias — never in new SQL, and never repurposed for
+  the sales-manager role). A new policy that inlines `auth.jwt() -> 'app_metadata' ->> 'role'`
+  re-introduces both the per-row cost and the chance of a table being left out of the next fix — and after
+  0020 a literal `'manager'` hands a sales manager the owner's rows; `rls-checks.sql` fails on one.
+- Never re-run `0013` on its own after `0020`: it re-creates two policies with that literal. Re-run `0014`
+  after it (MIGRATIONS.md).
 - Middleware must stay network-free: the role comes off the verified JWT, never from a query.

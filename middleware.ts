@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { clientEnv } from "@/lib/env";
-import { homeForRole, isManagerArea, roleFromClaims } from "@/lib/auth/claims";
+import { homeForRole, isAdminArea, isAdminRole, roleFromClaims } from "@/lib/auth/claims";
 import { routing } from "@/i18n/routing";
 
 // /offline is public because the service worker precaches it at install time,
@@ -117,7 +117,7 @@ export async function middleware(request: NextRequest) {
     return redirectTo("/login");
   }
 
-  // A session whose JWT carries no operator/manager role claim. Since
+  // A session whose JWT carries no operator/manager/admin role claim. Since
   // migration 0014 the access-token hook refuses to issue such a token at all,
   // so this is a fail-safe, not the main gate: it still catches a token minted
   // before 0014 (role "none"), and the case where the Custom Access Token hook
@@ -127,12 +127,14 @@ export async function middleware(request: NextRequest) {
     return redirectTo("/login", "error=not_allowed");
   }
 
-  // Managers are confined to manager areas, and manager areas are confined
-  // to managers — this is the one role check for both directions, so a
-  // request already sitting on /dashboard doesn't skip it.
-  const wantsManagerArea = isManagerArea(pathname);
-  const isManager = role === "manager";
-  if (isManager !== wantsManagerArea) {
+  // Role model v2 (CLAUDE.md §7): the admin panel — /admin and /dashboard —
+  // is the admin's alone, and this is the one check that keeps an operator or
+  // a sales manager out of it, bounced to their home (the operator app). It
+  // is one-directional on purpose: the admin may also open every operator
+  // route, to preview what operators see. The admin layout, every /dashboard
+  // page, every admin Server Action and RLS each refuse a non-admin again on
+  // their own, so this is the first layer, not the only one.
+  if (isAdminArea(pathname) && !isAdminRole(role)) {
     return redirectTo(homeForRole(role));
   }
 
