@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContentUnavailableError, ContentValidationError, safeContent } from "@/lib/content/safe";
 import { rowToScript, rowToCompetitor, type ScriptRow, type CompetitorRow } from "@/lib/content/db";
 
@@ -58,6 +58,12 @@ describe("safeContent — degrade mode", () => {
 });
 
 describe("safeContent — page mode", () => {
+  // CI exports CONTENT_BUILD_MODE=allow-empty for the whole job (ci.yml), which
+  // would turn these into degrade tests — pin the production value here.
+  beforeEach(() => {
+    vi.stubEnv("CONTENT_BUILD_MODE", "strict");
+  });
+
   it("rethrows as ContentUnavailableError naming the content kind", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const error = await safeContent("scripts", fail("fetch failed"), [], "page").catch((e: unknown) => e);

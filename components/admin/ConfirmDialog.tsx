@@ -1,10 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { overlayFadeVariants, overlayPanelVariants } from "@/components/ui/Dialog";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -45,6 +46,23 @@ export function ConfirmDialog({
   const reduce = useReducedMotion();
   const titleId = useId();
   const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // A modal in fact, not only in aria-modal: focus moves in (to Cancel, the
+  // first control — the safe answer), Tab stays inside, and it goes back to
+  // the trigger on close (R3 release audit). Same hook as <Dialog>.
+  useFocusTrap(panelRef, open);
+
+  // Escape is Cancel, except while the action is in flight — the buttons are
+  // disabled then too, so the dialog cannot be dismissed mid-write.
+  useEffect(() => {
+    if (!open || pending) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, pending, onCancel]);
 
   return (
     <AnimatePresence>
@@ -59,6 +77,7 @@ export function ConfirmDialog({
             variants={overlayFadeVariants}
           />
           <m.div
+            ref={panelRef}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={titleId}

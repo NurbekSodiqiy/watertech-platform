@@ -47,7 +47,7 @@ export function RouteDayCard({ day, summary, open, onToggleOpen, done, ready, on
           aria-expanded={open}
           aria-controls={panelId}
           onClick={onToggleOpen}
-          className="flex w-full items-center justify-between gap-4 bg-accent px-5 py-4 text-left leading-6 text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          className="flex w-full items-center justify-between gap-4 bg-accent px-5 py-4 text-left leading-6 text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-on-accent"
         >
           <span>{t("dayHeading", { day: day.day, title: day.title })}</span>
           <ChevronDown

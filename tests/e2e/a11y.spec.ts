@@ -1,13 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
-import { applySession, expectSignedInAt, operatorCookie } from "./session";
+import { adminCookie, applySession, expectSignedInAt, operatorCookie } from "./session";
 
 /**
  * Automated accessibility scan (axe-core, WCAG 2.1 A/AA) plus a keyboard walk
  * through the chrome every operator route carries.
  *
  * The public routes are scanned on every run, including CI. The operator
- * routes need a session (docs/TESTING.md) and are skipped without one.
+ * routes need an operator session and the admin panel the admin's
+ * (docs/TESTING.md); each block is skipped without its cookie.
  *
  * Threshold: zero `serious` and zero `critical` violations. `minor`/`moderate`
  * findings are listed in the failure message but do not fail a run on their own.
@@ -21,7 +22,22 @@ import { applySession, expectSignedInAt, operatorCookie } from "./session";
 const THEMES = ["light", "dark"] as const;
 
 const PUBLIC_ROUTES = ["/login", "/offline"];
-const OPERATOR_ROUTES = ["/", "/sales-process/scripts", "/products", "/faq", "/company/about", "/company/onboarding"];
+const OPERATOR_ROUTES = [
+  "/",
+  "/sales-process/scripts",
+  "/products",
+  "/faq",
+  "/company/about",
+  "/company/mission-values",
+  "/company/onboarding",
+];
+/** The admin panel pages R3 added or rebuilt (S03–S04). The person page is
+ * reached through the directory, since its path depends on the allow-list. */
+const ADMIN_ROUTES = ["/admin", "/admin/users", "/admin/users?view=table", "/dashboard", "/dashboard/quality"];
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /** The theme is chosen by the `watertech-theme` localStorage key, which
  * ThemeScript reads before first paint. Seeded through an init script so it is
@@ -90,6 +106,145 @@ for (const theme of THEMES) {
     }
   });
 }
+
+for (const theme of THEMES) {
+  test.describe(`a11y — admin panel (${theme})`, () => {
+    test.skip(!adminCookie, "TEST_SESSION_COOKIE is not set");
+
+    for (const route of ADMIN_ROUTES) {
+      test(`${route} has no serious or critical violations`, async ({ context, page, baseURL }) => {
+        await applySession(context, adminCookie ?? "", baseURL);
+        await useTheme(page, theme);
+        await page.goto(route);
+        await expectSignedInAt(page, new RegExp(`${escapeRegExp(route)}$`));
+        await expectTheme(page, theme);
+        await page.waitForLoadState("networkidle");
+        await scan(page);
+      });
+    }
+
+    test("a person page has no serious or critical violations", async ({ context, page, baseURL }) => {
+      await applySession(context, adminCookie ?? "", baseURL);
+      await useTheme(page, theme);
+      await page.goto("/admin/users");
+      await expectSignedInAt(page, /\/admin\/users$/);
+      const card = page.getByRole("tabpanel").getByRole("link").filter({ hasText: /Operator|Menejer/ }).first();
+      test.skip((await card.count()) === 0, "no operator or sales manager on the allow-list yet");
+      const href = (await card.getAttribute("href")) ?? "";
+      await page.goto(href);
+      await expectSignedInAt(page, new RegExp(`${escapeRegExp(href)}$`));
+      await expectTheme(page, theme);
+      await page.waitForLoadState("networkidle");
+      await scan(page);
+    });
+  });
+}
+
+/** A focused element shows a ring (Tailwind's ring is a box-shadow) or an outline. */
+async function expectVisibleFocus(page: Page): Promise<void> {
+  const indicator = await page.evaluate(() => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLElement)) return null;
+    const style = getComputedStyle(el);
+    return { shadow: style.boxShadow, outline: style.outlineStyle, outlineWidth: style.outlineWidth };
+  });
+  expect(indicator, "nothing is focused").not.toBeNull();
+  const hasRing = indicator !== null && indicator.shadow !== "none";
+  const hasOutline = indicator !== null && indicator.outline !== "none" && indicator.outlineWidth !== "0px";
+  expect(hasRing || hasOutline, `no focus indicator: ${JSON.stringify(indicator)}`).toBe(true);
+}
+
+test.describe("admin keyboard walk", () => {
+  test.skip(!adminCookie, "TEST_SESSION_COOKIE is not set");
+
+  test.beforeEach(async ({ context, baseURL }) => {
+    await applySession(context, adminCookie ?? "", baseURL);
+  });
+
+  test("the AdminShell nav is reachable by Tab, marks the current page and shows focus", async ({ page }) => {
+    await page.goto("/admin/users");
+    await expectSignedInAt(page, /\/admin\/users$/);
+    const nav = page.getByRole("complementary").getByRole("navigation");
+    const current = nav.locator('a[aria-current="page"]');
+    await expect(current).toHaveCount(1);
+    await expect(current).toHaveAttribute("href", /\/admin\/users$/);
+
+    // Tab from the top of the document until focus lands in the side nav.
+    await page.locator("body").focus();
+    let inNav = false;
+    for (let step = 0; step < 15 && !inNav; step += 1) {
+      await page.keyboard.press("Tab");
+      inNav = await nav.evaluate((el) => el.contains(document.activeElement));
+    }
+    expect(inNav, "Tab never reached the admin nav").toBe(true);
+    await expectVisibleFocus(page);
+  });
+
+  test("CompareTable sorts from the keyboard and reaches each row through its link", async ({ page }) => {
+    await page.goto("/admin");
+    await expectSignedInAt(page, /\/admin$/);
+    const table = page.getByRole("region").filter({ has: page.getByRole("table") }).first();
+    test.skip((await table.count()) === 0, "no one on the allow-list to compare yet");
+
+    const header = table.getByRole("columnheader").filter({ has: page.getByRole("button") }).first();
+    const button = header.getByRole("button");
+    const before = await header.getAttribute("aria-sort");
+    await button.focus();
+    await expectVisibleFocus(page);
+    await page.keyboard.press("Enter");
+    await expect(header).not.toHaveAttribute("aria-sort", before ?? "none");
+
+    const rowLink = table.getByRole("rowheader").getByRole("link").first();
+    test.skip((await rowLink.count()) === 0, "no linked rows");
+    await rowLink.focus();
+    await expectVisibleFocus(page);
+    const href = (await rowLink.getAttribute("href")) ?? "";
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(href)}$`));
+  });
+
+  test("a directory card and the person-page access panel are keyboard operable", async ({ page }) => {
+    await page.goto("/admin/users");
+    await expectSignedInAt(page, /\/admin\/users$/);
+    const card = page.getByRole("tabpanel").getByRole("link").filter({ hasText: /Operator|Menejer/ }).first();
+    test.skip((await card.count()) === 0, "no operator or sales manager on the allow-list yet");
+    await card.focus();
+    await expectVisibleFocus(page);
+    const href = (await card.getAttribute("href")) ?? "";
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(href)}$`));
+
+    // The role buttons and the status switch take focus; Escape backs out of the confirm dialog.
+    const toggle = page.getByRole("switch");
+    await toggle.focus();
+    await expectVisibleFocus(page);
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toBeFocused();
+  });
+});
+
+test.describe("company scenes — keyboard", () => {
+  test.skip(!operatorCookie, "TEST_OPERATOR_COOKIE is not set");
+
+  test.beforeEach(async ({ context, baseURL }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+  });
+
+  test("the onboarding day header shows focus on its accent fill and toggles its panel", async ({ page }) => {
+    await page.goto("/company/onboarding");
+    await expectSignedInAt(page, /\/company\/onboarding$/);
+    const header = page.locator("button[aria-expanded][aria-controls]").first();
+    await header.focus();
+    await expectVisibleFocus(page);
+    const expanded = await header.getAttribute("aria-expanded");
+    await page.keyboard.press("Enter");
+    await expect(header).not.toHaveAttribute("aria-expanded", expanded ?? "");
+  });
+});
 
 /** WCAG relative luminance contrast of two opaque sRGB colours. */
 function contrastRatio(a: readonly number[], b: readonly number[]): number {

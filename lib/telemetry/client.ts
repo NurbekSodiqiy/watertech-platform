@@ -40,6 +40,13 @@ let bufferOwner: string | null = null;
  * admin's. /api/events refuses an admin's batch as well; this only keeps it
  * from being built. */
 let recording = true;
+/** False until SessionProvider has named the role once. Nothing is sent before
+ * then — neither the regular flush nor the unload beacon — because until then
+ * an admin's page cannot be told from an operator's: what is queued waits in
+ * memory and goes out on the first flush after an operator or sales manager is
+ * named, or is dropped for an admin (R3 release audit). A page with no
+ * SessionProvider (/login, /offline) has no session to send under anyway. */
+let roleKnown = false;
 
 function getSessionId(): string {
   if (sessionId) return sessionId;
@@ -135,7 +142,7 @@ let retryNotBeforeMs = 0;
  * over a few requests instead of one oversized one. Stops on the first
  * failure and leaves the remainder queued for the next attempt. */
 async function flush() {
-  if (flushInFlight || queue.length === 0) return;
+  if (!roleKnown || flushInFlight || queue.length === 0) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   if (Date.now() < retryNotBeforeMs) return;
 
@@ -179,7 +186,7 @@ async function flush() {
  * more likely to actually complete than a fetch started during unload.
  * Best-effort, single batch only (sendBeacon has its own payload cap). */
 function flushViaBeacon() {
-  if (queue.length === 0 || typeof navigator?.sendBeacon !== "function") return;
+  if (!roleKnown || queue.length === 0 || typeof navigator?.sendBeacon !== "function") return;
   const batch = takeBatch();
   if (batch.length === 0) return;
   try {
@@ -261,6 +268,7 @@ function ensureInitialized() {
  * named again. The role is applied before the same-owner shortcut below,
  * because one account's role can change at a token refresh. */
 export function setTelemetryOwner(ownerId: string | null, role: Role | null): void {
+  roleKnown = true;
   recording = role !== "admin";
   if (!recording) queue = [];
 

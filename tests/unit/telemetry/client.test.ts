@@ -99,6 +99,46 @@ describe("an admin session records nothing (CLAUDE.md §9)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("sends nothing before the role is known — not the flush, not the unload beacon", async () => {
+    const fetchMock = stubFetch();
+    const sendBeacon = vi.fn<(url: string, data?: BodyInit | null) => boolean>(() => true);
+    vi.stubGlobal("navigator", { onLine: true, sendBeacon });
+    const client = await loadClient();
+
+    // A full batch, one flush interval and the page going away — all before
+    // SessionProvider has named the role, which is when an admin's page cannot
+    // yet be told from an operator's.
+    for (let i = 0; i < 30; i += 1) client.track({ type: "page_enter", path: `/page-${i}` });
+    await vi.advanceTimersByTimeAsync(25_000);
+    globals.window.dispatch("pagehide");
+    globals.document.dispatch("visibilitychange");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sendBeacon).not.toHaveBeenCalled();
+
+    client.setTelemetryOwner(OWNER_A, "admin");
+    await vi.advanceTimersByTimeAsync(25_000);
+    globals.window.dispatch("pagehide");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sendBeacon).not.toHaveBeenCalled();
+  });
+
+  it("holds an operator's events until the role is known, then sends them", async () => {
+    const fetchMock = stubFetch();
+    const client = await loadClient();
+
+    client.track({ type: "page_enter", path: "/before-session" });
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    client.setTelemetryOwner(OWNER_A, "operator");
+    await vi.advanceTimersByTimeAsync(25_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).toContain("/before-session");
+  });
+
   it("never restores or sends a buffer the admin's account left before role model v2", async () => {
     const leftOver = events("left_over");
     globals.local.setItem(ownerBufferKey(BUFFER, OWNER_A), leftOver);

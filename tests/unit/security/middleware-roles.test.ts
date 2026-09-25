@@ -61,6 +61,10 @@ const MATRIX: { path: string; expected: Record<Identity, string> }[] = [
     expected: { admin: "pass", manager: "pass", operator: "pass", "no session": "/login", "role none": "/login?error=not_allowed" },
   },
   {
+    path: "/company/about",
+    expected: { admin: "pass", manager: "pass", operator: "pass", "no session": "/login", "role none": "/login?error=not_allowed" },
+  },
+  {
     path: "/products",
     expected: { admin: "pass", manager: "pass", operator: "pass", "no session": "/login", "role none": "/login?error=not_allowed" },
   },
@@ -70,6 +74,10 @@ const MATRIX: { path: string; expected: Record<Identity, string> }[] = [
   },
   {
     path: "/admin/users",
+    expected: { admin: "pass", manager: "/", operator: "/", "no session": "/login", "role none": "/login?error=not_allowed" },
+  },
+  {
+    path: "/admin/users/operator%40example.com",
     expected: { admin: "pass", manager: "/", operator: "/", "no session": "/login", "role none": "/login?error=not_allowed" },
   },
   {
