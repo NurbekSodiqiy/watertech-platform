@@ -184,8 +184,10 @@ components/providers/       SessionProvider  OfflineBanner  WebVitalsReporter
 components/products/        ProductsCatalog          components/tools/     BatchCalculator
 components/scripts/         ScriptsWorkspace  ScriptsContentContext
 components/story/           LayersStory  LayersChapter  LayersCrossSection  layers-geometry.ts (R3/S05, /company/about)
-                            PipelineStory  PipelineChapter  fittings.tsx  geometry.ts (mission-values until R3/S06;
-                            fittings.tsx also the onboarding rail's until R3/S07)
+                            ManifestStory  MissionWords  VisionSegment  ValueStack  manifest-geometry.ts  value-icons.tsx
+                            (R3/S06, /company/mission-values)
+                            PipelineStory  PipelineChapter  geometry.ts (no importer since R3/S06) and fittings.tsx
+                            (the onboarding rail's) — all four removed by R3/S07
 components/onboarding/      OnboardingRail  OnboardingNode (replaced by R3/S07)
 hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useScrollBeat  useRevealPhase  useNow
                             useMounted …

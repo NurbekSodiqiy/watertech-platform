@@ -14,8 +14,11 @@ import { applySession, collectConsoleErrors, expectSignedInAt, operatorCookie } 
  * they are asserted verbatim so a copy change that forgets a chapter fails here.
  *
  * /company/about runs LayersStory (R3/S05): a sticky pipe cross-section at ≥ lg
- * (Desktop Chrome here), one ring per chapter. /company/mission-values still
- * runs PipelineStory until R3/S06 replaces it.
+ * (Desktop Chrome here), one ring per chapter. /company/mission-values runs
+ * ManifestStory (R3/S06): the mission lit word by word, the 2030 figure, the
+ * values as sticky stacking cards — where a heading can be covered by the next
+ * card, so "readable" there means uncovered and at full strength at some point
+ * of the scroll, not merely present.
  */
 
 const ABOUT = {
@@ -24,13 +27,16 @@ const ABOUT = {
   headings: ["Biz haqimizda", "Ishlab chiqarish", "Maqsadimiz", "Nega WATERTECH"],
 } as const;
 
-const PIPELINE_STORIES = [
-  {
-    path: "/company/mission-values",
-    url: /\/company\/mission-values$/,
-    headings: ["Missiya", "Vizyon 2030", "№1", "Sifat – bu vijdon", "Innovatsiya", "Xavfsizlik"],
-  },
-] as const;
+const MISSION = {
+  path: "/company/mission-values",
+  url: /\/company\/mission-values$/,
+  headings: ["Missiya", "Vizyon 2030", "№1", "Sifat – bu vijdon", "Innovatsiya", "Xavfsizlik"],
+  // pages.company.missionValues.chapters.missiya.body
+  sentence: "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish.",
+} as const;
+
+/** The sticky TopBar (`h-14`): anything behind it cannot be read. */
+const TOPBAR_HEIGHT = 56;
 
 /**
  * How much of an SVG stroke is drawn, 0 → 1.
@@ -55,13 +61,67 @@ async function ringFractions(page: Page): Promise<number[]> {
   return Promise.all(ABOUT.headings.map((_, index) => rings.nth(index).evaluate(drawnFraction)));
 }
 
-/** How much of PipelineStory's main water stroke is drawn, 0 → 1. */
-async function waterPathFraction(page: Page): Promise<number> {
-  // Document order inside PipelineDrawing: dry body, dry bore, then the main
-  // water stroke — the first accent-stroked path in the scene's <svg>.
-  const path = page.locator("svg path.stroke-accent").first();
-  await expect(path).toBeAttached();
-  return path.evaluate(drawnFraction);
+/** The drawn fraction of ManifestStory's two lines: the mission underline and the closing water line. */
+async function manifestLineFractions(page: Page): Promise<number[]> {
+  const paths = page.locator("svg[data-manifest-line] path");
+  await expect(paths, "the underline and the water line").toHaveCount(2);
+  return Promise.all([0, 1].map((index) => paths.nth(index).evaluate(drawnFraction)));
+}
+
+/** Rendered opacity of every element matching `selector`, times its ancestors'. */
+async function effectiveOpacities(page: Page, selector: string): Promise<number[]> {
+  return page.locator(selector).evaluateAll((els) =>
+    els.map((el) => {
+      let opacity = 1;
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        opacity *= Number(getComputedStyle(node).opacity);
+      }
+      return opacity;
+    })
+  );
+}
+
+/**
+ * The `names` whose h2 a reader can read right now: on screen below the
+ * TopBar, not covered by another element (a stacking card), and at full
+ * strength (no dimmed ancestor).
+ */
+async function readableHeadings(page: Page, names: readonly string[]): Promise<string[]> {
+  return page.evaluate(
+    ({ names, topBar }) =>
+      Array.from(document.querySelectorAll("h2")).flatMap((heading) => {
+        const name = heading.textContent?.trim() ?? "";
+        if (!names.includes(name)) return [];
+        const box = heading.getBoundingClientRect();
+        const x = box.left + Math.min(box.width / 2, 12);
+        const y = box.top + box.height / 2;
+        if (y < topBar || y > window.innerHeight || box.width === 0) return [];
+        const hit = document.elementFromPoint(x, y);
+        if (!hit || !heading.contains(hit)) return [];
+        let opacity = 1;
+        for (let node: Element | null = heading; node; node = node.parentElement) {
+          opacity *= Number(getComputedStyle(node).opacity);
+        }
+        return opacity > 0.99 ? [name] : [];
+      }),
+    { names, topBar: TOPBAR_HEIGHT }
+  );
+}
+
+/** Wheels down to the end of the page, collecting every heading that was readable on the way. */
+async function readHeadingsDownThePage(page: Page, names: readonly string[]): Promise<Set<string>> {
+  const seen = new Set<string>(await readableHeadings(page, names));
+  let lastY = -1;
+  for (let step = 0; step < 120; step += 1) {
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(140);
+    for (const name of await readableHeadings(page, names)) seen.add(name);
+    const y = await page.evaluate(() => window.scrollY);
+    if (y === lastY) break;
+    lastY = y;
+  }
+  await page.waitForTimeout(800);
+  return seen;
 }
 
 async function scrollToBottom(page: Page): Promise<void> {
@@ -123,45 +183,93 @@ test.describe("scroll stories", () => {
     }
   });
 
-  for (const story of PIPELINE_STORIES) {
-    test(`${story.path}: every chapter heading is visible after scrolling to the bottom`, async ({
-      context,
-      page,
-      baseURL,
-    }) => {
-      await applySession(context, operatorCookie ?? "", baseURL);
-      const errors = collectConsoleErrors(page);
+  test(`${MISSION.path}: every heading is readable at some point of the scroll, every word lit at the bottom`, async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const errors = collectConsoleErrors(page);
 
-      await page.goto(story.path);
-      await expectSignedInAt(page, story.url);
-      await scrollToBottom(page);
+    await page.goto(MISSION.path);
+    await expectSignedInAt(page, MISSION.url);
+    const seen = await readHeadingsDownThePage(page, MISSION.headings);
 
-      for (const heading of story.headings) {
+    expect([...seen].sort(), "headings never readable (covered, dimmed or off-screen)").toEqual(
+      [...MISSION.headings].sort()
+    );
+    for (const heading of MISSION.headings) {
+      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    }
+    // The sentence has scrolled past: every word is lit (or was never dimmed).
+    const words = await effectiveOpacities(page, "[data-manifest-word]");
+    expect(words.length, "the mission is split into words").toBeGreaterThan(1);
+    expect(Math.min(...words), "a mission word is still dimmed at the bottom").toBeGreaterThan(0.99);
+    // The run-out lets the last value card land fully readable, and the closing line draw.
+    await expect(page.getByRole("heading", { name: MISSION.headings[MISSION.headings.length - 1], exact: true })).toBeInViewport();
+    await expect
+      .poll(async () => Math.min(...(await manifestLineFractions(page))), { message: "a line is not drawn at the bottom" })
+      .toBeGreaterThan(0.99);
+    expect(errors, `console errors on ${MISSION.path}`).toEqual([]);
+  });
+
+  test(`${MISSION.path}: reduced motion shows the finished scene without scrolling`, async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+
+    try {
+      await page.goto(MISSION.path);
+      await expectSignedInAt(page, MISSION.url);
+      // No wheel, no scrollTo: the scene has to be finished already.
+      await page.waitForTimeout(600);
+
+      for (const heading of MISSION.headings) {
         await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
       }
-      expect(errors, `console errors on ${story.path}`).toEqual([]);
-    });
+      const words = await effectiveOpacities(page, "[data-manifest-word]");
+      expect(Math.min(...words), "a mission word is dimmed").toBeGreaterThan(0.99);
+      const lines = await manifestLineFractions(page);
+      expect(Math.min(...lines), `lines not fully drawn: ${lines.join(", ")}`).toBeGreaterThan(0.99);
+      const bars = page.locator("[data-manifest-bar]");
+      await expect(bars).toHaveCount(2);
+      expect(
+        await bars.evaluateAll((els) => els.map((el) => getComputedStyle(el).transform)),
+        "the vision bars are not at full height"
+      ).toEqual(["none", "none"]);
+      expect(await effectiveOpacities(page, "[data-manifest-house-fill]"), "our house is not filled").toEqual([1]);
+      const cards = await effectiveOpacities(page, "[data-manifest-card] > div");
+      expect(cards.length, "one card per value").toBe(4);
+      expect(Math.min(...cards), "a value card is dimmed").toBeGreaterThan(0.99);
+      expect(await page.evaluate(() => window.scrollY), "the page scrolled by itself").toBe(0);
 
-    test(`${story.path}: reduced motion shows the finished scene without scrolling`, async ({ browser, baseURL }) => {
-      const context = await browser.newContext({ reducedMotion: "reduce" });
-      await applySession(context, operatorCookie ?? "", baseURL);
-      const page = await context.newPage();
-      const errors = collectConsoleErrors(page);
+      // Scrolling under reduced motion stacks the cards (plain CSS sticky) but never shrinks or dims them.
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(600);
+      const after = await effectiveOpacities(page, "[data-manifest-card] > div");
+      expect(Math.min(...after), "a value card dimmed under reduced motion").toBeGreaterThan(0.99);
+      expect(
+        await page.locator("[data-manifest-card]").evaluateAll((els) => els.map((el) => getComputedStyle(el).transform)),
+        "a value card scaled under reduced motion"
+      ).toEqual(["none", "none", "none", "none"]);
+      expect(errors, `console errors on ${MISSION.path}`).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
 
-      try {
-        await page.goto(story.path);
-        await expectSignedInAt(page, story.url);
-        // No wheel, no scrollTo: the scene has to be finished already.
-        await page.waitForTimeout(600);
+  test(`${MISSION.path}: screen readers get the mission sentence exactly once`, async ({ context, page, baseURL }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+    await page.goto(MISSION.path);
+    await expectSignedInAt(page, MISSION.url);
 
-        for (const heading of story.headings) {
-          await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-        }
-        expect(await waterPathFraction(page), "water path is not fully drawn").toBeGreaterThan(0.99);
-        expect(errors, `console errors on ${story.path}`).toEqual([]);
-      } finally {
-        await context.close();
-      }
-    });
-  }
+    const tree = await page.locator("main").ariaSnapshot();
+    expect(tree.split(MISSION.sentence).length - 1, "the sentence in the accessibility tree").toBe(1);
+    // Neither the words one by one: every animated span sits under aria-hidden.
+    const exposedWords = await page
+      .locator("[data-manifest-word]")
+      .evaluateAll((els) => els.filter((el) => !el.closest('[aria-hidden="true"]')).length);
+    expect(exposedWords, "word spans exposed to assistive technology").toBe(0);
+  });
 });

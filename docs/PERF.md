@@ -552,6 +552,29 @@ than one. `/company/mission-values` moves the same way (+0.7 kB) and its page ch
 that about no longer shares. The route stays over budget until it is fixed deliberately (see Open items) — the
 limit was not raised.
 
+## R3/S06 (2026-09-25, `/company/mission-values` → ManifestStory)
+
+`/company/mission-values` no longer imports `PipelineStory`/`PipelineChapter`/`fittings.tsx` (and with them `MaskReveal`,
+`ScrollScene`, the pipeline geometry); it renders `ManifestStory` (`MissionWords`, `VisionSegment`, `ValueStack`,
+`manifest-geometry`, reusing `DrawPath` and `CountUp`). The six icons moved to `components/story/value-icons.tsx`, plain
+components rendered on the server and handed to the scene as elements, so they cost no JS. No dependency, no layout or
+shared module changed, no client message namespace added (the scene's strings arrive as props). Both trees built with
+CI's placeholder env (baseline `c7aac74` in a scratch worktree); "Exact" is gzip level 9 over the route's
+`app-build-manifest.json` entry, measured the same way for both columns (Python's gzip — about 0.2 kB below the Node
+figures of the S05 table, so compare within this table):
+
+| Route | Before (`c7aac74`) | Exact | After | Exact |
+|---|---:|---:|---:|---:|
+| `/company/mission-values` | 164 kB (page 5.59 kB) | 163.391 kB | **161 kB** (page 3.53 kB) | 161.313 kB |
+| `/company/about` | 150 kB | 150.307 kB | 150 kB | 150.265 kB |
+| `/company/onboarding` | 181 kB | 180.808 kB | 181 kB | 180.725 kB |
+
+**−2.1 kB, all of it the page chunk.** Every shared chunk of the route has the same size before and after (only the
+hashes moved). The scene's scroll work is motion values only — one `useScroll` for the mission sentence feeding 13
+word `useTransform`s, and the page `scrollY` feeding one transform per value card; the stack's layout (sentinel
+positions, card heights, sticky tops) is measured on mount and on `ResizeObserver` changes, never per frame.
+`/company/onboarding` still reads 181 kB (see Open items); nothing it imports changed.
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
@@ -559,5 +582,5 @@ limit was not raised.
 3. LCP was not measured in a browser (operator routes need a Google OAuth session); the `priority` choice is by layout.
 4. `/company/onboarding` reads 181 kB since R3/S05 (181.196 kB exact, chunk packing, see above). R3/S07 replaces its
    rail (`OnboardingRail`, `fittings.tsx`) with `RouteMap` and must bring it back to ≤ 180 kB; if it has to be fixed
-   sooner, the candidates are the rail's `fittings.tsx` glyphs (duplicated into the mission-values and onboarding page
-   chunks) or `CountUp`'s `animate()` (8.1 kB of shared framer code for one number).
+   sooner, the candidates are the rail's `fittings.tsx` glyphs (only onboarding imports them since R3/S06) or
+   `CountUp`'s `animate()` (8.1 kB of shared framer code, used by mission-values' ×3 and onboarding).

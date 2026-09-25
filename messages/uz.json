@@ -1339,6 +1339,12 @@
             "body": "Bizning mahsulotimiz o'rnatilgan joyda suv toshqini bo'lmasligi kerak."
           }
         },
+        "vision": {
+          "today": "Bugun",
+          "target": "2030",
+          "exportCaption": "MDH davlatlariga eksport hajmi",
+          "houses": "har 3 ta yangi uydan birida"
+        },
         "finale": {
           "caption": "Suv hayot manbai, biz esa uning xavfsiz oqimini ta'minlaymiz."
         }
