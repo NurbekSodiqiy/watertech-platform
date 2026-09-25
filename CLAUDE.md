@@ -5,7 +5,8 @@
 > Read it fully before the first edit of every session. When a task conflicts with a rule
 > here, **stop and flag the conflict** — do not improvise.
 >
-> Last reviewed 2026-09-24 against the repo (roadmap R3: roles v2 · admin analytics · company stories).
+> Last reviewed 2026-09-25 against the repo (roadmap R3: roles v2 · admin analytics · company stories — R3 release
+> audit, docs/AUDIT.md).
 > Sections marked **(R3/Sxx)** describe what that roadmap step introduces. If the code does not have it yet,
 > that step has not been merged: implement the step first — never write new code against the old shape.
 
@@ -76,7 +77,6 @@ components/
   ui/                               generic primitives: CopyButton, EmptyState, Breadcrumbs, badges, skeletons
   scripts/                         sales-script domain: SalesScriptsTab, ScriptTurns, CallModeOverlay, ObjectionChipRow…
   content/                        DocPageTemplate, PageRenderer, SectionLanding, DatabaseTemplate, BattleCardTemplate
-  home/                            DailyTimeline, HomeGreeting
   products/                       CertificateGallery/Grid, product lightbox
   providers/                       SessionProvider, ClientNameContext, CertificateLightboxContext, ThemeScript, TelemetryProvider
   admin/                           CMS forms/editors, AdminShell, UsersTable, AddUserDialog
@@ -86,7 +86,7 @@ components/
   changelog/                       ChangelogEntryCard
   copilot/                        operator copilot UI
   dashboard/                       monitoring widgets/KPIs (RangePicker, OperatorFilter, QualityPanel…)
-  home/                            home widgets (ChangelogStrip, ContinueCard, Favourites, Recents)
+  home/                            home widgets (ChangelogStrip, ContinueCard, Favourites, Recents); target for DailyTimeline, HomeGreeting
   motion/                          motion primitives — see §14
   onboarding/                      the /company/onboarding scene (RouteMap, R3/S07) — see §14
   story/                           scroll-storytelling scenes, one per /company page — see §14
@@ -290,10 +290,12 @@ Tailwind tokens in `tailwind.config.ts`:
 --border #DCE6F0 / #2A3B58  --text-primary #1E3A5F / #EFF4FA --text-secondary #5B7086 / #9FB2CC
 --accent #3D5A80 / #7FA8D9  --accent-hover #2E4763 / #9DBEE6 --accent-soft, --status-ok/warning/outdated
 --on-accent                 text/icon colour on a solid accent fill (never `text-white` on `bg-accent` —
-                             it fails contrast in dark mode)
+                             it fails contrast in dark mode) — and the focus ring colour there: an inset
+                             `ring-primary` on `bg-accent` is invisible (same token); use `ring-on-accent`
 --chart-green #1F9D55 / #4ADE80   --chart-blue #2F6FDB / #6EA8FF   --chart-track #E6EEF6 / #24334F   (R3/S03)
                              bar FILLS in admin charts only (Tailwind `bg-chart-green/blue/track`); ≥ 3:1 against
-                             surface in both themes. Never for text, never on operator pages.
+                             surface and surface-alt in both themes (tests/unit/ui/design-tokens.test.ts measures
+                             globals.css; values in docs/AUDIT.md). Never for text, never on operator pages.
 ```
 Use semantic classes only: `bg-background bg-surface bg-surface-alt border-border text-primary-dark
 text-text-secondary bg-primary text-primary bg-accent text-accent text-status-ok …`.
@@ -361,8 +363,9 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   the locally verified JWT and keeps non-admins out of the admin areas. (3) RLS decides rows, through
   `private.is_member()` / `private.is_admin()` only — never inline `auth.jwt() -> 'app_metadata'` in a
   new policy. (4) Server code re-checks: `getServerSession()` in Route Handlers,
-  `requireAdminSession()` first in every admin Server Action, and the admin layout / every `/dashboard`
-  page refuse a non-admin session. A new data-returning SQL function is SECURITY INVOKER and refuses a
+  `requireAdminSession()` first in every admin Server Action, and both admin layouts (`/admin`, `/dashboard`) plus
+  every `/dashboard` page refuse a non-admin session (`requireAdminPage`, pinned by
+  `tests/unit/auth/admin-gates.test.ts`). A new data-returning SQL function is SECURITY INVOKER and refuses a
   non-admin itself (`WT403`), or is granted to `service_role` only.
 - **Middleware matcher.** It may exclude only real static files: the three `public/` folders
   (`certificates/`, `icons/`, `products/`) by file extension, and `sw.js`, `manifest.webmanifest`,
@@ -422,7 +425,7 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - **Seed rules** (`npm run seed:content`, `supabase/seed/guard.ts`): it runs only with
   `SEED_TARGET=staging`, never against a ref listed in `PROD_PROJECT_REFS` (required for a hosted
   project) and never against an unrecognised host; it is insert-only (existing rows, `status` included,
-  stay as managers saved them) unless `--force`; run `--dry-run` first. Production content is entered
+  stay as the admin saved them) unless `--force`; run `--dry-run` first. Production content is entered
   through `/admin`. Never run the seed, a SQL check file or anything else that writes against production.
 
 ## 8. Content layer rules
@@ -432,7 +435,7 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   call getters; client components receive data via props. Never import the raw arrays into UI.
 - **A failed content read** (`lib/content/safe.ts`) depends on who reads. Pages use the throwing
   getters (`"page"` mode): `ContentUnavailableError` fails `next build` and keeps the last good ISR page
-  instead of publishing an empty knowledge base. Route Handlers, the Copilot retriever and the manager
+  instead of publishing an empty knowledge base. Route Handlers, the Copilot retriever and the admin
   dashboard use the `…OrEmpty` getters (`"degrade"` mode: log `[content:<kind>]`, return empty).
   `CONTENT_BUILD_MODE=allow-empty` exists for CI's placeholder project only — never in Vercel, production
   or `.env.local`; an unreadable value means `strict`.
@@ -451,7 +454,9 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   extend `aggregate.ts` if the dashboard should show it. `meta` ≤ 600 bytes serialized — the limit
   `lib/telemetry/schema.ts` enforces (the old "500" in this file was wrong, Audit-2 O7).
 - Who is tracked (R3/S01): `operator` and `manager` sessions only. An `admin` session sends nothing —
-  the client tracker no-ops and `/api/events` answers `204` without inserting. Every people/overview
+  the client tracker sends nothing until `SessionProvider` has named the role (events queued before wait in
+  memory, then go out for an operator/manager or are dropped for an admin), queues nothing afterwards, and
+  `/api/events` answers `204` without inserting. Every people/overview
   aggregate counts operators and managers; admin rows show "no telemetry", never zeros presented as idleness.
 - People analytics read telemetry only through the 0016/0021 SQL functions (`lib/admin/people-queries.ts`,
   `lib/dashboard/telemetry-window.ts`) — never raw `telemetry_events` rows in a page.

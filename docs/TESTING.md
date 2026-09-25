@@ -38,6 +38,14 @@ npm run typecheck && npm run lint && npm test && npm run build && npm run e2e
   and asserts the PostgREST filters (`id=eq.…&version=eq.…`).
 - `it.fails(...)` marks a known issue: it passes while the bug exists and turns red once it's fixed, which
   is the cue to change it to `it(...)`.
+- CI runs `npm test` with the whole job's env, `CONTENT_BUILD_MODE=allow-empty` included. A test whose
+  answer depends on an env variable stubs it itself (`vi.stubEnv`) — `content/safe.test.ts` pins `strict`
+  for its page-mode block, which failed under CI's env until the R3 release audit.
+- Structural guards (they read source files, since vitest runs in `node` with no DOM): `admin/nav.test.ts`
+  (the nav against the pages on disk), `auth/admin-gates.test.ts` (`requireAdminPage` in both admin layouts,
+  every `/dashboard` page and the people pages), `admin/confirm-dialog.test.ts` (the confirm dialog's focus
+  trap and Escape), `ui/design-tokens.test.ts` (chart tokens ≥ 3:1 on `surface`/`surface-alt` in both
+  themes, measured from `app/globals.css`; no inset focus ring in the colour of its own fill).
 
 ## End-to-end tests
 
@@ -67,8 +75,8 @@ telemetry, admin-only menu items), so the operator specs still run as an operato
 
 | Variable | Role | Unlocks |
 | --- | --- | --- |
-| `TEST_OPERATOR_COOKIE` | operator | `story.spec.ts`, `pins.spec.ts`, `changelog.spec.ts`, `locale.spec.ts`, and the operator blocks of `a11y.spec.ts` and `mobile.spec.ts`, and the operator block of `people.spec.ts` (kept out of the people pages) |
-| `TEST_SESSION_COOKIE` | admin (the variable's name predates the role) | the `admin session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`, `/admin/users?view=table`, the operator-app preview and the avatar menu's way back to `/admin`), `people.spec.ts` (the people directory and a person page; needs migration 0021 applied to that project) and `admin-bulk-reorder.spec.ts` |
+| `TEST_OPERATOR_COOKIE` | operator | `story.spec.ts`, `pins.spec.ts`, `changelog.spec.ts`, `locale.spec.ts`, and the operator blocks of `a11y.spec.ts` (axe on the operator routes and all three `/company/*` scenes, the keyboard walk, the onboarding day header's focus) and `mobile.spec.ts`, and the operator block of `people.spec.ts` (kept out of the people pages) |
+| `TEST_SESSION_COOKIE` | admin (the variable's name predates the role) | the `admin session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`, `/admin/users?view=table`, the operator-app preview and the avatar menu's way back to `/admin`), `people.spec.ts` (the people directory and a person page; needs migration 0021 applied to that project), `admin-bulk-reorder.spec.ts`, and the admin blocks of `a11y.spec.ts` (axe on `/admin`, `/admin/users`, the table view, a person page, `/dashboard`, `/dashboard/quality` in both themes; the admin keyboard walk) |
 | `TEST_MANAGER_COOKIE` | manager (a sales manager) | the `sales manager session` block of `auth-gate.spec.ts`: `/` renders, and `/admin/**` and `/dashboard/**` send them home; `people.spec.ts`: so do the people pages |
 
 1. `npm run build && npm run start`, open `http://localhost:3000`, sign in with an account of that role.
@@ -103,7 +111,12 @@ background. Those pairs are measured by hand in `docs/AUDIT.md` instead; re-meas
 `--status-*` token or a `/15`-style tint changes.
 
 The same file holds the keyboard walk: skip link → `<main>`, sidebar, Ctrl+K, Ctrl+J, and the mobile nav
-drawer, each asserted to trap focus while open and to return it to its trigger on Escape.
+drawer, each asserted to trap focus while open and to return it to its trigger on Escape. With the admin
+cookie, the `admin keyboard walk` block tabs into the AdminShell nav (one `aria-current` link, a visible
+ring), sorts a CompareTable column with Enter (`aria-sort` changes) and follows a row through its link, opens
+a person from a directory card, and opens and Escapes the access panel's confirm dialog (focus back on the
+switch). The role tabs' arrow keys are covered in `people.spec.ts`. "Visible focus" is asserted as a computed
+`box-shadow` (Tailwind's ring) or outline on `document.activeElement`.
 
 ### Mobile (`mobile.spec.ts`)
 

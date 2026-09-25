@@ -3,6 +3,12 @@
 Internal sales knowledge base for WaterTech operators (Uzbekistan). See [CLAUDE.md](CLAUDE.md) for the
 full architecture, folder map, and coding rules.
 
+Roles (role model v2): `admin` — the owner — runs the admin panel (`/admin` CMS + people analytics,
+`/dashboard` monitoring) and may preview the operator app; `manager` (sales manager) and `operator` use the
+operator app only and are the only roles telemetry records. Migrations 0020 (roles) and 0021 (people
+analytics) are applied by hand — order, Owner steps and rollbacks in [docs/MIGRATIONS.md](docs/MIGRATIONS.md);
+the auth model in [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Content pipeline
 
 Content (scripts, objections, FAQs, competitor battle-cards, package tiers, product catalog) is authored
@@ -16,18 +22,21 @@ lib/content/*.ts (TS arrays)
   --> Server Components / pages
 ```
 
-- The TS arrays remain the source of truth for content authored by developers. `npm run seed:content`
-  upserts every row (`onConflict: "id"`) — it never deletes rows, so content created later directly in
-  Supabase (a future admin UI) survives a re-run.
+- The TS arrays seed a **staging** project; production content is entered through the admin CMS
+  (`/admin`). `npm run seed:content` is **insert-only**: an id that already exists is skipped, so a row the
+  admin has edited — its `status` included — stays as saved. Only `--force` overwrites (a real upsert on
+  `id`); it never deletes. Run `--dry-run` first; the guard (`supabase/seed/guard.ts`) refuses anything but
+  `SEED_TARGET=staging` and any ref listed in `PROD_PROJECT_REFS` (CLAUDE.md §7).
 - `sort_order` is set from each array's position at seed time, so the seeded DB renders pages in the same
   order the static arrays did.
 - Every content table has `status` (`draft`/`published`), `version`, and a `content_versions` snapshot
-  taken on every update (trigger `snapshot_content_version`) — infrastructure for a future admin CMS.
+  taken on every update (trigger `snapshot_content_version`) — what the admin CMS's history and restore
+  (`/admin/versions/…`, `/admin/trash`) read.
 - Pages call the typed getters in `lib/content/loader.ts` (`getScripts()`, `getObjections()`, `getFaqs()`,
   `getCompetitors()`, `getPackageGroups()`, `getProducts()`, or `getContentBundle()` for all of the first
   five at once). Each getter is wrapped in `unstable_cache` tagged `"content"` plus its own
   `"content:<name>"` tag, `revalidate: 3600`.
-- After writing to a `content_*` table (from a Route Handler / Server Action / future admin editor), call
+- After writing to a `content_*` table (from a Route Handler / Server Action / the admin CMS), call
   `revalidateContent()` from `lib/content/revalidate.ts` to clear the cache — `/api/search-index`'s own
   cache is tagged `"content"` too, so one call clears both.
 - In development, `getContentBundle()` validates the fetched data against the zod schemas in
@@ -49,10 +58,10 @@ Supabase credentials for those two routes specifically.
 This fallback does **not** cover every page: other content pages (`/sales-process/scripts`, `/faq`,
 `/products`, `/sales-process/objections`, `/sales-process/battle-cards`, `/tools/calculator`,
 `/dashboard`, …) fetch content directly (not through `generateStaticParams`) and are prerendered at build
-time too — if Supabase is unreachable, those page builds fail. `.github/workflows/ci.yml` currently sets
-placeholder (non-functional) Supabase env vars, so **CI's `npm run build` step needs a real, reachable
-Supabase project's credentials as a secret** to succeed now that content lives in the database — a
-placeholder URL is no longer sufficient.
+time too — if Supabase is unreachable, those page builds fail (`lib/content/safe.ts`, "page" mode), which
+keeps the last good ISR page instead of publishing an empty knowledge base. `.github/workflows/ci.yml` builds
+against a placeholder project with `CONTENT_BUILD_MODE=allow-empty`, so its operator routes prerender empty;
+never set that variable in Vercel, production or `.env.local`.
 
 ## Publish gate & daily content scan
 

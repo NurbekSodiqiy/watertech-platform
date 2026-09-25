@@ -136,7 +136,7 @@ caught `admin.gate` for the dashboard's `QuickActionButton` while this was writt
 | Item | Finding |
 |---|---|
 | framer-motion features | `MotionProvider` uses `LazyMotion strict` with a dynamic `import("@/lib/motion/features")`; no `motion.*` anywhere, all `m.*`. The `domMax` chunk (~50 kB raw) is referenced by 0 HTML files. |
-| `components/story/*` | Scene code (`PipelineStory`, `PipelineChapter`, `geometry`) sits in one chunk referenced only by `/company/about` and `/company/mission-values`. `/company/onboarding` imports only `fittings.tsx` (1.5 kB of SVG glyphs). |
+| `components/story/*` | (S16; the scenes were replaced in R3/S05–S07 — see those sections) Scene code (`PipelineStory`, `PipelineChapter`, `geometry`) sits in one chunk referenced only by `/company/about` and `/company/mission-values`. `/company/onboarding` imports only `fittings.tsx` (1.5 kB of SVG glyphs). |
 | `lucide-react` | Only named per-icon imports (several multi-line); no namespace import, no `icons` map. |
 | `CommandPalette`, `CopilotPanel`, `ShortcutsHelp` | already `next/dynamic`, `ssr: false`. |
 | Certificate lightbox | Static import from a Server Component page; 4 kB parsed on a route at 143 kB. `ssr: false` is not allowed in a Server Component, so a client wrapper would be needed for ~1.5 kB gzip. Left. |
@@ -608,6 +608,31 @@ itself. Its work is on mount and resize only: one `ResizeObserver` on the route 
 four `useTransform`s over the samples (a binary search at most) and a spring; React never re-renders on scroll. A tick
 re-renders the four rows (no memo needed at that size) and springs the line's cap; the checkbox flips in the same
 frame.
+
+## R3 release audit (2026-09-25)
+
+Built with CI's placeholder env (`CONTENT_BUILD_MODE=allow-empty`), Next.js 14.2.35, Node 22.22; 113 pages generated.
+**Every operator route is at or under 180 kB** — 36 operator routes, largest `/sales-process/scripts` 170 kB, then
+`/products` 166, `/company/mission-values` 161, `/` 160, `/company/onboarding` 160, `/sales-process/battle-cards/[slug]`
+156; `/company/about` 150. Public: `/login` 200 kB (by design, see S14), `/offline` 109 kB. Shared by all: 89.5 kB.
+
+Admin panel (no budget; listed so the next change can compare):
+
+| Route | Page | First Load |
+|---|---:|---:|
+| `/admin` (overview) | 3.16 kB | 139 kB |
+| `/admin/users` (directory) | 14.4 kB | 164 kB |
+| `/admin/users/[email]` (person, dynamic) | 7.88 kB | **161 kB** (160 before this audit) |
+| `/admin/scripts/[id]` (largest editor) | 6.63 kB | 178 kB |
+| other `/admin/<table>/[id]` editors | 0.5–3.6 kB | 169 kB |
+| `/admin/<table>` lists | ~160 B | 146 kB |
+| `/admin/notifications` · `/admin/trash` · `/admin/versions/…` · `/admin/activity` | | 129 · 129 · 131 · 109 kB |
+| `/dashboard` · `/dashboard/content` · `/dashboard/copilot` · `/dashboard/quality` | | 135 · 141 · 135 · 135 kB |
+
+Against the same build before the audit's fixes, one row moved: `/admin/users/[email]` 160 → 161 kB, because
+`ConfirmDialog` now imports `hooks/useFocusTrap.ts` (well under 1 kB; on the other admin routes that render the dialog
+the change stays inside the table's rounding). The telemetry send gate (`lib/telemetry/client.ts`) and the `RouteDayCard` ring class change
+no row. No dependency added.
 
 ## Open items
 

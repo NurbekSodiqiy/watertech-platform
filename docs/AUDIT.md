@@ -2,7 +2,8 @@
 
 The release audit of roadmap Audit-2 (S01–S14), at commit `4d832e3`, 2026-09-23, Next.js 14.2.35, Node
 24.20. Every claim below was checked by running something or by reading the code path end to end; where
-a check could not run on this machine, the table says so and why. The S17 audit follows further down.
+a check could not run on this machine, the table says so and why. The S17 audit follows further down, and the
+**R3 release audit** (roles v2, people analytics, admin shell, company scenes) is the last section of this file.
 
 Severity, as in S17: **P0** breaks users or security · **P1** visible defect · **P2** rule drift or a
 defence-in-depth gap · **P3** nit.
@@ -410,3 +411,124 @@ with the written reason in `docs/PERF.md`.
 5. **Apply and verify migrations 0008 and 0010–0012, then run `rls-checks.sql` on staging.** Until they are
    applied, Copilot fails closed with 503, the changelog and contacts pages show empty states, the six
    `/tools/amocrm` pages 404 — and the RLS assertions this audit added have never actually been executed.
+
+# R3 release audit
+
+The release check of roadmap R3 (S01–S07: role model v2 / 0020, people analytics / 0021, the one admin shell and
+overview, the people directory and person page, the three `/company/*` scenes) before the owner uses the admin
+panel daily. Base commit `2c61b63`, 2026-09-25, Next.js 14.2.35, Node 22.22, CI's placeholder env
+(`.github/workflows/ci.yml`). Severity as above: **P0** breaks users or security · **P1** visible defect · **P2**
+rule drift or a defence-in-depth gap · **P3** nit.
+
+## R3.A Results
+
+| Check | Result | Measured |
+|---|---|---|
+| `npm run typecheck` | pass | 0 errors |
+| `npm run lint` | pass | 0 warnings |
+| `npm run check:i18n` | pass | no hard-coded strings; `uz.json` / `ru.json` 1 458 keys each, none one-sided; no key added |
+| `npm test` (with CI's env) | pass | 85 files, 1 327 tests. **Before this audit: 2 of 1 295 failed** (R3-F1) — CI's `npm test` step, and so its build and e2e steps, had been red on `master` since S05 (runs 22–26) |
+| `npm run build` | pass | 113 pages; 36 operator routes, largest `/sales-process/scripts` 170 kB — **every operator route ≤ 180 kB**; admin routes listed in PERF.md "R3 release audit" (largest `/admin/scripts/[id]` 178 kB, person page 161 kB) |
+| `npm run e2e` | pass, partial | **46 passed, 93 skipped, 0 failed.** Skipped, by the cookie each group needs: `TEST_OPERATOR_COOKIE` 55 (a11y 23, locale 10, mobile 8, story 8, sign-out 2, people 2, changelog 1, pins 1); `TEST_SESSION_COOKIE` (admin) 29 (a11y 15, people 7, auth-gate 5, admin-bulk-reorder 2); `TEST_MANAGER_COOKIE` 9 (auth-gate 6, people 3). This machine has no Google session. Chromium: the pinned Playwright 1.63 wants build 1243, the container has 1194 — run through a scratch config with `launchOptions.executablePath` (repo config unchanged) |
+| Role × route matrix (R3.C) | holds | at middleware (unit, `middleware-roles.test.ts`, 48 cases), page gate (read + `admin-gates.test.ts`), Server Action (read) and database (read) |
+| 0021 functions | hold | all 7 public functions `security invoker`, `set search_path = ''`, first statement `if not (select private.is_admin()) … errcode 'WT403'`; the 8 private helpers `security invoker` + `search_path = ''`; EXECUTE revoked from `public, anon, service_role`, granted to `authenticated` only (`0021_people_analytics.sql` §5) |
+| Admin rows via the API (WT462) | holds | `private.allowed_users_guard()` (0020): with `request.jwt.claims` set (a session or the service role), an insert of an admin row, a delete of one, and an update that touches the role / `is_active` / email of an admin row (or promotes to admin) raise `WT462`; `full_name` stays editable; `ASSIGNABLE_ROLES` keeps the UI to operator/manager |
+| Admin telemetry | holds (after R3-F5) | `/api/events` returns `204` for an admin before the rate limiter, the body and the insert (`app/api/events/route.ts`); the client sends nothing before the role is known and nothing for an admin after (`lib/telemetry/client.ts`, 32 unit cases) |
+| Person page vs a non-allow-listed email | holds | `parsePersonParam` (zod `userEmailSchema`) → `getPersonRecord` (exact match on `allowed_users` under the admin's RLS session) → `notFound()`; no widget is rendered without a row, and the RPCs answer a zero row or an empty set for an unknown email |
+| `lib/supabase/admin.ts` imports | hold | none added in R3 (`git diff 82765be..HEAD -G supabase/admin` → one unit test only); the 9 existing importers are two Route Handlers (`/api/events`, `/api/copilot`), one Server Action module (`lib/admin/actions/users.ts`, the Auth ban), and server-only modules predating R3 (the publish gate, `stale-scan`, `retention`, the content loaders, `content-health.ts`, `durable-rate-limit.ts`), each with its reason comment |
+| Dead code / naming sweep (R3.E) | clean | no live code uses a retired name; the remaining mentions are history, a guard test or an applied migration |
+| Chart token contrast | pass | R3.F, and pinned by `tests/unit/ui/design-tokens.test.ts` |
+
+**Not run here.** No SQL ran in this audit: there is no Postgres, and the S01/S02 PGlite verification (MIGRATIONS.md)
+covers 0020/0021 — the functions and the guard were re-read end to end instead. The staging runs of
+`people-checks.sql`, `rls-checks.sql` and `dashboard-parity.sql` remain the release gate (MIGRATIONS.md, Owner
+steps). Nothing signed in ran (above); the new admin axe and keyboard specs are written and skip without the cookie.
+
+## R3.B Findings
+
+### Fixed
+
+| # | Sev | Where | Finding | Fix | Test |
+|---|---|---|---|---|---|
+| R3-F1 | P1 | [tests/unit/content/safe.test.ts](../tests/unit/content/safe.test.ts) | The page-mode cases read the ambient `CONTENT_BUILD_MODE`; CI exports `allow-empty` for the whole job, so both failed there (`expected [] to be an instance of ContentUnavailableError`, CI run 26, `master` @ `2c61b63`). CI's `npm test` step had been red since S05, which also meant its build and e2e steps never ran for S05–S07. | The page-mode block pins `vi.stubEnv("CONTENT_BUILD_MODE", "strict")`. | The file passes with and without `CONTENT_BUILD_MODE=allow-empty` (15/15 each); the full suite under CI's env: 1 327/1 327. |
+| R3-F2 | P1 | [components/onboarding/RouteDayCard.tsx](../components/onboarding/RouteDayCard.tsx) | The day header — a `bg-accent` button — drew its focus ring as an inset `ring-primary`, which is the same `--accent` token: **no visible focus** on `/company/onboarding`'s day toggles for keyboard users, in both themes (WCAG 2.4.7). The card's `overflow-hidden` would clip an outset ring too. | `focus-visible:ring-on-accent` (the token that reads on an accent fill in both themes); rule added to CLAUDE.md §6. | `tests/unit/ui/design-tokens.test.ts` scans `components/` and `app/` for an inset primary/accent ring on a `bg-accent`/`bg-primary` literal — red on the old file; e2e "company scenes — keyboard" asserts a computed ring on focus. |
+| R3-F3 | P2 | [components/admin/ConfirmDialog.tsx](../components/admin/ConfirmDialog.tsx) | `role="alertdialog"` + `aria-modal="true"`, but focus stayed on the trigger, Tab walked the page behind the backdrop, Escape did nothing and nothing restored focus. It guards the person page's role and status changes and every CMS delete. | `useFocusTrap` (the hook `<Dialog>` uses): focus moves to Cancel, Tab cycles inside, focus returns to the trigger; Escape cancels except while the write is pending. | `tests/unit/admin/confirm-dialog.test.ts` (wiring; vitest has no DOM here); e2e "admin keyboard walk" opens it from the access panel's switch, Escapes it and expects focus back on the switch. |
+| R3-F4 | P2 | [app/[locale]/dashboard/layout.tsx](../app/%5Blocale%5D/dashboard/layout.tsx) | Unlike the `/admin` layout, the `/dashboard` layout had no gate of its own — only its pages did. With `dashboard/loading.tsx` the layout streams first, so were middleware bypassed, a non-admin would get a `200` with the admin shell (nav labels, the bell) before the page's redirect. No data: the bell's count is RLS-scoped (0 for a non-admin). | `await requireAdminPage(locale)` in the layout, before anything renders; the page calls stay. | `tests/unit/auth/admin-gates.test.ts`: both admin layouts gate before `getMessages()`, every `/dashboard` page and both people pages gate. |
+| R3-F5 | P3 | [lib/telemetry/client.ts](../lib/telemetry/client.ts) | Until `SessionProvider` (a lazy chunk) had named the role, the tracker could send: an admin's page that fired 25 events, sat 20 s, or unloaded early posted a batch (the beacon). `/api/events` dropped it (`204`), so nothing was recorded — but CLAUDE.md §9 says an admin sends nothing. | No flush and no beacon until the role is known; queued events wait in memory, go out for an operator/manager, are dropped for an admin. | 2 cases in `tests/unit/telemetry/client.test.ts`, both red before the fix (flush interval + batch size + `pagehide` + `visibilitychange` send nothing; an operator's pre-role event is sent once named). |
+| R3-F6 | P3 | docs, tests | Text vs code: README said the seed upserts every row and called the admin CMS "future", and that CI needs a real Supabase project; MIGRATIONS said nothing calls 0021 yet; SECURITY / CLAUDE.md §7 named only the admin layout as a page gate; CLAUDE.md §7/§8 and ADDING_A_MODULE.md still said "manager" for the admin; §2 listed `home/` twice. The middleware matrix test lacked `/company/about` and a person path. | Edited in place (docs list in the change summary); 6 matrix cases added. | `middleware-roles.test.ts` 48/48. |
+
+### Open
+
+| # | Sev | Where | Finding | Proposed fix |
+|---|---|---|---|---|
+| R3-O1 | P3 | `app/globals.css` (light) | `--chart-green` #1F9D55 on its own `--chart-track` #E6EEF6 is **2.98:1** — the bar's end against the track, just under WCAG 1.4.11's 3:1. Against `surface` / `surface-alt` it passes (R3.F), and every bar has its value printed next to it, so no number depends on the fill. | A design-system task: light `--chart-green` → **#1D9651** (3.24:1 on the track, 3.65 on `surface-alt`, 3.79 on `surface`), and extend `design-tokens.test.ts` to the track pair. |
+| R3-O2 | P3 | `app/[locale]/(admin)/admin/users/[email]/page.tsx` | The seven RPCs start in parallel with the allow-list read (one `Promise.all`), so an admin who types a non-allow-listed email still costs seven function calls (each a zero row) before the 404. Admin-only, nothing rendered; the page's comment chose latency. | Keep, or await `getPersonRecord` first and start the widgets only for a row (+1 round trip per person view). |
+| R3-O3 | P3 | `components/admin/ConfirmDialog.tsx`, `components/ui/Dialog.tsx` | Two modal implementations remain: `ConfirmDialog` now shares the focus hook but not `<Dialog>` (it needs `role="alertdialog"`). | A `role` prop on `<Dialog>` (`"dialog"` default, `"alertdialog"`), then `ConfirmDialog` renders through it. |
+| R3-O4 | P3 | `tests/e2e/*` | The admin and sales-manager specs have never run on this machine (no cookies). | Before daily use, the owner runs `npm run e2e` with `TEST_SESSION_COOKIE`, `TEST_OPERATOR_COOKIE` and `TEST_MANAGER_COOKIE` (TESTING.md). |
+
+Audit-2's open items O1–O9 are unchanged (O9: `lib/admin/actions/reorder.ts` still has `"use server"` twice).
+
+## R3.C Role × route matrix
+
+| Route | admin | manager (sales) | operator | Enforced by |
+|---|---|---|---|---|
+| `/` | preview (no telemetry) | yes | yes | middleware: not an admin area |
+| `/company/about` | preview | yes | yes | same |
+| `/admin` | yes | → `/` | → `/` | middleware `isAdminArea()`→`homeForRole()`; `(admin)/admin/layout.tsx` `requireAdminPage` |
+| `/admin/users` | yes | → `/` | → `/` | middleware; admin layout; the page's own `requireAdminPage`; `addUser`/`setRole`/`setActive` → `requireAdminSession` (`unauthorized`) and the allow-list guard (WT403) |
+| `/admin/users/<email>` | yes; non-allow-listed / malformed email → 404; an admin row → no numbers, locked panel | → `/` | → `/` | middleware; admin layout; page; the 0021 functions (WT403) |
+| `/dashboard` | yes | → `/` | → `/` | middleware; `dashboard/layout.tsx` (R3-F4) and the page; `publishFromDashboard` & co. → `requireAdminSession`; 0016 functions (WT403) |
+| `/dashboard/quality` | yes | → `/` | → `/` | middleware; layout; page; 0016 functions |
+
+No session → `/login`; a token without a known role → `/login?error=not_allowed` (all seven rows). The `/ru` forms
+land on `/ru`. Every Server Action file (`"use server"`, 15) calls `requireAdminSession` first, directly or through
+the injected `deps.requireSession` (`lib/admin/actions/deps.ts`).
+
+## R3.D Accessibility
+
+Keyboard, read end to end and (where a session is needed) written as e2e: the AdminShell nav — links with
+`aria-current`, a `focus-visible` ring, a phone strip that scrolls the current item into view; role tabs — a real
+`tablist`, roving `tabIndex`, arrows / Home / End (people.spec); CompareTable — sort buttons with `aria-sort`, each
+row reachable through its row-header link; PeopleDirectory cards — links with a ring; the access panel — role buttons
+with `aria-pressed`, a `role="switch"`, a confirm dialog that now traps focus (R3-F3); the three scenes — decorative
+SVG `aria-hidden`, text in DOM order, the day header now with a visible ring (R3-F2), the day checkbox a native input
+with a `peer-focus-visible` ring. New e2e: axe on `/admin`, `/admin/users`, the table view, a person page, `/dashboard`,
+`/dashboard/quality` in both themes, `/company/mission-values` added to the operator scan, and the admin keyboard walk.
+
+## R3.E Dead code and naming sweep
+
+`git grep` for `requireManagerSession`, `isManagerArea`, `MANAGER_AREAS`, `MANAGER_NAV`, `ManagerAreaSwitch`,
+`ManagerMonitoringHeader`, `DashboardTabs`, `last_manager`, `PipelineStory`, `FittingGlyph`: nothing in live code.
+Kept on purpose: `tests/unit/admin/nav.test.ts` (asserts the three retired files stay deleted), CLAUDE.md §7/§15 and
+PERF.md history (what was renamed or removed, when), Audit-2 §C of this file (history), and
+`supabase/migrations/0017_…sql` line 23 (`last_manager` in a comment of an applied migration — never edited).
+`is_manager()` after 0019: only inside 0020 (its alias definition, preflight and grants), a comment in 0021 and
+`lib/admin/actions/user-access.ts` explaining it, and the check files that assert the alias still answers for the admin.
+
+## R3.F Measured contrast (chart tokens)
+
+WCAG relative luminance from the channels in `app/globals.css` (≥ 3:1 required for a bar fill, 1.4.11):
+
+| Pair | Light | Dark |
+|---|---:|---:|
+| `--chart-green` on `--surface` | 3.49 | 8.54 |
+| `--chart-green` on `--surface-alt` | 3.36 | 7.76 |
+| `--chart-blue` on `--surface` | 4.75 | 6.17 |
+| `--chart-blue` on `--surface-alt` | 4.58 | 5.60 |
+| `--chart-green` on `--chart-track` | **2.98** (R3-O1) | 7.25 |
+| `--chart-blue` on `--chart-track` | 4.06 | 5.24 |
+| `--accent` (focus ring) on `--surface` / `--surface-alt` | 7.06 / 6.80 | 6.03 / 5.47 |
+
+## R3.G Residual risks
+
+1. **Signed-in paths are unverified by automation here.** 93 e2e cases (all admin / manager / operator flows, the new
+   admin axe and keyboard specs) need the owner's cookies.
+2. **SQL is verified on PGlite, not Postgres + PostgREST.** 0020/0021 were exercised there in S01/S02; this audit only
+   re-read them. Staging runs of `people-checks.sql`, `rls-checks.sql` and `dashboard-parity.sql` are the gate.
+3. **A role change reaches a session at its next token refresh (≤ 1 h).** A demoted or deactivated admin keeps a
+   valid `admin` claim until then: the allow-list guard (WT403) stops their writes to `allowed_users`, but content
+   writes, reads through `is_admin()` and the admin pages trust the claim (SECURITY.md §4).
+4. **Middleware and pages trust the JWT's role claim**, which depends on the Custom Access Token hook being enabled
+   in the Supabase dashboard (SECURITY.md §3) — no query can see that setting.
+5. **Telemetry can be lost, never misfiled:** events queued before the role is known are dropped if the page
+   unloads first (R3-F5 trades that for "an admin sends nothing").

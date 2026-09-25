@@ -143,10 +143,10 @@ that is staging or the belief is stale. Tick these off as they are applied:
       that knows the three roles in one sitting, then every admin signs out and back in**: either half alone locks
       the owner out of the admin panel until the other lands (operators are unaffected). Owner steps and rollback:
       [After applying 0020](#after-applying-0020--owner-steps).
-- [ ] **0021** people analytics — requires 0016 and 0020. Nothing calls its functions until the people directory
-      and person page land (R3/S03–S04), so an unapplied 0021 breaks nothing today; once they land, their widgets
-      show error states until it is applied. Then run `supabase/tests/people-checks.sql` on staging. Owner steps:
-      [After applying 0021](#after-applying-0021--owner-steps).
+- [ ] **0021** people analytics — requires 0016 and 0020. The R3 release calls its functions from `/admin` (overview),
+      `/admin/users` and `/admin/users/<email>`: until it is applied those widgets show their error state (each fails
+      alone, CLAUDE.md §15) and `/dashboard`'s activity tab keeps 0016's own copy. Apply it with the R3 release, then run
+      `supabase/tests/people-checks.sql` on staging. Owner steps: [After applying 0021](#after-applying-0021--owner-steps).
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -287,8 +287,9 @@ takes its "checklist completed" count from the new shared helper — the numbers
    a claim-less token, WT400 for bad arguments, the grants), then `dashboard-parity.sql` and `rls-checks.sql` again —
    the first covers the re-created `dashboard_operator_activity`, the second now sweeps the six new functions too.
    See [TESTING.md](TESTING.md#people-analytics-checks-staging-only-after-0021).
-4. **Verify** after the S03/S04 release: `/admin/users` lists every allow-list row, admins with "no telemetry";
-   `/dashboard` shows the same numbers as before.
+4. **Verify** (the R3 release is the one that calls these functions): `/admin` shows the overview and its compare
+   table, `/admin/users` lists every allow-list row with admins as "no telemetry", a person's page
+   (`/admin/users/<email>`) shows their numbers, and `/dashboard` shows the same numbers as before.
 5. **No type regeneration strictly needed**; the six functions are hand-written in `lib/supabase/database.types.ts` —
    compare with `npm run gen:types` when convenient.
 

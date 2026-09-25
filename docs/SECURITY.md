@@ -24,13 +24,15 @@ not an email in a request body, not a role in a payload.
 | `operator` | an operator | yes | **no** → sent to `/` | recorded |
 
 The admin panel refuses an operator and a sales manager at **every layer on its own**: `middleware.ts`
-(`isAdminArea()` → `homeForRole()`), the page gate (`requireAdminPage()` in the admin layout and in every
-`/dashboard` page), the Server Action guard (`requireAdminSession()`), and the database (RLS through
+(`isAdminArea()` → `homeForRole()`), the page gate (`requireAdminPage()` in both admin layouts — `/admin` and
+`/dashboard`, so the shell never renders for them — and again in every `/dashboard` page and on the people pages),
+the Server Action guard (`requireAdminSession()`), and the database (RLS through
 `private.is_admin()`, and a `WT403` from every admin function). **Admin rows are SQL-editor-only**: the
 allow-list guard refuses any write that carries a JWT and creates, promotes, demotes, deactivates,
 reactivates, deletes or re-addresses an admin row (`WT462`), so `/admin/users` assigns `operator` and
-`manager` only. An admin's session records no telemetry — the client tracker does nothing and
-`/api/events` answers `204` without inserting.
+`manager` only. An admin's session records no telemetry — the client tracker sends nothing until the role is
+known and nothing for an admin after (`lib/telemetry/client.ts`), and `/api/events` answers `204` without
+inserting.
 
 ## 2. Sign-in, end to end
 

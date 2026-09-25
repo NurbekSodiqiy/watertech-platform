@@ -84,7 +84,7 @@ for you is the database, the content mappers, the pages, and the entry itself.
         // referenceCheck  — ids this row points at, with no DB-level foreign key
         // referencedBy    — rows that point at THIS one, for the delete guard: mode "block"
         //                   (the delete is refused and the dialog offers "move to draft") or
-        //                   mode "cascade" (the database deletes them too, so the manager
+        //                   mode "cascade" (the database deletes them too, so the admin
         //                   confirms once, by name and count)
       }),
       ```
@@ -134,7 +134,7 @@ for you is the database, the content mappers, the pages, and the entry itself.
 - [ ] `lib/content/loader.ts` — the getter comes in two, over one internal `readGuides(locale, mode)`:
       `getGuides()` for pages (a failed read throws, so a broken build never ships an empty page and ISR
       keeps the last good one) and `getGuidesOrEmpty()` for Route Handlers, the Copilot retriever and
-      request-time manager renders (a failed read degrades to `[]`). Pick the one that matches what the
+      request-time admin renders (a failed read degrades to `[]`). Pick the one that matches what the
       caller renders — see `ContentReadMode` in `lib/content/safe.ts` and docs/TESTING.md.
 - [ ] Any client widget on the page that can crash independently → wrap at the usage site in
       `<WidgetBoundary>` (Server Component) or `<ErrorBoundary fallback={(reset) => …}>` (Client Component).
