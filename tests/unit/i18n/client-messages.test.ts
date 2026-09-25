@@ -16,13 +16,13 @@ type Area = "operator" | "admin" | "dashboard";
 const ROOT = path.resolve(__dirname, "../../..");
 const SOURCE_DIRS = ["components", "hooks", "lib", "app"];
 
-/** Files whose path does not say which provider mounts them. ManagerMonitoringHeader is
- * used by dashboard/layout.tsx only; useActionError is the admin CMS's error copy, shared
- * with the dashboard's QuickActionButton — no operator page mounts either. */
-const AREA_BY_FILE = new Map<string, Area>([
-  ["components/ManagerMonitoringHeader.tsx", "dashboard"],
-  ["hooks/useActionError.ts", "admin"],
-]);
+/** Files whose path does not say which provider mounts them. useActionError is the admin
+ * CMS's error copy, shared with the dashboard's QuickActionButton — no operator page mounts it. */
+const AREA_BY_FILE = new Map<string, Area>([["hooks/useActionError.ts", "admin"]]);
+
+/** Client files that other providers mount too, on top of their own area: AdminShell is the
+ * shell of both the admin and the dashboard layout, so both lists must cover what it reads. */
+const ALSO_MOUNTED_IN = new Map<string, Area[]>([["components/admin/AdminShell.tsx", ["dashboard"]]]);
 
 function listSources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -70,7 +70,9 @@ const IMPORT_RE = /(?:import|export)\s[^;]*?from\s+["']([^"']+)["']|import\(\s*[
 function clientReachable(area: Area): Set<string> {
   const seen = new Set<string>();
   const queue = [...sources.keys()].filter(
-    (file) => areaOf(file) === area && isClientFile(sources.get(file) ?? ""),
+    (file) =>
+      (areaOf(file) === area || (ALSO_MOUNTED_IN.get(file) ?? []).includes(area)) &&
+      isClientFile(sources.get(file) ?? ""),
   );
   for (let file = queue.pop(); file !== undefined; file = queue.pop()) {
     if (seen.has(file)) continue;

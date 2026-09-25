@@ -76,13 +76,6 @@
     }
   },
   "chrome": {
-    "managerNav": {
-      "label": "Rahbariyat bo'limlari",
-      "areas": {
-        "dashboard": "Monitoring",
-        "admin": "Kontent"
-      }
-    },
     "appShell": {
       "mobileNavTitle": "Navigatsiya",
       "closeMobileNav": "Navigatsiyani yopish",
@@ -492,21 +485,29 @@
       "lastUpdate": "Oxirgi yangilanish",
       "never": "Boshlanmagan"
     },
-    "title": "Rahbariyat monitoring",
-    "description": "Operatorlar faolligi, kontent holati va sifat ko'rsatkichlari — bir joyda.",
+    "headings": {
+      "activity": {
+        "title": "Faollik tafsilotlari",
+        "description": "Har bir operator faolligi, soatlar bo'yicha reja va natijasiz qidiruvlar."
+      },
+      "content": {
+        "title": "Kontent sog'ligi",
+        "description": "Qoralamalar, eskirgan yozuvlar va rus tilidagi tarjima bo'shliqlari."
+      },
+      "quality": {
+        "title": "Sifat",
+        "description": "Foydasiz deb belgilangan javoblar, natijasiz qidiruvlar va onboarding jarayoni."
+      },
+      "copilot": {
+        "title": "Copilot",
+        "description": "Copilot savollari, javob tezligi va javobsiz qolgan savollar."
+      }
+    },
     "metadata": {
-      "content": "Rahbariyat monitoring — Kontent",
-      "quality": "Rahbariyat monitoring — Sifat",
-      "copilot": "Rahbariyat monitoring — Copilot"
-    },
-    "tabs": {
-      "activity": "Faollik",
-      "content": "Kontent",
-      "quality": "Sifat",
-      "copilot": "Copilot"
-    },
-    "header": {
-      "signOut": "Chiqish"
+      "activity": "Admin panel — Faollik tafsilotlari",
+      "content": "Admin panel — Kontent sog'ligi",
+      "quality": "Admin panel — Sifat",
+      "copilot": "Admin panel — Copilot"
     },
     "duration": {
       "minutes": "{minutes} daq",
@@ -630,7 +631,6 @@
     },
     "admin": {
       "contacts": {
-        "nav": "Kontaktlar",
         "title": "Kontaktlar",
         "description": "Operatorlar «Ichki kontaktlar» sahifasida ko'radigan odamlar. Telefon +998 formatida yoki ichki raqam bo'lishi kerak.",
         "columns": {
@@ -658,7 +658,6 @@
         }
       },
       "sops": {
-        "nav": "amoCRM reglamentlari",
         "title": "amoCRM reglamentlari",
         "description": "«amoCRM» bo'limidagi qisqa standart tartib-qoidalar. Har bir reglament — tartiblangan qadamlar ro'yxati.",
         "columns": {
@@ -699,7 +698,6 @@
         }
       },
       "changelog": {
-        "nav": "O'zgarishlar",
         "title": "O'zgarishlar tarixi",
         "description": "Operatorlarga ko'rsatiladigan yangiliklar. Har bir yozuvni nechta operator o'qiganini ko'rasiz.",
         "columns": {
@@ -728,7 +726,6 @@
         }
       },
       "activity": {
-        "nav": "Faoliyat",
         "title": "Faoliyat jurnali",
         "description": "Kontent tahrirlari va o'chirishlar, nashr tekshiruvlari va foydalanuvchi ruxsatlari o'zgarishlari — bitta ro'yxatda.",
         "filters": {
@@ -786,7 +783,6 @@
         "truncated": "Eng chuqur ko'rish mumkin bo'lgan sahifaga yetildi. Eskiroq yozuvlarni ko'rish uchun sana filtrini ishlating."
       },
       "trash": {
-        "nav": "Savat",
         "title": "Savat — o'chirilgan yozuvlar",
         "description": "O'chirilgan yozuvlar tarixi. Tiklangan yozuv qoralama sifatida qaytadi — nashr qilishdan oldin tekshiring.",
         "columns": {
@@ -804,7 +800,6 @@
         "page": "{page}-sahifa"
       },
       "users": {
-        "nav": "Foydalanuvchilar",
         "title": "Foydalanuvchilar va kirish huquqi",
         "description": "Kim tizimga kira oladi va qaysi rolda. Har bir o'zgarish kirish jurnaliga yoziladi.",
         "activityUnavailable": "Oxirgi faollikni hozir yuklab bo'lmadi — qolgan ma'lumotlar to'g'ri.",
@@ -872,21 +867,100 @@
         "statusPublished": "Nashr etilgan"
       },
       "overview": {
-        "nav": "Umumiy",
-        "title": "Umumiy",
-        "description": "Har bir bo'lim bo'yicha yozuvlar soni va qoralamalar holati.",
+        "title": "Umumiy ko'rinish",
+        "description": "Operator va menejerlar faolligi, kontentdan foydalanish va kontent holati — bir sahifada.",
+        "updatedAt": "Yangilandi {time}",
+        "refresh": "Yangilash",
+        "percent": "{value}%",
         "entries": "{count} ta yozuv",
-        "drafts": "{count} qoralama"
+        "drafts": "{count} qoralama",
+        "kpi": {
+          "activePeople": "Faol xodimlar",
+          "activePeopleCaption": "{total} xodimdan {active} tasi",
+          "activeTime": "Umumiy faol vaqt",
+          "views": "Ko'rilgan materiallar",
+          "copies": "Nusxalashlar",
+          "onboarding": "O'rtacha onboarding",
+          "onboardingCaption": "Davr ichida belgilangan bandlar bo'yicha",
+          "perActive": "Faol xodimga o'rtacha {value}",
+          "noActive": "Davrda faol xodim yo'q"
+        },
+        "compare": {
+          "title": "Xodimlarni solishtirish",
+          "description": "Operator va menejerlar tanlangan davr bo'yicha. Qatorni bosing — xodim sahifasi ochiladi.",
+          "columns": {
+            "person": "Xodim",
+            "activeTime": "Faol vaqt",
+            "activeDays": "Faol kunlar",
+            "views": "Ko'rishlar",
+            "copies": "Nusxalar",
+            "searches": "Qidiruv (topilmadi)",
+            "onboarding": "Onboarding",
+            "lastSeen": "Oxirgi faollik"
+          },
+          "searchesValue": "{searches} ({zero})",
+          "inactive": "Faol emas",
+          "never": "Hali yo'q"
+        },
+        "activeTimeChart": {
+          "title": "Faol vaqt — xodimlar bo'yicha",
+          "description": "Sahifalarda o'tkazilgan vaqt, bo'sh turish hisobga olinmagan.",
+          "sublabel": "{days} kun faol"
+        },
+        "usageChart": {
+          "title": "Kontentdan foydalanish — xodimlar bo'yicha",
+          "description": "Ko'rishlar va nusxalar yig'indisi.",
+          "sublabel": "{views} ko'rish · {copies} nusxa"
+        },
+        "topContent": {
+          "title": "Eng ko'p ishlatilgan materiallar",
+          "description": "Operator va menejerlar eng ko'p ochgan va nusxalagan kontent.",
+          "columns": {
+            "rank": "#",
+            "material": "Material",
+            "type": "Turi",
+            "views": "Ko'rishlar",
+            "copies": "Nusxalar",
+            "people": "Xodimlar"
+          },
+          "viewTypes": {
+            "script_select": "Skript",
+            "stage_view": "Skript bosqichi",
+            "objection_view": "E'tiroz",
+            "faq_view": "FAQ",
+            "competitor_view": "Raqobatchi",
+            "package_view": "Paket"
+          }
+        },
+        "daily": {
+          "title": "Kunlik faollik — har bir xodim",
+          "description": "Har kuni faol bo'lgan daqiqalar.",
+          "seriesLabel": "{name} — kunlik faol daqiqalar",
+          "pointTitle": "{date}: {minutes} daq"
+        },
+        "contentStatus": {
+          "title": "Kontent holati",
+          "description": "Bo'limlar bo'yicha yozuvlar va nashr kutayotgan qoralamalar."
+        },
+        "empty": {
+          "noPeople": {
+            "title": "Hali operator yoki menejer yo'q",
+            "reason": "Ularni Xodimlar sahifasida ruxsat ro'yxatiga qo'shing — shu yerda paydo bo'lishadi.",
+            "cta": "Xodimlarga o'tish"
+          },
+          "noEvents": {
+            "title": "Tanlangan davrda faollik yo'q",
+            "reason": "Boshqa davrni tanlang yoki xodimlar ish boshlaganidan keyin qayting."
+          }
+        }
       },
       "scripts": {
-        "nav": "Skriptlar",
         "title": "Skriptlar",
         "description": "Savdo skriptlari, ularning bosqichlari va repliklari.",
         "newTitle": "Yangi skript",
         "editTitle": "Skriptni tahrirlash"
       },
       "objections": {
-        "nav": "E'tirozlar",
         "title": "E'tirozlar",
         "description": "Mijoz e'tirozlari va ularga javoblar.",
         "newTitle": "Yangi e'tiroz",
@@ -904,7 +978,6 @@
         }
       },
       "faq": {
-        "nav": "FAQ",
         "title": "FAQ",
         "description": "Tez-tez so'raladigan savollar ro'yxati.",
         "columns": {
@@ -921,7 +994,6 @@
         }
       },
       "competitors": {
-        "nav": "Raqobatchilar",
         "title": "Raqobatchilar",
         "description": "Raqobatchi kompaniyalar bo'yicha taqqoslash kartalari.",
         "columns": {
@@ -950,7 +1022,6 @@
         }
       },
       "packages": {
-        "nav": "Paketlar",
         "title": "Paketlar",
         "description": "Xarid paketlari — har biri bir guruhga tegishli.",
         "manageGroups": "Guruhlarni boshqarish",
@@ -989,7 +1060,6 @@
         }
       },
       "products": {
-        "nav": "Mahsulotlar",
         "title": "Mahsulotlar",
         "description": "Mahsulot katalogi — rasmlar mahsulot sahifasida yuklanadi.",
         "columns": {
@@ -1665,9 +1735,46 @@
       "imageTooLarge": "Rasm hajmi 2 MB dan oshmasligi kerak"
     },
     "shell": {
-      "title": "Kontent boshqaruvi",
+      "title": "Admin panel",
       "signOut": "Chiqish",
-      "sections": "Kontent bo'limlari"
+      "sections": "Admin panel bo'limlari",
+      "operatorView": "Operator ko'rinishi",
+      "signedInAs": "{email} sifatida kirgansiz"
+    },
+    "nav": {
+      "groups": {
+        "monitoring": "Monitoring",
+        "content": "Kontent",
+        "system": "Tizim"
+      },
+      "items": {
+        "overview": "Umumiy ko'rinish",
+        "people": "Xodimlar",
+        "activityDetails": "Faollik tafsilotlari",
+        "contentHealth": "Kontent sog'ligi",
+        "quality": "Sifat",
+        "copilot": "Copilot",
+        "scripts": "Skriptlar",
+        "objections": "E'tirozlar",
+        "faq": "FAQ",
+        "competitors": "Raqobatchilar",
+        "packages": "Paketlar",
+        "products": "Mahsulotlar",
+        "changelog": "O'zgarishlar",
+        "contacts": "Kontaktlar",
+        "sops": "amoCRM reglamentlari",
+        "history": "O'zgarishlar tarixi",
+        "notifications": "Bildirishnomalar",
+        "trash": "Savat"
+      }
+    },
+    "charts": {
+      "delta": {
+        "vsPrevious": "oldingi davrga nisbatan",
+        "none": "Oldingi davr bilan solishtirib bo'lmaydi",
+        "percent": "{value}%",
+        "points": "{value} f.p."
+      }
     },
     "table": {
       "add": "+ Qo'shish",

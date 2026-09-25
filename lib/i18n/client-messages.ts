@@ -39,11 +39,14 @@ export const ROOT_CLIENT_NAMESPACES = [
 /** Added on top of the root list by app/[locale]/(admin)/admin/layout.tsx. */
 export const ADMIN_CLIENT_NAMESPACES = ["admin", "pages.admin"] as const;
 
-/** Added on top of the root list by app/[locale]/dashboard/layout.tsx. `admin.gate` is for
+/** Added on top of the root list by app/[locale]/dashboard/layout.tsx. `admin.shell` and
+ * `admin.nav` are for AdminShell, which both admin layouts mount; `admin.gate` is for
  * GateReportDialog and `admin.errors` / `admin.validation` for useActionError, which the
  * dashboard's QuickActionButton shares with the admin editors. */
 export const DASHBOARD_CLIENT_NAMESPACES = [
   "dashboard",
+  "admin.shell",
+  "admin.nav",
   "admin.gate",
   "admin.errors",
   "admin.validation",

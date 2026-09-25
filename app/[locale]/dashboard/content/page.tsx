@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { requireAdminPage } from "@/lib/auth/server-session";
+import { PageHeader } from "@/components/PageHeader";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -27,6 +28,7 @@ export default async function DashboardContentPage({
   unstable_setRequestLocale(locale);
 
   await requireAdminPage(locale);
+  const tHeading = await getTranslations("dashboard.headings");
 
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Kontent render");
 
@@ -37,6 +39,8 @@ export default async function DashboardContentPage({
 
   return (
     <div className="space-y-6">
+      <PageHeader path={BASE_PATH} title={tHeading("content.title")} description={tHeading("content.description")} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <RangePicker range={range} basePath={BASE_PATH} />
         <OperatorFilter range={range} basePath={BASE_PATH} />

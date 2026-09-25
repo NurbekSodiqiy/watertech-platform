@@ -23,6 +23,10 @@
   --status-warning: 217 164 65; /* #D9A441 */
   --status-outdated: 201 105 91; /* #C9695B */
   --on-accent: 255 255 255; /* #FFFFFF */
+  /* Admin chart bar fills only (R3/S03, CLAUDE.md §6) — never text, never operator pages. */
+  --chart-green: 31 157 85; /* #1F9D55 */
+  --chart-blue: 47 111 219; /* #2F6FDB */
+  --chart-track: 230 238 246; /* #E6EEF6 */
   --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
@@ -40,6 +44,9 @@
   --status-warning: 230 189 106; /* #E6BD6A */
   --status-outdated: 224 135 118; /* #E08776 */
   --on-accent: 18 28 48; /* #121C30 */
+  --chart-green: 74 222 128; /* #4ADE80 */
+  --chart-blue: 110 168 255; /* #6EA8FF */
+  --chart-track: 36 51 79; /* #24334F */
   --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 

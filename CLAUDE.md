@@ -163,7 +163,12 @@ components/  (flat today)   AppShell  Sidebar  TopBar  PageTransition  CommandPa
                             OnboardingChecklist  DailyTimeline  HomeGreeting  MiniCalculatorButton
                             CertificateGallery  CertificateGrid  CertificateCardTrigger  CertificateLightboxContext
                             ClientNameContext  ClientNameInput  ThemeScript  ThemeToggle  LocaleSwitcher
-                            TelemetryProvider  FeedbackWidget  ManagerMonitoringHeader (removed by R3/S03)
+                            TelemetryProvider  FeedbackWidget
+components/admin/           AdminShell  AdminOverview  OverviewRefresh  RelativeTime  NotificationsBell  UsersTable …
+components/admin/charts/    ChartCard  StatCard  DeltaBadge  BarList  ColumnBars  CompareTable  BarGrow  BarGrowGroup
+                            (R3/S03; pure geometry in lib/admin/charts.ts, overview arithmetic in lib/admin/overview.ts)
+app/[locale]/(admin)/admin/(overview)/   page.tsx + loading.tsx of /admin — a route group, so the overview has its
+                            own skeleton while ../loading.tsx stays the CMS pages' generic one (R3/S03)
 components/ui/              Dialog  ErrorBoundary  PinButton  RecentRecorder  Skeleton  SubmitButton  Toaster
                             WidgetBoundary  WidgetFallback  toast-store.ts
 components/providers/       SessionProvider  OfflineBanner  WebVitalsReporter
@@ -529,7 +534,10 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - **One shell.** `/admin/**` and `/dashboard/**` both render inside `components/admin/AdminShell.tsx`. Its left
   nav comes from the grouped config in `lib/admin/nav.ts` (groups: Monitoring · Content · System) — a new
   admin page is added there once, and `tests/unit/admin/nav.test.ts` checks it against the pages on disk and
-  both message files. The old Dashboard ↔ Admin switch is gone. The header has "Operator view" (`/`).
+  both message files (labels under `admin.nav`). The old Dashboard ↔ Admin switch, `ManagerMonitoringHeader` and
+  `DashboardTabs` are gone; each `/dashboard/*` page renders its own `PageHeader`. The header has "Operator view"
+  (`/`). `AdminShell` is mounted by both layouts, so what it reads must be in both client lists
+  (`admin.shell`, `admin.nav` in `DASHBOARD_CLIENT_NAMESPACES`; the client-messages test checks both).
 - **People.** `/admin/users` is the people directory (cards + table view, role tabs, search, sort — all
   client-side over the full list, URL kept in sync with `history.replaceState`, §4). Each card links to
   `/admin/users/[email]` built by `personPath(email)` (encodeURIComponent) and parsed back by
@@ -537,10 +545,15 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   The list is driven by `allowed_users`, so a newly added person appears without any other change.
 - **Charts** are server-rendered divs/SVG from `components/admin/charts/` — no chart dependency. Bar length is
   an inline `style` percentage (computed size, allowed by §6); the only motion is a one-time `scaleX`/`scaleY`
-  grow via `m.*` that is skipped under reduced motion. Fills use `bg-chart-green` (time/activity) and
+  grow via `m.*` (`BarGrow`), driven per chart by one `BarGrowGroup` on `useRevealPhase`: the server HTML, reduced
+  motion and a chart already on screen at mount show the final bars; a chart below the fold grows once when it
+  scrolls in. `CompareTable` is the one client chart: a function cannot cross the Server → Client boundary, so
+  each cell arrives rendered (`content`) with its `sortValue`. Fills use `bg-chart-green` (time/activity) and
   `bg-chart-blue` (content usage) on `bg-chart-track`; values sit next to the bar as text in
   `text-primary-dark tabular-nums` — colour never carries the number alone.
 - **Every widget fails alone**: data arrives as `WidgetData<T>`; a failed call renders `DashboardWidgetError`
   in that widget's slot, an empty result renders `EmptyState` — never a silent zero.
 - Numbers, dates and durations are formatted with the active locale (`Intl.*`, `lib/dashboard/format.ts`);
-  relative times ("2 soat oldin") render after mount via `useNow()` (§3 hydration rules).
+  relative times ("2 soat oldin") render after mount via `useNow()` (§3 hydration rules). Never render
+  `Intl` output of `uz-UZ` in a client component before mount: Node's ICU and the browser format it differently,
+  which is a hydration mismatch (`components/admin/RelativeTime.tsx` shows a plain `YYYY-MM-DD HH:MM` until then).

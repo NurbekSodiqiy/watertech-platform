@@ -482,6 +482,24 @@ so its −22 B is noise, not a saving. It keeps **54 bytes** before the table re
 `/sales-process/scripts` (+125 B: CopyButton, ScriptTurns, the two call sites) and the three `DatabaseTemplate`
 pages (+44 B).
 
+## R3/S03 (2026-09-24, one admin shell and the admin overview)
+
+Admin-only change: `/dashboard/*` now mounts `AdminShell` (instead of `ManagerMonitoringHeader` + `DashboardTabs`),
+and `/admin` is the new overview with the chart primitives of `components/admin/charts/` (server-rendered; the client
+parts are `CompareTable`, `BarGrow`/`BarGrowGroup`, `OverviewRefresh`, `RelativeTime`). No operator layout or shared
+module changed; `chrome.managerNav` left the root message list. `next build` table, gzip level 9 over each route's
+`app-build-manifest.json` entry (built with the local `.env.local`, not CI's placeholder env, so compare within this
+table only):
+
+| Route | `next build` table | Exact |
+|---|---:|---:|
+| `/admin` | 139 kB | 138.613 kB |
+| `/admin/users` | 154 kB | 154.377 kB |
+| `/dashboard`, `/dashboard/copilot` | 135 kB | 134.730 kB |
+| `/dashboard/quality` | 135 kB | 134.631 kB |
+| `/dashboard/content` | 141 kB | 141.106 kB |
+| `/company/onboarding` (operator, unchanged code) | 180 kB | 180.321 kB |
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.

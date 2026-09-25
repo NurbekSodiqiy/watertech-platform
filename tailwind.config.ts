@@ -31,6 +31,12 @@ const config: Config = {
           warning: "rgb(var(--status-warning) / <alpha-value>)",
           outdated: "rgb(var(--status-outdated) / <alpha-value>)",
         },
+        // Admin chart bar fills only (CLAUDE.md §6, §15).
+        chart: {
+          green: "rgb(var(--chart-green) / <alpha-value>)",
+          blue: "rgb(var(--chart-blue) / <alpha-value>)",
+          track: "rgb(var(--chart-track) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: [

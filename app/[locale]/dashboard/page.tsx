@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { Clock, Copy, ListChecks } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth/server-session";
 import { EmptyState } from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -11,6 +13,11 @@ import { formatDuration } from "@/lib/dashboard/format";
 import { parseDashboardRange } from "@/lib/dashboard/range";
 import { fetchActivityTelemetry, fetchDashboardKpis } from "@/lib/dashboard/telemetry-window";
 import { PLANNED_HOURS } from "@/lib/telemetry/aggregate";
+
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const t = await getTranslations({ locale, namespace: "dashboard.metadata" });
+  return { title: t("activity") };
+}
 
 const BASE_PATH = "/dashboard";
 
@@ -22,11 +29,12 @@ export default async function DashboardPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   unstable_setRequestLocale(locale);
-  const [t, tDash, tDuration, tPlan] = await Promise.all([
+  const [t, tDash, tDuration, tPlan, tHeading] = await Promise.all([
     getTranslations("emptyState.dashboardNoEvents"),
     getTranslations("dashboard.activity"),
     getTranslations("dashboard.duration"),
     getTranslations("dailyTimeline.tasks"),
+    getTranslations("dashboard.headings"),
   ]);
 
   // Access check happens here, in the page itself — role comes from the
@@ -45,6 +53,8 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
+      <PageHeader path={BASE_PATH} title={tHeading("activity.title")} description={tHeading("activity.description")} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <RangePicker range={range} basePath={BASE_PATH} />
         <OperatorFilter range={range} basePath={BASE_PATH} />

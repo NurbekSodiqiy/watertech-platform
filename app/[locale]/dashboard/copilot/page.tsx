@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { requireAdminPage } from "@/lib/auth/server-session";
+import { PageHeader } from "@/components/PageHeader";
 import { RangePicker } from "@/components/dashboard/RangePicker";
 import { CopilotKpiGrid } from "@/components/dashboard/CopilotKpiGrid";
 import { CopilotUnansweredTable } from "@/components/dashboard/CopilotUnansweredTable";
@@ -25,6 +26,7 @@ export default async function DashboardCopilotPage({
   unstable_setRequestLocale(locale);
 
   await requireAdminPage(locale);
+  const tHeading = await getTranslations("dashboard.headings");
 
   // The copilot log has no per-operator filter (an operator is only ever a
   // count here, never a name), so an ?op= left over from another tab is dropped.
@@ -33,6 +35,8 @@ export default async function DashboardCopilotPage({
 
   return (
     <div className="space-y-6">
+      <PageHeader path={BASE_PATH} title={tHeading("copilot.title")} description={tHeading("copilot.description")} />
+
       <RangePicker range={range} basePath={BASE_PATH} />
 
       {stats.ok ? <CopilotKpiGrid stats={stats.data} /> : <DashboardWidgetError />}
