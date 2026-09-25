@@ -183,9 +183,12 @@ components/ui/              Dialog  ErrorBoundary  PinButton  RecentRecorder  Sk
 components/providers/       SessionProvider  OfflineBanner  WebVitalsReporter
 components/products/        ProductsCatalog          components/tools/     BatchCalculator
 components/scripts/         ScriptsWorkspace  ScriptsContentContext
-components/story/           PipelineStory  PipelineChapter  fittings.tsx  geometry.ts (replaced by R3/S05–S07)
+components/story/           LayersStory  LayersChapter  LayersCrossSection  layers-geometry.ts (R3/S05, /company/about)
+                            PipelineStory  PipelineChapter  fittings.tsx  geometry.ts (mission-values until R3/S06;
+                            fittings.tsx also the onboarding rail's until R3/S07)
 components/onboarding/      OnboardingRail  OnboardingNode (replaced by R3/S07)
-hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useRevealPhase  useNow  useMounted …
+hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useScrollBeat  useRevealPhase  useNow
+                            useMounted …
 ```
 
 If a task names a file that is not at the stated path, run `git ls-files | grep -i <name>` before creating
@@ -531,8 +534,9 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - Animated elements are `m.*` under the `LazyMotion strict` provider (`components/motion/MotionProvider.tsx`),
   never `motion.*`. Scroll progress comes from `components/motion/ScrollScene.tsx` (`useScroll({ target })`
   against the document — AppShell has no inner scroll container) read through `useSceneProgress()`; a segment
-  that needs its own progress calls `useScroll({ target })` the same way. Pinning uses CSS `position: sticky`
-  only (sticky offsets must clear the sticky TopBar).
+  that needs its own progress calls `useScroll({ target })` the same way, and a sticky figure driven by elements
+  elsewhere in the text reads their progress through `hooks/useScrollBeat.ts` (`LayersStory`: each chapter heading
+  draws its ring). Pinning uses CSS `position: sticky` only (sticky offsets must clear the sticky TopBar).
 - Operator work pages (scripts, objections, FAQ, products, calculator, call mode) never get scroll
   scenes — only ≤200 ms response motion. Scroll storytelling is reserved for `/company/*` and
   empty/onboarding states. `/company/onboarding` sits at the 180 kB First Load JS limit (Audit-2) — a new

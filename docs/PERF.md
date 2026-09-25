@@ -526,8 +526,38 @@ per card; the search input is deferred (`useDeferredValue`) and sorting is a sep
 **The person page.** Eight RPCs and one allow-list read in one `Promise.all`; each is a 0021 / 0016 aggregate
 (no raw telemetry row), so the payload is a few KB whatever the person's history.
 
+## R3/S05 (2026-09-25, `/company/about` → LayersStory)
+
+`/company/about` no longer imports `PipelineStory`/`PipelineChapter` (scene, `CountUp`, `MaskReveal`, `ScrollScene`)
+or `Stagger`/`StaggerItem`; it renders `LayersStory` (`LayersChapter`, `LayersCrossSection`, `layers-geometry`,
+`hooks/useScrollBeat`). No dependency, no layout or shared module changed. Both trees were built in scratch copies
+with CI's placeholder env (the local `next dev` was using the repo's `.next`), `next build` table and gzip level 9
+over each route's `app-build-manifest.json` entry:
+
+| Route | Before (`45c4f7d`) | Exact | After | Exact |
+|---|---:|---:|---:|---:|
+| `/company/about` | 163 kB (page 599 B) | 163.241 kB | **150 kB** (page 2.91 kB) | 150.458 kB |
+| `/company/mission-values` | 163 kB (page 236 B) | 162.878 kB | 164 kB (page 5.59 kB) | 163.588 kB |
+| `/company/onboarding` | 180 kB | 180.394 kB | **181 kB** | 181.196 kB |
+
+**`/company/about` −12.8 kB.** The pipeline scene and framer-motion's `animate()` (VisualElement, value types — reached
+through `CountUp` in the tank finale) are no longer on the route. The new scene is about 2.3 kB of page JS.
+
+**`/company/onboarding` +0.8 kB, over the 180 kB budget — no code change there.** It downloads exactly the same 325
+modules as before (module ids compared chunk by chunk). What changed is the packing: before, one chunk shared by
+about, mission-values and onboarding held both framer's animation core (springs, keyframes — `useSpring`) and
+`animate()`'s VisualElement code (13.4 kB gzip). About now uses only the first, so webpack splits it into a chunk
+for all three (6.1 kB) and one for mission-values + onboarding (8.1 kB); two files compress about 0.87 kB worse
+than one. `/company/mission-values` moves the same way (+0.7 kB) and its page chunk now carries the pipeline scene
+that about no longer shares. The route stays over budget until it is fixed deliberately (see Open items) — the
+limit was not raised.
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
 2. `MiniCalculatorButton` and the certificate lightbox could be split (~1.5 kB gzip each) if a later task names `TopBar`.
 3. LCP was not measured in a browser (operator routes need a Google OAuth session); the `priority` choice is by layout.
+4. `/company/onboarding` reads 181 kB since R3/S05 (181.196 kB exact, chunk packing, see above). R3/S07 replaces its
+   rail (`OnboardingRail`, `fittings.tsx`) with `RouteMap` and must bring it back to ≤ 180 kB; if it has to be fixed
+   sooner, the candidates are the rail's `fittings.tsx` glyphs (duplicated into the mission-values and onboarding page
+   chunks) or `CountUp`'s `animate()` (8.1 kB of shared framer code for one number).

@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { CalendarDays, Settings, ShieldCheck, Globe, type LucideIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Stagger } from "@/components/motion/Stagger";
-import { StaggerItem } from "@/components/motion/StaggerItem";
-import { PipelineChapter } from "@/components/story/PipelineChapter";
-import { PipelineStory } from "@/components/story/PipelineStory";
-import type { FittingKind } from "@/components/story/fittings";
+import { LayersStory } from "@/components/story/LayersStory";
 import type { Locale } from "@/i18n/routing";
 
 const BADGES: { key: string; Icon: LucideIcon }[] = [
@@ -16,13 +12,9 @@ const BADGES: { key: string; Icon: LucideIcon }[] = [
   { key: "export", Icon: Globe },
 ];
 
-// Reading order down the pipeline; the scene alternates card sides itself.
-const CHAPTERS: { key: string; fitting: FittingKind }[] = [
-  { key: "about", fitting: "coupling" },
-  { key: "production", fitting: "elbow" },
-  { key: "goal", fitting: "tee" },
-  { key: "whyUs", fitting: "valve" },
-];
+// Reading order = ring order, outer → inner: the company's start is the
+// pipe's outside wall, "why us" the layer next to the water.
+const CHAPTERS = ["about", "production", "goal", "whyUs"] as const;
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: Locale } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.company.about" });
@@ -33,38 +25,34 @@ export default async function AboutPage({ params: { locale } }: { params: { loca
   unstable_setRequestLocale(locale);
   const t = await getTranslations("pages.company.about");
 
+  const chapters = CHAPTERS.map((key) => ({
+    id: key,
+    title: t(`chapters.${key}.title`),
+    body: t(`chapters.${key}.body`),
+    ringLabel: t(`rings.${key}`),
+  }));
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
         <Breadcrumbs path="/company/about" />
-        <div>
-          <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">{t("title")}</h1>
-        </div>
+        <h1 className="text-[32px] font-extrabold leading-tight tracking-tight text-primary-dark">{t("title")}</h1>
+        {/* Four facts, not motion: static chips on one line (wrapping on a phone). */}
+        <ul className="flex flex-wrap gap-2">
+          {BADGES.map(({ key, Icon }) => (
+            <li
+              key={key}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[12.5px] font-medium text-primary-dark"
+            >
+              <Icon size={14} aria-hidden="true" className="shrink-0 text-accent" />
+              {t(`badges.${key}`)}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {/* Compact badge row */}
-      <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {BADGES.map(({ key, Icon }) => (
-          <StaggerItem
-            key={key}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface p-4 text-center shadow-soft"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/20 bg-accent/[0.08] text-accent dark:bg-accent/[0.12]">
-              <Icon size={20} />
-            </span>
-            <span className="text-[13px] font-semibold leading-tight text-primary-dark">{t(`badges.${key}`)}</span>
-          </StaggerItem>
-        ))}
-      </Stagger>
-
-      <PipelineStory finale={{ kind: "tank", caption: t("finale.caption") }}>
-        {CHAPTERS.map(({ key, fitting }) => (
-          <PipelineChapter key={key} fitting={fitting} title={t(`chapters.${key}.title`)}>
-            <p>{t(`chapters.${key}.body`)}</p>
-          </PipelineChapter>
-        ))}
-      </PipelineStory>
+      <LayersStory chapters={chapters} finaleCaption={t("finale.caption")} />
     </div>
   );
 }
