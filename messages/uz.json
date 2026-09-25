@@ -1352,9 +1352,20 @@
       "onboarding": {
         "welcomeTitle": "Xush kelibsiz!",
         "welcomeBody": "Ushbu {days} kunlik rejani bajaring va jamoamizning to'laqonli a'zosiga aylaning.",
-        "checklistHeading": "{days} kunlik checklist",
         "dayHeading": "{day}-kun: {title}",
-        "objective": "Maqsad:"
+        "objective": "Maqsad:",
+        "route": {
+          "label": "Onboarding marshruti",
+          "title": "Sizning yo'lingiz",
+          "progress": "{done}/{total} kun yakunlandi",
+          "next": "Keyingi: {day}-kun — {title}",
+          "finished": "Marshrut yakunlandi — barcha kunlar bajarildi!",
+          "youAreHere": "Siz shu yerdasiz",
+          "done": "Yakunlandi",
+          "upcoming": "Oldinda",
+          "dayDone": "Kunni yakunladim",
+          "dayNumber": "{day}-kun"
+        }
       },
       "internalRules": {
         "title": "Ichki qoidalar",

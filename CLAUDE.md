@@ -88,7 +88,7 @@ components/
   dashboard/                       monitoring widgets/KPIs (RangePicker, OperatorFilter, QualityPanel…)
   home/                            home widgets (ChangelogStrip, ContinueCard, Favourites, Recents)
   motion/                          motion primitives — see §14
-  onboarding/                      onboarding page pieces (route map from R3/S07)
+  onboarding/                      the /company/onboarding scene (RouteMap, R3/S07) — see §14
   story/                           scroll-storytelling scenes, one per /company page — see §14
 lib/
   content/                        types.ts + seed data files + loader.ts (typed getters, incl. getContacts/getSops). Pages call getters, never arrays directly. No mock-data folder: every content kind lives in Supabase. safe.ts decides what a failed read does (§8).
@@ -186,9 +186,8 @@ components/scripts/         ScriptsWorkspace  ScriptsContentContext
 components/story/           LayersStory  LayersChapter  LayersCrossSection  layers-geometry.ts (R3/S05, /company/about)
                             ManifestStory  MissionWords  VisionSegment  ValueStack  manifest-geometry.ts  value-icons.tsx
                             (R3/S06, /company/mission-values)
-                            PipelineStory  PipelineChapter  geometry.ts (no importer since R3/S06) and fittings.tsx
-                            (the onboarding rail's) — all four removed by R3/S07
-components/onboarding/      OnboardingRail  OnboardingNode (replaced by R3/S07)
+components/onboarding/      RouteMap  RouteDayCard  RouteCheckpoint  ProgressRing  RouteTrail (lazy)  route-geometry.ts
+                            (R3/S07, /company/onboarding; OnboardingChecklist, still flat, owns the progress)
 hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useScrollBeat  useRevealPhase  useNow
                             useMounted …
 ```
@@ -517,7 +516,7 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - Tokens (durations, easings, spring presets) live in `lib/motion/tokens.ts`. Components import the
   tokens; no inline magic numbers for `duration` / `ease`.
 - Motion primitives live in `components/motion/`. Scroll-storytelling scenes live in
-  `components/story/`.
+  `components/story/`; the onboarding route map, a work page as well, lives in `components/onboarding/`.
 - Scroll-linked animation uses motion values only: `useScroll` → `useTransform`/`useSpring`. Never a
   scroll event listener that calls `setState` per frame.
 - Allowed animated properties: `transform`, `opacity`, and for SVG line art `pathLength` /
@@ -533,6 +532,13 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   `about` → `LayersStory` (PP-R pipe cross-section, one ring per chapter, water fills the bore at the end);
   `mission-values` → `ManifestStory` (word-by-word mission, vision 2030 bars, stacked value cards);
   `onboarding` → `RouteMap` (journey route, checkpoints show the reader's real checklist progress).
+- `RouteMap` is presentation only (`OnboardingChecklist` owns state, storage and telemetry) and comes in two layers.
+  The server HTML draws the whole route — one small svg per segment, dashed, solid up to the reader — which is the
+  final state reduced motion, no-JS and the first paint show. `RouteTrail` (`next/dynamic`, mounted on idle, never
+  under reduced motion) measures those segments into one path with the same curves (`route-geometry.ts`), takes
+  over the solid line and draws it with scroll up to the reader's checkpoint, with a traveller dot placed from
+  `getPointAtLength` samples taken on mount/resize only. What was on screen when it took over stays drawn (the
+  `useRevealPhase` contract per pixel of line). The day checkbox is a native input and never waits for motion.
 - Animated elements are `m.*` under the `LazyMotion strict` provider (`components/motion/MotionProvider.tsx`),
   never `motion.*`. Scroll progress comes from `components/motion/ScrollScene.tsx` (`useScroll({ target })`
   against the document — AppShell has no inner scroll container) read through `useSceneProgress()`; a segment
@@ -541,8 +547,8 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   draws its ring). Pinning uses CSS `position: sticky` only (sticky offsets must clear the sticky TopBar).
 - Operator work pages (scripts, objections, FAQ, products, calculator, call mode) never get scroll
   scenes — only ≤200 ms response motion. Scroll storytelling is reserved for `/company/*` and
-  empty/onboarding states. `/company/onboarding` sits at the 180 kB First Load JS limit (Audit-2) — a new
-  scene there must be lazy or smaller than what it replaces.
+  empty/onboarding states. `/company/onboarding` reads 160 kB since R3/S07 (it was at the 180 kB limit): keep
+  its scroll machinery in the lazy `RouteTrail`, and keep `CountUp` (framer's `animate()`) off that route.
 
 ## 15. Admin panel UI (R3/S03–S04)
 

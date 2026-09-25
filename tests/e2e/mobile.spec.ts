@@ -12,7 +12,7 @@ import { applySession, expectSignedInAt, operatorCookie } from "./session";
 const VIEWPORT = { width: 375, height: 812 };
 
 const PUBLIC_ROUTES = ["/login", "/offline", "/ru/login"];
-const OPERATOR_ROUTES = ["/", "/sales-process/scripts", "/products", "/faq", "/company/about"];
+const OPERATOR_ROUTES = ["/", "/sales-process/scripts", "/products", "/faq", "/company/about", "/company/onboarding"];
 
 test.use({ viewport: VIEWPORT });
 

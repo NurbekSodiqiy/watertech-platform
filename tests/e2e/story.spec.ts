@@ -18,7 +18,10 @@ import { applySession, collectConsoleErrors, expectSignedInAt, operatorCookie } 
  * ManifestStory (R3/S06): the mission lit word by word, the 2030 figure, the
  * values as sticky stacking cards — where a heading can be covered by the next
  * card, so "readable" there means uncovered and at full strength at some point
- * of the scroll, not merely present.
+ * of the scroll, not merely present. /company/onboarding runs RouteMap (R3/S07):
+ * the four days as a route drawn up to the reader's real checklist progress —
+ * a work page too, so its checkbox is exercised end to end (it ticks the
+ * operator's own onboarding off and back, leaving their progress as it was).
  */
 
 const ABOUT = {
@@ -34,6 +37,68 @@ const MISSION = {
   // pages.company.missionValues.chapters.missiya.body
   sentence: "Odamlar uylarida xotirjam yashashlari uchun ishonchli va uzoq xizmat qiladigan suv tizimlarini yaratish.",
 } as const;
+
+const ONBOARDING = {
+  path: "/company/onboarding",
+  url: /\/company\/onboarding$/,
+  // pages.company.onboarding.route.title, then dayHeading over lib/content/onboarding.ts
+  headings: [
+    "Sizning yo'lingiz",
+    "1-kun: Biz haqimizda va mahsulot",
+    "2-kun: Mahsulotni o'rganishga sho'ng'ish",
+    "3-kun: Mijoz va CRM",
+    "4-kun: Savdo Qurollari va Amaliyot",
+  ],
+  days: 4,
+} as const;
+
+/** A day's checkbox: pages.company.onboarding.route.dayDone plus the visually
+ * hidden day number (route.dayNumber) that tells the four apart. */
+function dayCheckbox(page: Page, day: number) {
+  return page.getByRole("checkbox", { name: new RegExp(`^Kunni yakunladim \\(${day}-kun\\)$`) });
+}
+
+/** The checkpoints' states in day order, once the reader's progress has loaded. */
+async function checkpointStates(page: Page): Promise<string[]> {
+  const checkpoints = page.locator("[data-route-checkpoint]");
+  await expect(checkpoints, "one checkpoint per day").toHaveCount(ONBOARDING.days);
+  await expect(checkpoints.first(), "the progress never loaded").not.toHaveAttribute("data-route-checkpoint", "loading");
+  return checkpoints.evaluateAll((els) => els.map((el) => el.getAttribute("data-route-checkpoint") ?? ""));
+}
+
+/** Segments drawn for those states (route-geometry's journey().reached): the
+ * lead-in plus one per checkpoint up to the reader's, or all of them — through
+ * the finish — once every day is done. */
+function reachedFor(states: readonly string[]): number {
+  const current = states.indexOf("current");
+  return current === -1 ? states.length + 1 : current + 1;
+}
+
+/** The server-drawn solid segments that are on screen (each segment exists
+ * once per layout; the other layout's copy is display:none). */
+async function visibleDrawnSegments(page: Page): Promise<number> {
+  return page
+    .locator("[data-route-drawn]")
+    .evaluateAll((els) => els.filter((el) => el.getClientRects().length > 0).length);
+}
+
+/** Distance, px, from the end of the scroll layer's drawn line to the centre
+ * of `target` — the reader's checkpoint, or the finish. The drawn fraction is
+ * the first number of the path's dash array (see drawnFraction). */
+async function lineEndGap(page: Page, target: string): Promise<number> {
+  return page.evaluate((selector) => {
+    const svg = document.querySelector("svg[data-route-trail='active']");
+    const path = svg?.querySelector("path.stroke-accent");
+    const goal = document.querySelector(selector);
+    if (!(svg instanceof SVGSVGElement) || !(path instanceof SVGPathElement) || !goal) return Infinity;
+    const raw = path.getAttribute("stroke-dasharray") ?? path.style.strokeDasharray;
+    const fraction = raw.trim() ? Number.parseFloat(raw) : 1;
+    const end = path.getPointAtLength(fraction * path.getTotalLength());
+    const origin = svg.getBoundingClientRect();
+    const box = goal.getBoundingClientRect();
+    return Math.hypot(origin.left + end.x - (box.left + box.width / 2), origin.top + end.y - (box.top + box.height / 2));
+  }, target);
+}
 
 /** The sticky TopBar (`h-14`): anything behind it cannot be read. */
 const TOPBAR_HEIGHT = 56;
@@ -271,5 +336,103 @@ test.describe("scroll stories", () => {
       .locator("[data-manifest-word]")
       .evaluateAll((els) => els.filter((el) => !el.closest('[aria-hidden="true"]')).length);
     expect(exposedWords, "word spans exposed to assistive technology").toBe(0);
+  });
+
+  test(`${ONBOARDING.path}: reduced motion shows the route drawn up to the reader, no traveller, no scrolling`, async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+
+    try {
+      await page.goto(ONBOARDING.path);
+      await expectSignedInAt(page, ONBOARDING.url);
+      const states = await checkpointStates(page);
+      expect(states.filter((state) => state === "current").length, "more than one 'you are here'").toBeLessThanOrEqual(1);
+      // Past the idle period in which the scroll layer would load: it must not.
+      await page.waitForTimeout(1500);
+      await expect(page.locator("svg[data-route-trail]"), "the scroll layer loaded under reduced motion").toHaveCount(0);
+      await expect(page.locator("[data-route-traveller]")).toHaveCount(0);
+      // The server-drawn route is the final state: solid exactly up to the reader.
+      expect(await visibleDrawnSegments(page), `drawn segments for ${states.join(", ")}`).toBe(reachedFor(states));
+      expect(await page.evaluate(() => window.scrollY), "the page scrolled by itself").toBe(0);
+
+      for (const heading of ONBOARDING.headings) {
+        await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      }
+      expect(errors, `console errors on ${ONBOARDING.path}`).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test(`${ONBOARDING.path}: the line is drawn to the reader's checkpoint after scrolling to the bottom`, async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const errors = collectConsoleErrors(page);
+
+    await page.goto(ONBOARDING.path);
+    await expectSignedInAt(page, ONBOARDING.url);
+    const states = await checkpointStates(page);
+    for (const heading of ONBOARDING.headings) {
+      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    }
+
+    await expect(page.locator("svg[data-route-trail='active']"), "the scroll layer never took over").toHaveCount(1);
+    // Taking over, it drops the static copy of the solid line.
+    expect(await visibleDrawnSegments(page)).toBe(0);
+    await scrollToBottom(page);
+
+    const target = states.includes("current") ? '[data-route-checkpoint="current"]' : "[data-route-finish]";
+    await expect
+      .poll(() => lineEndGap(page, target), { message: "the line does not end where the reader is" })
+      .toBeLessThan(4);
+    expect(errors, `console errors on ${ONBOARDING.path}`).toEqual([]);
+  });
+
+  test(`${ONBOARDING.path}: ticking a day off is instant and survives a reload`, async ({ context, page, baseURL }) => {
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const errors = collectConsoleErrors(page);
+
+    await page.goto(ONBOARDING.path);
+    await expectSignedInAt(page, ONBOARDING.url);
+    const states = await checkpointStates(page);
+    // The reader's day — or, with everything done, the last one (unticked and ticked back).
+    const current = states.indexOf("current");
+    const index = current === -1 ? states.length - 1 : current;
+    const day = index + 1;
+    const checkpoint = page.locator("[data-route-checkpoint]").nth(index);
+
+    const box = dayCheckbox(page, day);
+    await expect(box, "disabled until the progress has loaded").toBeEnabled();
+    const before = await box.isChecked();
+    await box.setChecked(!before);
+    await expect(box).toBeChecked({ checked: !before });
+    await expect(checkpoint).toHaveAttribute("data-route-checkpoint", before ? "current" : "done");
+
+    // The write is debounced by 800 ms; let it reach the server before reloading.
+    await page.waitForTimeout(1500);
+    await page.reload();
+    await expect(dayCheckbox(page, day)).toBeEnabled();
+    await expect(dayCheckbox(page, day)).toBeChecked({ checked: !before });
+    await expect(page.locator("[data-route-checkpoint]").nth(index)).toHaveAttribute(
+      "data-route-checkpoint",
+      before ? "current" : "done"
+    );
+
+    // Leave the operator's progress as it was.
+    await dayCheckbox(page, day).setChecked(before);
+    await expect(dayCheckbox(page, day)).toBeChecked({ checked: before });
+    await page.waitForTimeout(1500);
+    await page.reload();
+    await expect(dayCheckbox(page, day)).toBeEnabled();
+    await expect(dayCheckbox(page, day)).toBeChecked({ checked: before });
+    expect(errors, `console errors on ${ONBOARDING.path}`).toEqual([]);
   });
 });

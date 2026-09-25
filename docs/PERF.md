@@ -575,12 +575,43 @@ word `useTransform`s, and the page `scrollY` feeding one transform per value car
 positions, card heights, sticky tops) is measured on mount and on `ResizeObserver` changes, never per frame.
 `/company/onboarding` still reads 181 kB (see Open items); nothing it imports changed.
 
+## R3/S07 (2026-09-25, `/company/onboarding` → RouteMap)
+
+`/company/onboarding` no longer imports `OnboardingRail`/`OnboardingNode`/`fittings.tsx` or `CountUp` (and with it
+framer's `animate()`); it renders `RouteMap` (`RouteDayCard`, `RouteCheckpoint`, `ProgressRing`, the pure
+`route-geometry.ts`). The scroll layer, `RouteTrail` (`ScrollScene` → `useScroll` + `useSpring`, the measured path,
+the traveller), is a `next/dynamic` chunk mounted once the page is idle and never under reduced motion, so none of it is
+First Load: the server-drawn route is the whole page until then, and the checkboxes work without it. `PipelineStory`,
+`PipelineChapter` and `geometry.ts` were deleted with the rail (no importer left). No dependency, no layout or shared
+module changed; the new strings sit under `pages.company.onboarding`, already a client namespace. Both trees built
+with CI's placeholder env (baseline `1f686b4` in a scratch worktree); "Exact" is gzip level 9 (Python) over the route's
+`app-build-manifest.json` entry, measured the same way for both columns:
+
+| Route | Before (`1f686b4`) | Exact | After | Exact |
+|---|---:|---:|---:|---:|
+| `/company/onboarding` | 181 kB (page 10.8 kB) | 180.708 kB | **160 kB** (page 12.6 kB) | 159.721 kB |
+| `/company/about` | 150 kB (page 2.91 kB) | 150.302 kB | 150 kB (page 3.42 kB) | 150.326 kB |
+| `/company/mission-values` | 161 kB (page 3.53 kB) | 161.344 kB | 161 kB (page 14.4 kB) | 161.331 kB |
+| `/` | 160 kB | 160.198 kB | 160 kB | 160.207 kB |
+
+**−21.0 kB, back under the 180 kB budget.** The route drops the two framer chunks `CountUp` pulled in (the animation
+core and `animate()`'s VisualElement code — see R3/S05) and the rail. Every other route's `next build` figure is
+unchanged (all 70 rows compared); "shared by all" reads 89.5 kB instead of 89.4 kB (+30 B: the webpack runtime's map
+of the new lazy chunks). The page-chunk moves on about and mission-values are packing, not code: `animate()` is now
+used by mission-values alone, so it moved into that page's chunk, and the same bytes left a shared one (First Load:
+about +24 B, mission-values −13 B).
+
+**What loads later.** `RouteTrail` on idle: 17.9 kB gzip in five files, of which 16.0 kB are the four framer chunks
+`/company/about` and `/company/mission-values` already load (cached once either has been visited) and 1.9 kB the scene
+itself. Its work is on mount and resize only: one `ResizeObserver` on the route and its segment boxes, the boxes read with
+`getBoundingClientRect`, and ≤ 400 `getPointAtLength` samples (one per 8 px of line). Scrolling is motion values only —
+four `useTransform`s over the samples (a binary search at most) and a spring; React never re-renders on scroll. A tick
+re-renders the four rows (no memo needed at that size) and springs the line's cap; the checkbox flips in the same
+frame.
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
 2. `MiniCalculatorButton` and the certificate lightbox could be split (~1.5 kB gzip each) if a later task names `TopBar`.
 3. LCP was not measured in a browser (operator routes need a Google OAuth session); the `priority` choice is by layout.
-4. `/company/onboarding` reads 181 kB since R3/S05 (181.196 kB exact, chunk packing, see above). R3/S07 replaces its
-   rail (`OnboardingRail`, `fittings.tsx`) with `RouteMap` and must bring it back to ≤ 180 kB; if it has to be fixed
-   sooner, the candidates are the rail's `fittings.tsx` glyphs (only onboarding imports them since R3/S06) or
-   `CountUp`'s `animate()` (8.1 kB of shared framer code, used by mission-values' ×3 and onboarding).
+4. ~~`/company/onboarding` over 180 kB since R3/S05~~ — done in R3/S07 (160 kB, see above).

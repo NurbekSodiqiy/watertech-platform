@@ -21,7 +21,7 @@ import { applySession, expectSignedInAt, operatorCookie } from "./session";
 const THEMES = ["light", "dark"] as const;
 
 const PUBLIC_ROUTES = ["/login", "/offline"];
-const OPERATOR_ROUTES = ["/", "/sales-process/scripts", "/products", "/faq", "/company/about"];
+const OPERATOR_ROUTES = ["/", "/sales-process/scripts", "/products", "/faq", "/company/about", "/company/onboarding"];
 
 /** The theme is chosen by the `watertech-theme` localStorage key, which
  * ThemeScript reads before first paint. Seeded through an init script so it is
