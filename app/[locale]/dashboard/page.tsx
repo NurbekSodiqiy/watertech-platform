@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_setRequestLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
-import { Clock, Copy, ListChecks } from "lucide-react";
 import { requireAdminPage } from "@/lib/auth/server-session";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,7 +8,8 @@ import { RangePicker } from "@/components/dashboard/RangePicker";
 import { OperatorFilter } from "@/components/dashboard/OperatorFilter";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
 import { DashboardWidgetError } from "@/components/dashboard/DashboardWidgetError";
-import { formatDuration } from "@/lib/dashboard/format";
+import { PeopleActivityList } from "@/components/admin/people/PeopleActivityList";
+import { fetchPeopleLookup } from "@/lib/admin/people-queries";
 import { parseDashboardRange } from "@/lib/dashboard/range";
 import { fetchActivityTelemetry, fetchDashboardKpis } from "@/lib/dashboard/telemetry-window";
 import { PLANNED_HOURS } from "@/lib/telemetry/aggregate";
@@ -29,12 +29,12 @@ export default async function DashboardPage({
   searchParams: Record<string, string | string[] | undefined>;
 }) {
   unstable_setRequestLocale(locale);
-  const [t, tDash, tDuration, tPlan, tHeading] = await Promise.all([
+  const [t, tDash, tPlan, tHeading, tPeople] = await Promise.all([
     getTranslations("emptyState.dashboardNoEvents"),
     getTranslations("dashboard.activity"),
-    getTranslations("dashboard.duration"),
     getTranslations("dailyTimeline.tasks"),
     getTranslations("dashboard.headings"),
+    getTranslations("pages.admin.people.activityList"),
   ]);
 
   // Access check happens here, in the page itself — role comes from the
@@ -44,10 +44,13 @@ export default async function DashboardPage({
   if (process.env.NODE_ENV !== "production") console.time("[dashboard] Faollik render");
 
   const range = parseDashboardRange(searchParams);
-  const [kpis, { operators, hourly, zeroResultSearches, webVitals }] = await Promise.all([
+  const [kpis, { operators, hourly, zeroResultSearches, webVitals }, lookup] = await Promise.all([
     fetchDashboardKpis(range),
     fetchActivityTelemetry(range),
+    // Who the emails in the activity list are: names, roles and the person page.
+    fetchPeopleLookup(),
   ]);
+  const people = lookup.ok ? new Map(lookup.data.map((person) => [person.email, person])) : null;
 
   if (process.env.NODE_ENV !== "production") console.timeEnd("[dashboard] Faollik render");
 
@@ -63,7 +66,12 @@ export default async function DashboardPage({
       {kpis.ok ? <KpiGrid kpis={kpis.data} /> : <DashboardWidgetError />}
 
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold text-primary-dark">{tDash("perOperator")}</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-[15px] font-bold text-primary-dark">{tPeople("title")}</h2>
+          <Link href="/admin/users" className="text-[13px] font-medium text-accent hover:underline">
+            {tPeople("all")}
+          </Link>
+        </div>
         {!operators.ok ? (
           <DashboardWidgetError />
         ) : operators.data.length === 0 ? (
@@ -75,58 +83,7 @@ export default async function DashboardPage({
             action={{ label: t("cta"), href: "/dashboard" }}
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {operators.data.map((op) => (
-              <div key={op.email} className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-soft">
-                <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
-                  <p className="truncate text-[14px] font-semibold text-primary-dark">{op.email}</p>
-                  <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-accent">
-                    <Clock size={14} />
-                    {formatDuration(op.activeMs, tDuration)}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
-                    {tDash("mostViewed")}
-                  </p>
-                  {op.topViewed.length === 0 ? (
-                    <p className="text-[13px] text-text-secondary">{tDash("noData")}</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {op.topViewed.map((v, i) => (
-                        <li key={i} className="flex items-center justify-between gap-2 text-[13px]">
-                          {v.adminHref ? (
-                            <Link href={v.adminHref} className="truncate text-primary hover:underline">
-                              {v.label}
-                            </Link>
-                          ) : (
-                            <span className="truncate text-primary-dark">{v.label}</span>
-                          )}
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                            {v.count}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-5 border-t border-border pt-3 text-[13px]">
-                  <span className="flex items-center gap-1.5 text-text-secondary">
-                    <Copy size={13} />
-                    {tDash("copies", { count: op.copyCount })}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-text-secondary">
-                    <ListChecks size={13} />
-                    {op.checklistPercent !== null
-                      ? `${op.checklistCompleted}/${op.checklistTotal} (${op.checklistPercent}%)`
-                      : op.checklistCompleted}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <PeopleActivityList rows={operators.data} people={people} range={range} />
         )}
       </section>
 

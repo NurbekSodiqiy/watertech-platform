@@ -72,6 +72,8 @@ export interface AdminUser {
   isActive: boolean;
   /** Newest telemetry event (admin_user_last_activity, 0017); null when none. */
   lastActivityAt: string | null;
+  /** allowed_users.created_at, toISOString() form — "added on". */
+  addedAt: string;
   updatedAt: string;
   updatedBy: string | null;
 }

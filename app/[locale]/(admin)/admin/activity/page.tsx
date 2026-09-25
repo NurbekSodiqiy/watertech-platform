@@ -6,6 +6,7 @@ import { ActivityFeed } from "@/components/admin/ActivityFeed";
 import { ActivityFilterForm } from "@/components/admin/ActivityFilterForm";
 import { activityFilterParams, parseActivityFilters } from "@/lib/admin/activity";
 import { listActivity } from "@/lib/admin/activity-queries";
+import { fetchPeopleLookup } from "@/lib/admin/people-queries";
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "pages.admin.activity" });
@@ -35,7 +36,12 @@ export default async function AdminActivityPage({
   ]);
 
   const filters = parseActivityFilters(searchParams);
-  const { items, page, hasMore, truncated } = await listActivity(filters, pageNumber(searchParams.page));
+  const [{ items, page, hasMore, truncated }, lookup] = await Promise.all([
+    listActivity(filters, pageNumber(searchParams.page)),
+    // Who the emails in the feed are: the ones on the allow-list link to their page.
+    fetchPeopleLookup(),
+  ]);
+  const knownEmails = lookup.ok ? new Set(lookup.data.map((person) => person.email)) : undefined;
 
   function pageHref(target: number): string {
     const params = activityFilterParams(filters);
@@ -56,7 +62,7 @@ export default async function AdminActivityPage({
       {items.length === 0 ? (
         <EmptyState variant="compact" stateKey="activityNone" title={tEmpty("title")} reason={tEmpty("reason")} />
       ) : (
-        <ActivityFeed items={items} />
+        <ActivityFeed items={items} knownEmails={knownEmails} />
       )}
 
       {truncated && <p className="text-[12.5px] text-text-secondary">{t("truncated")}</p>}

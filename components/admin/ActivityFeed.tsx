@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { formatDateTime } from "@/lib/admin/format";
+import { personPath } from "@/lib/admin/people";
 import {
   activityKey,
   editHref,
@@ -23,6 +24,20 @@ const ACCESS_BADGE: Record<AccessActivity["action"], string> = {
   update: "bg-status-warning/15 text-status-warning",
   delete: "bg-status-outdated/15 text-status-outdated",
 };
+
+/** An email that is a person of the allow-list links to their page; any other
+ * (a removed person, "system") stays plain text. */
+function EmailCell({ email, known }: { email: string; known: ReadonlySet<string> | undefined }) {
+  if (!known?.has(email.toLowerCase())) return <>{email}</>;
+  return (
+    <Link
+      href={personPath(email.toLowerCase())}
+      className="rounded hover:text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      {email}
+    </Link>
+  );
+}
 
 function describeChange(change: AccessFieldChange, t: Translator): string {
   const field = t(`fields.${change.field}`);
@@ -97,11 +112,21 @@ function GateCells({ item, t, tTables }: { item: GateActivity; t: Translator; tT
   );
 }
 
-function AccessCells({ item, t }: { item: AccessActivity; t: Translator }) {
+function AccessCells({
+  item,
+  t,
+  known,
+}: {
+  item: AccessActivity;
+  t: Translator;
+  known: ReadonlySet<string> | undefined;
+}) {
   return (
     <>
       <td className="px-3 py-2.5">
-        <p className="break-words font-medium text-primary-dark">{item.targetEmail}</p>
+        <p className="break-words font-medium text-primary-dark">
+          <EmailCell email={item.targetEmail} known={known} />
+        </p>
         {item.changes.length > 0 && (
           <ul className="text-[12px] text-text-secondary">
             {item.changes.map((change) => (
@@ -127,8 +152,16 @@ function AccessCells({ item, t }: { item: AccessActivity; t: Translator }) {
 /** The merged feed as one table: when, from which history, who, what, and the
  * way to the diff (an edit or delete opens the row's version history) or to
  * the row. Rendered on the server — dates are formatted in the office's time
- * zone, so there is nothing to hydrate. */
-export async function ActivityFeed({ items }: { items: ActivityItem[] }) {
+ * zone, so there is nothing to hydrate. `knownEmails` (lowercased allow-list
+ * emails) turns the actor and the target of an access change into links to that
+ * person's page; without it, or for an email not in it, they stay text. */
+export async function ActivityFeed({
+  items,
+  knownEmails,
+}: {
+  items: ActivityItem[];
+  knownEmails?: ReadonlySet<string>;
+}) {
   const [t, tTables, locale] = await Promise.all([
     getTranslations("pages.admin.activity"),
     getTranslations("admin.versions.tables"),
@@ -155,10 +188,12 @@ export async function ActivityFeed({ items }: { items: ActivityItem[] }) {
             <tr key={activityKey(item)} className="border-b border-border align-top last:border-0">
               <td className="whitespace-nowrap px-3 py-2.5 text-text-secondary">{formatDateTime(item.at, locale)}</td>
               <td className="px-3 py-2.5 text-text-secondary">{t(`sources.${item.kind}`)}</td>
-              <td className="break-all px-3 py-2.5 text-text-secondary">{item.actor ?? t("system")}</td>
+              <td className="break-all px-3 py-2.5 text-text-secondary">
+                {item.actor ? <EmailCell email={item.actor} known={knownEmails} /> : t("system")}
+              </td>
               {item.kind === "version" && <VersionCells item={item} t={t} tTables={tTables} />}
               {item.kind === "gate" && <GateCells item={item} t={t} tTables={tTables} />}
-              {item.kind === "access" && <AccessCells item={item} t={t} />}
+              {item.kind === "access" && <AccessCells item={item} t={t} known={knownEmails} />}
             </tr>
           ))}
         </tbody>

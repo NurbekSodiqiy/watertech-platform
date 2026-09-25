@@ -12,6 +12,8 @@ const GATED_ROUTES: { path: string; login: RegExp; locale: keyof typeof LOGIN_BU
   { path: "/admin", login: /\/login$/, locale: "uz" },
   { path: "/admin/users", login: /\/login$/, locale: "uz" },
   { path: "/ru/admin/users", login: /\/ru\/login$/, locale: "ru" },
+  { path: "/admin/users/ali%40example.com", login: /\/login$/, locale: "uz" },
+  { path: "/ru/admin/users/ali%40example.com", login: /\/ru\/login$/, locale: "ru" },
   { path: "/dashboard/content", login: /\/login$/, locale: "uz" },
   { path: "/ru/", login: /\/ru\/login$/, locale: "ru" },
   // Regression for the matcher bug where a bare `products/` exclusion
@@ -105,11 +107,13 @@ test.describe("admin session (TEST_SESSION_COOKIE)", () => {
     await expect(page.getByText(/^\d+ ta yozuv$/)).toHaveCount(6);
   });
 
-  // Read-only: nothing here writes the allow-list.
+  // Read-only: nothing here writes the allow-list. The directory (R3/S04) opens
+  // on cards; ?view=table is the management table this test is about — the
+  // directory itself is tests/e2e/people.spec.ts.
   test("/admin/users lists the allow-list and locks the admin's own row", async ({ page }) => {
-    await page.goto("/admin/users");
-    await expectStillOn(page, /\/admin\/users$/);
-    await expect(page.getByRole("heading", { name: "Foydalanuvchilar va kirish huquqi" })).toBeVisible();
+    await page.goto("/admin/users?view=table");
+    await expectStillOn(page, /\/admin\/users\?view=table$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Xodimlar", exact: true })).toBeVisible();
     const ownRow = page.getByRole("row").filter({ hasText: "Siz" });
     await expect(ownRow).toHaveCount(1);
     // An admin row: badge, disabled controls, and the note they point at (0020).
@@ -123,7 +127,7 @@ test.describe("admin session (TEST_SESSION_COOKIE)", () => {
   test("the add dialog offers Operator and Menejer, never Admin", async ({ page }) => {
     await page.goto("/admin/users");
     await expectStillOn(page, /\/admin\/users$/);
-    await page.getByRole("button", { name: "+ Foydalanuvchi qo'shish" }).click();
+    await page.getByRole("button", { name: "+ Xodim qo'shish" }).click();
     const role = page.getByRole("dialog").getByLabel("Rol", { exact: true });
     await expect(role.getByRole("option")).toHaveText(["Operator", "Menejer"]);
   });

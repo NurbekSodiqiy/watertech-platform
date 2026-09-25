@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { setActive, setRole } from "@/lib/admin/actions/users";
 import { formatRelative } from "@/lib/admin/format";
+import { personPath } from "@/lib/admin/people";
 import {
   ASSIGNABLE_ROLES,
   USER_ROLES,
@@ -72,8 +73,22 @@ function compareUsers(a: AdminUser, b: AdminUser, key: SortKey): number {
  *
  * Every write re-validates on the server and again in SQL; nothing this
  * component disables is a protection, only a courtesy.
+ *
+ * The email is a link to the person's page (/admin/users/[email]). Inside the
+ * people directory the table is its "Jadval" view: `hideToolbar` drops its own
+ * search, filters and add button, because the directory's tabs, search box and
+ * add button already filtered `users` and opened the dialog — one set of
+ * controls per page.
  */
-export function UsersTable({ users, currentEmail }: { users: AdminUser[]; currentEmail: string }) {
+export function UsersTable({
+  users,
+  currentEmail,
+  hideToolbar = false,
+}: {
+  users: AdminUser[];
+  currentEmail: string;
+  hideToolbar?: boolean;
+}) {
   const router = useRouter();
   const mounted = useMounted();
   const online = useOnline();
@@ -212,57 +227,59 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[180px] flex-1">
-          <Search
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
-          />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={tFilter("filterPlaceholder")}
-            aria-label={tFilter("filterPlaceholder")}
-            className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
-          />
+      {!hideToolbar && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[180px] flex-1">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={tFilter("filterPlaceholder")}
+              aria-label={tFilter("filterPlaceholder")}
+              className="w-full rounded-lg border border-border bg-surface-alt py-2 pl-8 pr-3 text-[13px] text-primary-dark placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-light"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => {
+              const value = e.target.value;
+              setRoleFilter(isUserRole(value) ? value : "all");
+            }}
+            aria-label={t("filters.role")}
+            className={FILTER_SELECT_CLASS}
+          >
+            <option value="all">{t("filters.allRoles")}</option>
+            {USER_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {t(`roles.${role}`)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              const value = e.target.value;
+              setStatusFilter(value === "active" || value === "inactive" ? value : "all");
+            }}
+            aria-label={t("filters.status")}
+            className={FILTER_SELECT_CLASS}
+          >
+            <option value="all">{t("filters.allStatuses")}</option>
+            <option value="active">{t("status.active")}</option>
+            <option value="inactive">{t("status.inactive")}</option>
+          </select>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="shrink-0 rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover"
+          >
+            {t("add")}
+          </button>
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => {
-            const value = e.target.value;
-            setRoleFilter(isUserRole(value) ? value : "all");
-          }}
-          aria-label={t("filters.role")}
-          className={FILTER_SELECT_CLASS}
-        >
-          <option value="all">{t("filters.allRoles")}</option>
-          {USER_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {t(`roles.${role}`)}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            const value = e.target.value;
-            setStatusFilter(value === "active" || value === "inactive" ? value : "all");
-          }}
-          aria-label={t("filters.status")}
-          className={FILTER_SELECT_CLASS}
-        >
-          <option value="all">{t("filters.allStatuses")}</option>
-          <option value="active">{t("status.active")}</option>
-          <option value="inactive">{t("status.inactive")}</option>
-        </select>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="shrink-0 rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-surface transition-colors hover:bg-accent-hover"
-        >
-          {t("add")}
-        </button>
-      </div>
+      )}
 
       {visible.length === 0 ? (
         <EmptyState
@@ -303,7 +320,12 @@ export function UsersTable({ users, currentEmail }: { users: AdminUser[]; curren
                 return (
                   <tr key={user.email} className="border-b border-border last:border-0 hover:bg-primary/5">
                     <td className="px-4 py-2.5">
-                      <span className="font-medium text-primary-dark">{user.email}</span>
+                      <Link
+                        href={personPath(user.email)}
+                        className="font-medium text-primary-dark hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {user.email}
+                      </Link>
                       {isSelf && (
                         <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                           {t("you")}

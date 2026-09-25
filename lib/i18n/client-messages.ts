@@ -36,8 +36,10 @@ export const ROOT_CLIENT_NAMESPACES = [
   "pages.tools.calculator",
 ] as const;
 
-/** Added on top of the root list by app/[locale]/(admin)/admin/layout.tsx. */
-export const ADMIN_CLIENT_NAMESPACES = ["admin", "pages.admin"] as const;
+/** Added on top of the root list by app/[locale]/(admin)/admin/layout.tsx.
+ * `dashboard.duration` ("2 soat 15 daq") is for the people directory's cards,
+ * which format active time like the dashboard does (lib/dashboard/format.ts). */
+export const ADMIN_CLIENT_NAMESPACES = ["admin", "pages.admin", "dashboard.duration"] as const;
 
 /** Added on top of the root list by app/[locale]/dashboard/layout.tsx. `admin.shell` and
  * `admin.nav` are for AdminShell, which both admin layouts mount; `admin.gate` is for

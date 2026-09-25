@@ -47,7 +47,7 @@ Playwright starts `npm run start`, so **build first**. It reuses a server alread
 CI has no Google sign-in, so what runs there is what an anonymous visitor can reach:
 
 - `smoke.spec.ts`: `/` gate, the sign-in button in both locales, `/api/events` 401.
-- `auth-gate.spec.ts`: `/`, `/admin`, `/dashboard/content`, `/ru/` redirect to the matching login page, and
+- `auth-gate.spec.ts`: `/`, `/admin`, `/admin/users/<email>`, `/dashboard/content`, `/ru/` redirect to the matching login page, and
   so do URLs that merely end in a file extension (`/sales-process/scripts/<slug>.json`, `/x.json` — the
   matcher hole Audit-2 F1 closed); `/sw.js`, the manifest and one file from each `public/` folder are
   still served without a session.
@@ -67,9 +67,9 @@ telemetry, admin-only menu items), so the operator specs still run as an operato
 
 | Variable | Role | Unlocks |
 | --- | --- | --- |
-| `TEST_OPERATOR_COOKIE` | operator | `story.spec.ts`, `pins.spec.ts`, `changelog.spec.ts`, `locale.spec.ts`, and the operator blocks of `a11y.spec.ts` and `mobile.spec.ts` |
-| `TEST_SESSION_COOKIE` | admin (the variable's name predates the role) | the `admin session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`, `/admin/users`, the operator-app preview and the avatar menu's way back to `/admin`) and `admin-bulk-reorder.spec.ts` |
-| `TEST_MANAGER_COOKIE` | manager (a sales manager) | the `sales manager session` block of `auth-gate.spec.ts`: `/` renders, and `/admin/**` and `/dashboard/**` send them home |
+| `TEST_OPERATOR_COOKIE` | operator | `story.spec.ts`, `pins.spec.ts`, `changelog.spec.ts`, `locale.spec.ts`, and the operator blocks of `a11y.spec.ts` and `mobile.spec.ts`, and the operator block of `people.spec.ts` (kept out of the people pages) |
+| `TEST_SESSION_COOKIE` | admin (the variable's name predates the role) | the `admin session` block of `auth-gate.spec.ts` (`/dashboard`, `/admin`, `/admin/users?view=table`, the operator-app preview and the avatar menu's way back to `/admin`), `people.spec.ts` (the people directory and a person page; needs migration 0021 applied to that project) and `admin-bulk-reorder.spec.ts` |
+| `TEST_MANAGER_COOKIE` | manager (a sales manager) | the `sales manager session` block of `auth-gate.spec.ts`: `/` renders, and `/admin/**` and `/dashboard/**` send them home; `people.spec.ts`: so do the people pages |
 
 1. `npm run build && npm run start`, open `http://localhost:3000`, sign in with an account of that role.
 2. DevTools → Application → Cookies → `http://localhost:3000`. Copy every `sb-<project-ref>-auth-token`

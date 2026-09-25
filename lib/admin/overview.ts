@@ -1,5 +1,9 @@
 import { checklistPercent } from "@/lib/telemetry/aggregate";
-import { percentChange, type PersonOverview, type PersonTotals } from "@/lib/admin/people";
+import { displayName, percentChange, type PersonOverview, type PersonTotals } from "@/lib/admin/people";
+
+// The name a person is shown under lives in lib/admin/people.ts (client islands
+// use it too); re-exported so the overview's callers keep one import.
+export { displayName };
 
 // The admin overview's arithmetic (/admin, R3/S03): who the page is about, the
 // headline totals of a window and their change against the window before.
@@ -99,12 +103,6 @@ export function rankPeople(
   score: (person: PersonOverview) => number
 ): PersonOverview[] {
   return [...people].sort((a, b) => score(b) - score(a) || displayName(a).localeCompare(displayName(b)));
-}
-
-/** The allow-list's full name, else the email. */
-export function displayName(person: Pick<PersonOverview, "fullName" | "email">): string {
-  const name = person.fullName?.trim();
-  return name ? name : person.email;
 }
 
 /** Whole minutes, the unit of the daily series. */

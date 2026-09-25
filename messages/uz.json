@@ -530,10 +530,6 @@
       "zeroResults": "Natijasiz qidiruvlar"
     },
     "activity": {
-      "perOperator": "Operatorlar bo'yicha faollik",
-      "mostViewed": "Eng ko'p ko'rilgan",
-      "noData": "Ma'lumot yo'q",
-      "copies": "{count} nusxalash",
       "hourlyHeading": "Soatlik reja vs fakt",
       "hour": "Soat",
       "plan": "Reja",
@@ -856,6 +852,182 @@
           "cancel": "Bekor qilish",
           "submit": "Qo'shish",
           "submitting": "Qo'shilmoqda…"
+        }
+      },
+      "people": {
+        "directory": {
+          "title": "Xodimlar",
+          "description": "Operator va menejerlar — Gmail bo'yicha. Kartani bosing: faqat shu xodimning ma'lumotlari ochiladi.",
+          "add": "+ Xodim qo'shish",
+          "statsUnavailable": "Faollik statistikasi hozir yuklanmadi — kartalar raqamlarsiz ko'rsatilmoqda.",
+          "retry": "Qayta urinish",
+          "summary": {
+            "total": "Jami",
+            "operators": "Operatorlar",
+            "managers": "Menejerlar",
+            "active": "Faol ({days} kun)",
+            "inactive": "Nofaol",
+            "inactiveHint": "{days} kunda faollik yo'q"
+          },
+          "tabs": {
+            "label": "Rol bo'yicha",
+            "all": "Hammasi",
+            "operator": "Operatorlar",
+            "manager": "Menejerlar",
+            "admin": "Admin"
+          },
+          "search": {
+            "label": "Ism yoki Gmail bo'yicha qidirish",
+            "placeholder": "Ism yoki Gmail…"
+          },
+          "sort": {
+            "label": "Saralash",
+            "activity": "Oxirgi faollik",
+            "time": "Faol vaqt",
+            "name": "Ism",
+            "added": "Qo'shilgan sana"
+          },
+          "view": {
+            "label": "Ko'rinish",
+            "cards": "Kartalar",
+            "table": "Jadval"
+          },
+          "resultCount": "Topildi: {count}",
+          "empty": {
+            "title": "Hali operator yoki menejer yo'q",
+            "reason": "Birinchisini qo'shing — uning kartasi shu yerda paydo bo'ladi."
+          },
+          "windowNote": "Kartalardagi raqamlar oxirgi {days} kun uchun (Toshkent vaqti bilan)."
+        },
+        "card": {
+          "lastActive": "Oxirgi faollik: <time>{when}</time>",
+          "neverActive": "hali yo'q",
+          "windowActive": "{days} kunda faol: {time}",
+          "noTelemetry": "Telemetriya yozilmaydi",
+          "statsUnavailable": "Statistika yuklanmadi",
+          "dayTitle": "{day}: {minutes} daq",
+          "seriesLabel": "{name} — oxirgi {days} kunda kunlik faol daqiqalar"
+        },
+        "person": {
+          "header": {
+            "back": "Xodimlar",
+            "added": "Qo'shilgan",
+            "firstSeen": "Birinchi faollik",
+            "lastSeen": "Oxirgi faollik",
+            "never": "Hali yo'q",
+            "noTelemetry": "Telemetriya yozilmaydi — admin faolligi hisobga olinmaydi.",
+            "noTelemetryLabel": "Faollik"
+          },
+          "stats": {
+            "activeTime": "Faol vaqt",
+            "activeDays": "Faol kunlar",
+            "sessions": "Sessiyalar",
+            "views": "Ko'rilgan materiallar",
+            "copies": "Nusxalashlar",
+            "searches": "Qidiruvlar",
+            "copilot": "Copilot savollari",
+            "calls": "Qo'ng'iroqlar qayd etilgan",
+            "perActiveDay": "Kuniga: {value}",
+            "noActiveDays": "Faol kun yo'q",
+            "ofDays": "{count} kundan",
+            "searchesCaption": "{count} tasi natijasiz",
+            "callsCaption": "Kunlik rejadan"
+          },
+          "onboarding": {
+            "title": "Onboarding",
+            "value": "{done} / {total} band · {percent}%",
+            "caption": "Tanlangan davrda belgilangan bandlar."
+          },
+          "empty": {
+            "noActivity": {
+              "title": "Tanlangan davrda faollik yo'q",
+              "reason": "Boshqa davrni tanlang — xodim ishlagan kunlar shu yerda ko'rinadi."
+            }
+          },
+          "daily": {
+            "title": "Kunlik faollik",
+            "description": "Har kuni faol bo'lgan daqiqalar. Ustiga olib boring — hodisalar soni ko'rinadi.",
+            "pointTitle": "{date}: {minutes} daq · {events} hodisa"
+          },
+          "hourly": {
+            "title": "Qaysi soatlarda ishlaydi",
+            "description": "Toshkent vaqti bo'yicha soatlarga bo'lingan hodisalar soni.",
+            "pointTitle": "{hour}: {count} hodisa"
+          },
+          "sections": {
+            "title": "Bo'limlar bo'yicha vaqt",
+            "description": "Sahifalarda o'tkazilgan vaqt (bo'sh turish ajratilmagan).",
+            "home": "Bosh sahifa",
+            "visits": "{count} tashrif"
+          },
+          "topViewed": {
+            "title": "Eng ko'p ko'rilgan materiallar",
+            "description": "E'tirozlar, skript bosqichlari va FAQ — eng ko'p ochilganlari.",
+            "views": "{count} ko'rish"
+          },
+          "zeroSearches": {
+            "title": "Topilmagan qidiruvlar",
+            "description": "Natija bermagan so'rovlar — kontentda nima yetishmaydi.",
+            "query": "«{query}»",
+            "times": "{count} marta",
+            "empty": {
+              "title": "Topilmagan qidiruv yo'q",
+              "reason": "Bu davrda barcha qidiruvlar natija bergan."
+            }
+          },
+          "timeline": {
+            "title": "So'nggi harakatlar",
+            "description": "Eng yangilari birinchi. Tanlangan davrdan qat'i nazar.",
+            "empty": {
+              "title": "Hali harakat yo'q",
+              "reason": "Xodim ilovadan foydalanganda harakatlar shu yerda paydo bo'ladi."
+            }
+          },
+          "locked": {
+            "title": "Kirish huquqi",
+            "description": "Admin qatori bu yerdan o'zgartirilmaydi."
+          }
+        },
+        "access": {
+          "title": "Kirish huquqi",
+          "description": "Xodim qaysi rolda ishlaydi va tizimga kira oladimi.",
+          "role": {
+            "label": "Rol",
+            "hint": "Operator va menejer bir xil ilova bilan ishlaydi. O'zgarish keyingi token yangilanishida (odatda 1 soat ichida) kuchga kiradi."
+          },
+          "status": {
+            "label": "Kirish ruxsati",
+            "hint": "To'xtatilsa, xodim Google orqali qayta kira olmaydi va sessiyasi yangilanmaydi."
+          },
+          "roleTitle": "Rolni o'zgartirish",
+          "roleDescription": "{name} endi «{role}» sifatida ishlaydi. O'zgarish keyingi token yangilanishida (odatda 1 soat ichida) kuchga kiradi.",
+          "roleConfirm": "O'zgartirish"
+        },
+        "activityList": {
+          "title": "Xodimlar faolligi",
+          "all": "Barcha xodimlar"
+        },
+        "events": {
+          "page_enter": "Sahifani ochdi: {path}",
+          "script_select": "Skript ochdi: {label}",
+          "stage_view": "Skript bosqichini ko'rdi: {label}",
+          "objection_view": "E'tirozni ochdi: {label}",
+          "faq_view": "FAQ savolini ochdi: {label}",
+          "competitor_view": "Raqobatchi kartasini ochdi: {label}",
+          "package_view": "Paketni ko'rdi: {label}",
+          "search": "Qidirdi: «{query}»",
+          "searchNoResults": "Qidirdi: «{query}» — hech narsa topilmadi",
+          "copy": "Nusxa oldi: {label}",
+          "copyPlain": "Matndan nusxa oldi",
+          "call_mode_on": "Qo'ng'iroq rejimini yoqdi",
+          "call_mode_off": "Qo'ng'iroq rejimini o'chirdi",
+          "checklist_toggle": "{kind, select, daily_task {Kunlik reja bandini} onboarding_item {Onboarding bandini} other {Ro'yxat bandini}} {state, select, on {belgiladi} off {belgisini oldi} other {o'zgartirdi}}",
+          "calculator_use": "Kalkulyatordan foydalandi",
+          "call_count_log": "Qo'ng'iroqlar sonini kiritdi: {count}",
+          "feedback": "{helpful, select, yes {Javobni foydali deb belgiladi} no {Javobni foydasiz deb belgiladi} other {Fikr bildirdi}}",
+          "copilot_ask": "Copilotga savol berdi",
+          "pin_toggle": "{state, select, on {Pin qo'ydi} off {Pinni oldi} other {Pinni o'zgartirdi}}: {label}",
+          "unknown": "Harakat: {type}"
         }
       },
       "shared": {

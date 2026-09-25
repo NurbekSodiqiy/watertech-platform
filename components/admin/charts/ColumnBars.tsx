@@ -28,6 +28,11 @@ export interface ColumnBarsProps {
   scroll?: boolean;
   /** Rendered instead of the series when there are no points. */
   empty?: ReactNode;
+  /** A sparkline for a card: no value above the bars, no label under the axis,
+   * columns that share the width instead of scrolling, and static bars (no
+   * BarGrow, no in-view observer) — a directory draws one per person. Each
+   * column keeps its tooltip; the whole series is one image named by `label`. */
+  compact?: boolean;
 }
 
 const FILL: Record<ColumnBarsProps["tone"], string> = {
@@ -47,9 +52,45 @@ const MIN_COLUMN = "1.75rem";
 /** A vertical series — one column per day or hour, the value printed just
  * above its bar and the label under the axis. A zero is a 2px stub on the
  * axis, so "nothing that day" still reads as a measured day. */
-export function ColumnBars({ points, tone, label, size = "md", scroll = true, empty = null }: ColumnBarsProps) {
+export function ColumnBars({
+  points,
+  tone,
+  label,
+  size = "md",
+  scroll = true,
+  empty = null,
+  compact = false,
+}: ColumnBarsProps) {
   if (points.length === 0) return <>{empty}</>;
   const max = seriesMax(points.map((point) => point.value));
+
+  if (compact) {
+    return (
+      <div
+        role="img"
+        aria-label={label}
+        className={`grid items-end gap-0.5 border-b border-border ${AREA[size]}`}
+        style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}
+      >
+        {points.map((point) => {
+          const percent = barPercent(point.value, max);
+          return (
+            <div
+              key={point.key}
+              title={point.title ?? `${point.label}: ${point.display}`}
+              className="flex h-full items-end"
+            >
+              {percent > 0 ? (
+                <div className={`w-full rounded-t-lg ${FILL[tone]}`} style={{ height: `${percent}%` }} />
+              ) : (
+                <div className="h-[2px] w-full rounded-full bg-text-secondary/30" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   const series = (
     <ol

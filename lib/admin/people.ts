@@ -438,7 +438,20 @@ export function parsePersonParam(raw: string): string | null {
   return parsed.success ? parsed.data : null;
 }
 
-// --- Avatars -----------------------------------------------------------------------
+// --- Names and avatars -----------------------------------------------------------------
+
+/** The allow-list's full name, else the email. */
+export function displayName(person: { fullName: string | null; email: string }): string {
+  const name = person.fullName?.trim();
+  return name ? name : person.email;
+}
+
+/** The part of the email before the "@" — a person's name where the allow-list
+ * has none and the email would not fit ("ali.valiyev@gmail.com" → "ali.valiyev"). */
+export function emailLocalPart(email: string): string {
+  const at = email.indexOf("@");
+  return at > 0 ? email.slice(0, at) : email;
+}
 
 const FIRST_LETTER = /[\p{L}\p{N}]/u;
 

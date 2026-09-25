@@ -80,8 +80,9 @@ components/
   products/                       CertificateGallery/Grid, product lightbox
   providers/                       SessionProvider, ClientNameContext, CertificateLightboxContext, ThemeScript, TelemetryProvider
   admin/                           CMS forms/editors, AdminShell, UsersTable, AddUserDialog
-    charts/                        StatCard, BarList, ColumnBars, CompareTable, DeltaBadge, ChartCard (R3/S03) — §15
-    people/                        PeopleDirectory, PersonCard, person-page widgets (R3/S04) — §15
+    charts/                        StatCard, BarList, ColumnBars, CompareTable, DeltaBadge, ChartCard, ProgressBar (R3/S03–S04) — §15
+    people/                        PeopleDirectory, PersonCard, PersonAvatar, RoleBadge, PersonHeader, PersonDetail,
+                                   PersonTimeline, PersonAccessPanel, PeopleActivityList (R3/S04) — §15
   changelog/                       ChangelogEntryCard
   copilot/                        operator copilot UI
   dashboard/                       monitoring widgets/KPIs (RangePicker, OperatorFilter, QualityPanel…)
@@ -109,6 +110,10 @@ lib/
                                    non-CRUD writes are dependency-injected the same way:
                                    actions/restore.ts (history + trash), actions/user-access.ts
                                    (allow-list), actions/product-image.ts (catalog photos).
+                                   people.ts / people-queries.ts (R3/S02) are the 0021 rows and calls;
+                                   directory.ts (R3/S04) is the people directory's pure logic (join with
+                                   the overview, summary, URL state, search, sort — client-safe) and
+                                   person-page.ts the person page's (section labels, timeline sentences).
   copilot/                         copilot prompt/response logic (gemini.ts, retrieve.ts, docs.ts, protocol.ts)
   agents/                         server "agents": publish-gate/ (runs before every publish), stale-scan.ts
                                    (daily cron), retention.ts — not copilot code
@@ -166,7 +171,11 @@ components/  (flat today)   AppShell  Sidebar  TopBar  PageTransition  CommandPa
                             TelemetryProvider  FeedbackWidget
 components/admin/           AdminShell  AdminOverview  OverviewRefresh  RelativeTime  NotificationsBell  UsersTable …
 components/admin/charts/    ChartCard  StatCard  DeltaBadge  BarList  ColumnBars  CompareTable  BarGrow  BarGrowGroup
-                            (R3/S03; pure geometry in lib/admin/charts.ts, overview arithmetic in lib/admin/overview.ts)
+                            ProgressBar (R3/S03–S04; pure geometry in lib/admin/charts.ts, overview arithmetic in
+                            lib/admin/overview.ts)
+components/admin/people/    PeopleDirectory  PersonCard  PersonAvatar  RoleBadge  PersonHeader  PersonDetail
+                            PersonTimeline  PersonAccessPanel  PeopleActivityList (R3/S04)
+app/[locale]/(admin)/admin/users/   page.tsx (directory) + loading.tsx, [email]/page.tsx (person) + loading.tsx (R3/S04)
 app/[locale]/(admin)/admin/(overview)/   page.tsx + loading.tsx of /admin — a route group, so the overview has its
                             own skeleton while ../loading.tsx stays the CMS pages' generic one (R3/S03)
 components/ui/              Dialog  ErrorBoundary  PinButton  RecentRecorder  Skeleton  SubmitButton  Toaster
@@ -538,11 +547,26 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   `DashboardTabs` are gone; each `/dashboard/*` page renders its own `PageHeader`. The header has "Operator view"
   (`/`). `AdminShell` is mounted by both layouts, so what it reads must be in both client lists
   (`admin.shell`, `admin.nav` in `DASHBOARD_CLIENT_NAMESPACES`; the client-messages test checks both).
-- **People.** `/admin/users` is the people directory (cards + table view, role tabs, search, sort — all
-  client-side over the full list, URL kept in sync with `history.replaceState`, §4). Each card links to
-  `/admin/users/[email]` built by `personPath(email)` (encodeURIComponent) and parsed back by
-  `parsePersonParam()` (zod `userEmailSchema`) → `notFound()` for anything not in `allowed_users`.
-  The list is driven by `allowed_users`, so a newly added person appears without any other change.
+- **People.** `/admin/users` ("Xodimlar") is the people directory: one server read of `listAdminUsers()` plus
+  `admin_people_overview` for the last 14 Tashkent days, joined by email (`buildDirectory`), then everything —
+  role tabs (a real `tablist`, arrow keys, counts follow the search), search (`normalizeSearchText`: case,
+  apostrophes, Cyrillic), sort (activity · active time · name · added) and the cards ⇄ table view — is client-side
+  over the full list. The state lives in `?role=&q=&sort=&view=`: read on the server for the first paint
+  (`parseDirectoryState`), written back with `history.replaceState` (§4). Cards are memoized, fetch nothing and
+  do not prefetch; the table view is `UsersTable` with `hideToolbar` (the directory's controls drive it). The
+  summary strip counts operators + managers only (the admin is listed, never counted); "Faol (7 kun)" is any event
+  in the last 7 days of the 14-day window, "Nofaol" the rest. Each card links to `/admin/users/[email]` built by
+  `personPath(email)` (encodeURIComponent) and parsed back by `parsePersonParam()` (zod `userEmailSchema`) →
+  `notFound()` for anything not in `allowed_users`. The list is driven by `allowed_users`, so a newly added person
+  appears without any other change: `AddUserDialog` calls `router.refresh()` after `addUser`, and the (dynamic) page
+  re-reads both sources — there is no cache or `revalidatePath` involved.
+- **Person page.** `/admin/users/[email]` reads the allow-list row and every widget's RPC in one `Promise.all`
+  (`fetchPerson*` in `lib/admin/people-queries.ts`: 0021 functions plus `dashboard_hourly` / `_most_viewed` /
+  `_zero_result_searches` with `p_operator`); no row → `notFound()`, an admin row → no numbers (telemetry is never
+  recorded for that role) and the locked note instead of `PersonAccessPanel`. Timeline lines are
+  `pages.admin.people.events.<type>` sentences built by `buildTimeline`: entity titles from the content bundle, meta
+  only through the zod-validated known keys. Wherever a gmail is shown and that person is on the allow-list it links
+  here (overview compare table, `PeopleActivityList` on `/dashboard`, the table view, the activity feed's actors).
 - **Charts** are server-rendered divs/SVG from `components/admin/charts/` — no chart dependency. Bar length is
   an inline `style` percentage (computed size, allowed by §6); the only motion is a one-time `scaleX`/`scaleY`
   grow via `m.*` (`BarGrow`), driven per chart by one `BarGrowGroup` on `useRevealPhase`: the server HTML, reduced

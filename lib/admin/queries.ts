@@ -538,7 +538,7 @@ export async function listAdminUsers(): Promise<AdminUserList> {
   const [rows, activity] = await Promise.all([
     supabase
       .from("allowed_users")
-      .select("email,full_name,role,is_active,updated_at,updated_by")
+      .select("email,full_name,role,is_active,created_at,updated_at,updated_by")
       .order("email"),
     supabase.rpc("admin_user_last_activity"),
   ]);
@@ -565,6 +565,7 @@ export async function listAdminUsers(): Promise<AdminUserList> {
       role: row.role,
       isActive: row.is_active,
       lastActivityAt: lastSeen.get(row.email) ?? null,
+      addedAt: new Date(row.created_at).toISOString(),
       updatedAt: row.updated_at,
       updatedBy: row.updated_by,
     });

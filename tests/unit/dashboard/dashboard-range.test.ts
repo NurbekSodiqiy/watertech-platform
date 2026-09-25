@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_RANGE_SPAN_DAYS, parseDashboardRange } from "@/lib/dashboard/range";
+import { MAX_RANGE_SPAN_DAYS, lastDaysRange, parseDashboardRange, rangeDayCount } from "@/lib/dashboard/range";
 
 // 2026-09-16T20:30Z is already 01:30 on 2026-09-17 in Tashkent (UTC+5), so a
 // default window computed from the UTC date would be off by one day.
@@ -78,5 +78,37 @@ describe("parseDashboardRange", () => {
       to: "2026-09-03",
       operatorEmail: null,
     });
+  });
+});
+
+describe("lastDaysRange", () => {
+  it("is the last N Tashkent days, today included, both ends inclusive", () => {
+    expect(lastDaysRange(14)).toEqual({ from: "2026-09-04", to: TODAY_TASHKENT });
+    expect(lastDaysRange(1)).toEqual({ from: TODAY_TASHKENT, to: TODAY_TASHKENT });
+    expect(rangeDayCount(lastDaysRange(14))).toBe(14);
+  });
+
+  it("takes today from Tashkent, not from UTC", () => {
+    // NOW_UTC is still the 16th in UTC.
+    expect(lastDaysRange(7).to).toBe("2026-09-17");
+  });
+
+  it("can be pinned to a day, across a month boundary", () => {
+    expect(lastDaysRange(7, "2026-10-03")).toEqual({ from: "2026-09-27", to: "2026-10-03" });
+  });
+
+  it("refuses a span the dashboard functions would refuse", () => {
+    expect(() => lastDaysRange(0)).toThrow(RangeError);
+    expect(() => lastDaysRange(1.5)).toThrow(RangeError);
+    expect(() => lastDaysRange(MAX_RANGE_SPAN_DAYS + 2)).toThrow(RangeError);
+    expect(rangeDayCount(lastDaysRange(MAX_RANGE_SPAN_DAYS + 1))).toBe(MAX_RANGE_SPAN_DAYS + 1);
+  });
+});
+
+describe("rangeDayCount", () => {
+  it("counts both ends", () => {
+    expect(rangeDayCount({ from: "2026-09-11", to: "2026-09-17" })).toBe(7);
+    expect(rangeDayCount({ from: "2026-09-17", to: "2026-09-17" })).toBe(1);
+    expect(rangeDayCount({ from: "2026-08-30", to: "2026-09-02" })).toBe(4);
   });
 });

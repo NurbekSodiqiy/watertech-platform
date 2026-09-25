@@ -500,6 +500,32 @@ table only):
 | `/dashboard/content` | 141 kB | 141.106 kB |
 | `/company/onboarding` (operator, unchanged code) | 180 kB | 180.321 kB |
 
+## R3/S04 (2026-09-25, people directory and person page)
+
+`/admin/users` became the people directory (`PeopleDirectory` + `PersonCard`, client) and `/admin/users/[email]`
+the person page (server-rendered; its only client parts are `PersonAccessPanel`, `CopyButton`, `RelativeTime`,
+`BarGrow`/`BarGrowGroup` and `DashboardWidgetError`). No dependency was added and no operator layout or shared
+module changed; `dashboard.duration` (two strings) joined the admin client message list. `next build` table:
+
+| Route | Before (S03) | After |
+|---|---:|---:|
+| `/admin/users` | 154 kB | 164 kB (page chunk 8.81 → 14.4 kB: directory, cards, search/sort logic, `normalizeSearchText`) |
+| `/admin/users/[email]` | — | 160 kB (page chunk 7.87 kB, dynamic) |
+| `/admin`, `/dashboard`, `/dashboard/quality`, `/dashboard/content` | 139 / 135 / 135 / 141 kB | unchanged |
+| `/company/onboarding` (operator) | 180 kB | 180 kB |
+
+**The directory with ~200 people.** One server round trip (`listAdminUsers()` and `admin_people_overview` in
+parallel); the per-day series sent per person is 14 bare millisecond values (the days are consecutive, so the
+first one travels once as `windowStart` — about 100 B per person, ≈ 20 kB of RSC payload at 200 people, estimated
+from the shape, not measured on a 200-row database). Cards are `React.memo` and fetch nothing; the shared "last
+active" clock is one `useNow` floored to the minute, so they re-render once a minute; the sparkline is
+`ColumnBars compact` — plain `div`s, no `BarGrow`/in-view observer per card (14 motion values × 200 cards would
+be 2 800 animated nodes); links do not prefetch (`prefetch={false}`), so scrolling never starts a server render
+per card; the search input is deferred (`useDeferredValue`) and sorting is a separate memo from filtering.
+
+**The person page.** Eight RPCs and one allow-list read in one `Promise.all`; each is a 0021 / 0016 aggregate
+(no raw telemetry row), so the payload is a few KB whatever the person's history.
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.

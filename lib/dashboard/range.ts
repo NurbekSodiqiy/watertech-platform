@@ -69,6 +69,21 @@ export function previousEqualRange(range: DashboardRange): DashboardRange {
   return { from: prevFrom, to: prevTo, operatorEmail: range.operatorEmail };
 }
 
+/** The last `days` Tashkent calendar days, today included — [today − (days−1),
+ * today], both ends inclusive, the shape parseDashboardRange returns. `today`
+ * is a parameter only so a test can pin it. */
+export function lastDaysRange(days: number, today: string = todayInTashkent()): Pick<DashboardRange, "from" | "to"> {
+  if (!Number.isInteger(days) || days < 1 || days > MAX_RANGE_SPAN_DAYS + 1) {
+    throw new RangeError(`lastDaysRange: days must be 1-${MAX_RANGE_SPAN_DAYS + 1}, got ${days}`);
+  }
+  return { from: addDays(today, -(days - 1)), to: today };
+}
+
+/** Number of calendar days a range covers, both ends inclusive. */
+export function rangeDayCount(range: Pick<DashboardRange, "from" | "to">): number {
+  return daysBetween(range.from, range.to) + 1;
+}
+
 export interface RangePreset {
   /** Also the `dashboard.ranges.<key>` message key of the pill's label. */
   key: "today" | "7d" | "30d" | "month";
