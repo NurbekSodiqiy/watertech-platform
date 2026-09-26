@@ -21,7 +21,11 @@
 -- self-change / stale-token guard, the append-only access_audit, and
 -- admin_user_last_activity()), 0020 (role model v2: `admin` is the owner and
 -- holds everything the old `manager` held; a `manager` is a sales manager and
--- gets exactly what an operator gets; admin rows are SQL-editor-only, WT462).
+-- gets exactly what an operator gets; admin rows are SQL-editor-only, WT462),
+-- 0022 (an admin session may delete an operator's or a sales manager's
+-- allow-list row — never an admin's, never their own — and
+-- admin_purge_person_history() deletes one person's telemetry, user_state and
+-- copilot_logs rows under the same refusals).
 --
 -- 0013 is the baseline for allowed_users and telemetry_events, which predate
 -- supabase/migrations. On a project where 0013 has not been applied yet, the
@@ -29,8 +33,8 @@
 -- the write-side block fails — that failure means "apply 0013", not "the
 -- policies are wrong". The same applies to 0014: the hook block at the top
 -- fails with "is 0014 applied?" and the non-member block reports rows that a
--- pre-0014 policy really does expose. A missing 0017 or 0020 stops the file at
--- its preflight.
+-- pre-0014 policy really does expose. A missing 0017, 0020 or 0022 stops the
+-- file at its preflight.
 
 begin;
 
@@ -117,6 +121,13 @@ begin
   end if;
   if to_regprocedure('private.is_admin()') is null then
     raise exception 'RLS FAIL: private.is_admin() missing — apply 0020_roles_admin_manager.sql, then re-run this file';
+  end if;
+  if to_regprocedure('public.admin_purge_person_history(text)') is null
+     or not exists (
+       select 1 from pg_catalog.pg_policies p
+       where p.schemaname = 'public' and p.tablename = 'allowed_users' and p.policyname = 'allowed_users_admin_delete'
+     ) then
+    raise exception 'RLS FAIL: admin_purge_person_history() / allowed_users_admin_delete missing — apply 0022_person_removal.sql, then re-run this file';
   end if;
 end $$;
 
@@ -400,6 +411,7 @@ begin
     ('public.admin_person_sections(text, timestamptz, timestamptz)'),
     ('public.admin_person_recent_events(text, integer)'),
     ('public.admin_top_content(timestamptz, timestamptz, integer)'),
+    ('public.admin_purge_person_history(text)'),
     ('public.reorder_content_rows(text, text[], integer[])')
   ) as t(sig)
   where to_regprocedure(t.sig) is not null;
@@ -460,6 +472,9 @@ begin
           'select * from public.admin_person_recent_events(''op@test'')'),
         ('public.admin_top_content(timestamptz, timestamptz, integer)',
           'select * from public.admin_top_content(now() - interval ''1 day'', now())'),
+        -- Another member's history (0022): refused before anything is read.
+        ('public.admin_purge_person_history(text)',
+          'select public.admin_purge_person_history(''rls-other-op@test'')'),
         ('public.reorder_content_rows(text, text[], integer[])',
           'select public.reorder_content_rows(''content_faqs'', array[''rls-test-draft''], array[1])')
       ) as t(sig, sql)
@@ -548,9 +563,9 @@ end $$;
 -- callable by either — the counter behind /api/copilot's paid calls must be
 -- reachable only by the server's service-role client.
 --
--- allowed_users (0017/0020): neither can add, promote, deactivate or remove
--- anyone — themselves included. These are the statements a direct PostgREST
--- call with their JWT would run.
+-- allowed_users (0017/0020/0022): neither can add, promote, deactivate or
+-- remove anyone — themselves included. These are the statements a direct
+-- PostgREST call with their JWT would run.
 do $$
 declare
   ident record;
@@ -614,10 +629,37 @@ begin
       raise exception 'RLS FAIL: the allowed_users UPDATE policy let the % reach rows (only the guard refused)', ident.label;
     end;
 
+    -- DELETE is granted to every `authenticated` session since 0022; the
+    -- admin-only policy is what hides every row from them, so each of these
+    -- deletes nothing and never reaches the guard. The unfiltered one is the
+    -- UPDATE case again: no SELECT policy is consulted, only the DELETE
+    -- policy's USING — reaching the guard (WT403) means that policy let them in.
     begin
       delete from public.allowed_users where email = 'rls-admin@test';
-      raise exception 'RLS FAIL: the % can DELETE an allowed_users row', ident.label;
-    exception when insufficient_privilege then null; -- no delete grant, as intended
+      get diagnostics n = row_count;
+      if n <> 0 then
+        raise exception 'RLS FAIL: the % can DELETE an admin''s allowed_users row (% rows)', ident.label, n;
+      end if;
+
+      delete from public.allowed_users where email = 'rls-deactivated@test';
+      get diagnostics n = row_count;
+      if n <> 0 then
+        raise exception 'RLS FAIL: the % can DELETE an operator''s allowed_users row (% rows)', ident.label, n;
+      end if;
+
+      delete from public.allowed_users where email = ident.email;
+      get diagnostics n = row_count;
+      if n <> 0 then
+        raise exception 'RLS FAIL: the % can DELETE their OWN allowed_users row (% rows)', ident.label, n;
+      end if;
+
+      delete from public.allowed_users;
+      get diagnostics n = row_count;
+      if n <> 0 then
+        raise exception 'RLS FAIL: the %''s unfiltered DELETE matched % allowed_users rows', ident.label, n;
+      end if;
+    exception when sqlstate 'WT403' then
+      raise exception 'RLS FAIL: the allowed_users DELETE policy let the % reach rows (only the guard refused)', ident.label;
     end;
   end loop;
 end $$;
@@ -978,11 +1020,7 @@ begin
     end;
   end loop;
 
-  begin
-    delete from public.allowed_users where email = 'rls-new@test';
-    raise exception 'RLS FAIL: admin can DELETE an allowed_users row (deactivate instead)';
-  exception when insufficient_privilege then null; -- no delete grant, as intended
-  end;
+  -- Removing a row (0022) has its own block below.
 
   -- Admin rows are SQL-editor-only (0020, WT462) — for the admin too. Two
   -- admins are active (rls-admin, rls-admin-2) and none of these touches the
@@ -1080,6 +1118,144 @@ begin
   end if;
 end $$;
 
+-- === As an admin: removing a person (0022) =====================================
+-- What "remove" on /admin/users does after the Supabase Auth account is gone:
+-- optionally the history purge, then the allow-list row. Two admins are active
+-- (rls-admin, rls-admin-2), so WT460 is not what refuses anything here.
+
+do $$
+declare
+  n bigint;
+  audit record;
+  audit_rows bigint;
+  purged jsonb;
+begin
+  -- An operator row and a sales-manager row: each deleted, each audited with
+  -- the whole row as `before`, the admin as the actor and no `after`.
+  insert into public.allowed_users (email, role, full_name) values
+    ('rls-leaver-op@test', 'operator', 'RLS Leaver'),
+    ('rls-leaver-sales@test', 'manager', 'RLS Leaver 2');
+
+  delete from public.allowed_users where email = 'rls-leaver-op@test';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: admin cannot DELETE an operator''s allowed_users row (% rows)', n;
+  end if;
+  delete from public.allowed_users where email = 'rls-leaver-sales@test';
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'RLS FAIL: admin cannot DELETE a sales manager''s allowed_users row (% rows)', n;
+  end if;
+
+  for audit in
+    select a.target_email, a.actor, a.before, a.after
+    from public.access_audit a
+    where a.target_email in ('rls-leaver-op@test', 'rls-leaver-sales@test') and a.action = 'delete'
+  loop
+    if audit.actor is distinct from 'rls-admin@test' or audit.after is not null
+       or audit.before ->> 'email' is distinct from audit.target_email
+       or audit.before ->> 'role' not in ('operator', 'manager') then
+      raise exception 'RLS FAIL: the delete audit row for % is wrong (%)', audit.target_email, to_jsonb(audit);
+    end if;
+  end loop;
+  select count(*) into n from public.access_audit
+  where target_email in ('rls-leaver-op@test', 'rls-leaver-sales@test') and action = 'delete';
+  if n <> 2 then
+    raise exception 'RLS FAIL: two removals left % delete audit rows (expected 2)', n;
+  end if;
+
+  -- Admin rows stay SQL-editor-only (WT462), active or not; the caller's own
+  -- row is "self" first (WT461 before WT462).
+  begin
+    delete from public.allowed_users where email = 'rls-admin-2@test';
+    raise exception 'RLS FAIL: admin can DELETE another admin row through the API';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    delete from public.allowed_users where email = 'rls-admin-off@test';
+    raise exception 'RLS FAIL: admin can DELETE an inactive admin row through the API';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    delete from public.allowed_users where email = 'rls-admin@test';
+    raise exception 'RLS FAIL: admin can DELETE their own row';
+  exception when sqlstate 'WT461' then null;
+  end;
+
+  -- The history purge. rls-other-op@test has one row in each of the three
+  -- tables (fixtures) and no allow-list row — the purge does not need one. The
+  -- argument is normalised; access_audit is never touched.
+  --
+  -- The function is the only way in: the admin's own session cannot delete
+  -- these rows (no DELETE grant on telemetry_events since 0013, no DELETE
+  -- policy on copilot_logs, and user_state's delete policy is own-rows only).
+  begin
+    delete from public.telemetry_events where user_email = 'rls-other-op@test';
+    raise exception 'RLS FAIL: an admin session can DELETE telemetry_events rows directly';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.copilot_logs where email = 'rls-other-op@test';
+    get diagnostics n = row_count;
+    if n <> 0 then
+      raise exception 'RLS FAIL: an admin session can DELETE copilot_logs rows directly (% rows)', n;
+    end if;
+  exception when insufficient_privilege then null;
+  end;
+  delete from public.user_state where user_email = 'rls-other-op@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: an admin session can DELETE another member''s user_state rows directly (% rows)', n;
+  end if;
+
+  select count(*) into audit_rows from public.access_audit;
+  select public.admin_purge_person_history('  RLS-Other-Op@Test ') into purged;
+  if purged is distinct from '{"telemetry": 1, "user_state": 1, "copilot": 1}'::jsonb then
+    raise exception 'RLS FAIL: admin_purge_person_history returned %, expected one row of each', purged;
+  end if;
+  if exists (select 1 from public.telemetry_events where user_email = 'rls-other-op@test')
+     or exists (select 1 from public.user_state where user_email = 'rls-other-op@test')
+     or exists (select 1 from public.copilot_logs where email = 'rls-other-op@test') then
+    raise exception 'RLS FAIL: admin_purge_person_history left rows of the purged email behind';
+  end if;
+  if (select count(*) from public.telemetry_events where user_email = 'op@test') <> 1
+     or (select count(*) from public.user_state where user_email = 'op@test') <> 1 then
+    raise exception 'RLS FAIL: admin_purge_person_history deleted somebody else''s rows';
+  end if;
+  if (select count(*) from public.access_audit) <> audit_rows then
+    raise exception 'RLS FAIL: admin_purge_person_history wrote to or deleted from access_audit';
+  end if;
+
+  -- A repeat finds nothing: the retry of a removal that failed after its purge.
+  select public.admin_purge_person_history('rls-other-op@test') into purged;
+  if purged is distinct from '{"telemetry": 0, "user_state": 0, "copilot": 0}'::jsonb then
+    raise exception 'RLS FAIL: a repeated purge returned %, expected zeros', purged;
+  end if;
+
+  -- The refusals: the caller's own history (WT461, normalised too), an admin
+  -- row's — active or not (WT462) — and an empty email (WT400).
+  begin
+    perform public.admin_purge_person_history(' RLS-Admin@test');
+    raise exception 'RLS FAIL: admin can purge their OWN history';
+  exception when sqlstate 'WT461' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('rls-admin-2@test');
+    raise exception 'RLS FAIL: admin can purge another admin''s history';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('rls-admin-off@test');
+    raise exception 'RLS FAIL: admin can purge an inactive admin''s history';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('   ');
+    raise exception 'RLS FAIL: admin_purge_person_history accepted an empty email';
+  exception when sqlstate 'WT400' then null;
+  end;
+end $$;
+
 -- An admin token whose allow-list row no longer says admin: demoted (op@test)
 -- or deactivated (rls-admin-off@test) while the old access token is still
 -- valid. RLS believes the claim; the guard reads the row (WT403, first).
@@ -1112,7 +1288,46 @@ begin
       raise exception 'RLS FAIL: % (stale admin token) can change another row', ident.label;
     exception when sqlstate 'WT403' then null;
     end;
+
+    -- 0022: the delete policy believes the claim; the guard does not.
+    begin
+      delete from public.allowed_users where email = 'rls-deactivated@test';
+      raise exception 'RLS FAIL: % (stale admin token) can DELETE a row', ident.label;
+    exception when sqlstate 'WT403' then null;
+    end;
+
+    -- ...and the purge reads the caller's row like the guard does.
+    begin
+      perform public.admin_purge_person_history('rls-sales@test');
+      raise exception 'RLS FAIL: % (stale admin token) can purge a person''s history', ident.label;
+    exception when sqlstate 'WT403' then null;
+    end;
   end loop;
+end $$;
+
+-- The other stale token: an active admin row whose token still says operator
+-- (promoted in the SQL editor within the last hour). Row and claim must both
+-- say admin — the purge asks the claim first (WT403), and the delete policy
+-- hides every row until the token is refreshed.
+do $$
+declare
+  n bigint;
+begin
+  perform set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-4000-8000-000000000009","role":"authenticated","email":"rls-admin-2@test","app_metadata":{"role":"operator"}}',
+    true);
+
+  begin
+    perform public.admin_purge_person_history('rls-sales@test');
+    raise exception 'RLS FAIL: an operator token of an active admin row can purge a person''s history';
+  exception when sqlstate 'WT403' then null;
+  end;
+
+  delete from public.allowed_users where email = 'rls-deactivated@test';
+  get diagnostics n = row_count;
+  if n <> 0 then
+    raise exception 'RLS FAIL: an operator token of an active admin row can DELETE an allowed_users row (% rows)', n;
+  end if;
 end $$;
 
 -- === The owner's side of 0017 and 0020 =========================================
@@ -1244,6 +1459,14 @@ begin
     raise exception 'RLS FAIL: the LAST active admin deactivated themselves';
   exception when sqlstate 'WT460' then null;
   end;
+
+  -- The delete policy (0022) lets the admin reach their own row; the guard
+  -- answers "last admin" before "self".
+  begin
+    delete from public.allowed_users where email = 'rls-admin@test';
+    raise exception 'RLS FAIL: the LAST active admin deleted themselves';
+  exception when sqlstate 'WT460' then null;
+  end;
 end $$;
 
 reset role;
@@ -1269,14 +1492,55 @@ begin
       ('service_role', 'public.access_audit',  'TRUNCATE'),
       ('authenticated', 'public.access_audit', 'INSERT'),
       ('anon',          'public.access_audit', 'SELECT'),
-      ('authenticated', 'public.allowed_users', 'DELETE'),
       ('authenticated', 'public.allowed_users', 'TRUNCATE'),
       ('anon',          'public.allowed_users', 'SELECT'),
-      ('anon',          'public.allowed_users', 'INSERT')
+      ('anon',          'public.allowed_users', 'INSERT'),
+      ('anon',          'public.allowed_users', 'DELETE'),
+      -- Revoked by 0013; 0022's purge is SECURITY DEFINER so it stays that way.
+      ('authenticated', 'public.telemetry_events', 'DELETE')
     ) as t(grantee, relation, privilege)
   loop
     if has_table_privilege(c.grantee, c.relation, c.privilege) then
       raise exception 'RLS FAIL: % holds % on %', c.grantee, c.privilege, c.relation;
+    end if;
+  end loop;
+
+  -- 0022: DELETE on allowed_users for `authenticated`, behind exactly one
+  -- DELETE policy — the admin-only one. A second permissive policy would widen
+  -- it, which the behavioural checks above could not tell apart from this one.
+  if not has_table_privilege('authenticated', 'public.allowed_users', 'DELETE') then
+    raise exception 'RLS FAIL: authenticated cannot DELETE from allowed_users (0022 grant missing — was 0017 re-run after it?)';
+  end if;
+  if (select count(*) from pg_catalog.pg_policies p
+      where p.schemaname = 'public' and p.tablename = 'allowed_users' and p.cmd in ('DELETE', 'ALL')) <> 1
+     or not exists (
+       select 1 from pg_catalog.pg_policies p
+       where p.schemaname = 'public' and p.tablename = 'allowed_users'
+         and p.policyname = 'allowed_users_admin_delete' and p.cmd = 'DELETE'
+         and p.permissive = 'PERMISSIVE' and p.roles = '{authenticated}'
+         and p.qual like '%private.is_admin()%'
+     ) then
+    raise exception 'RLS FAIL: allowed_users DELETE policies are not exactly 0022''s allowed_users_admin_delete';
+  end if;
+
+  -- SECURITY DEFINER with an empty search_path: the one privileged path into
+  -- three tables no session role may delete from, and no schema on a
+  -- caller's path can shadow a name inside it.
+  if not exists (
+    select 1 from pg_catalog.pg_proc p
+    where p.oid = 'public.admin_purge_person_history(text)'::regprocedure
+      and p.prosecdef
+      and p.proconfig @> array['search_path=""']
+  ) then
+    raise exception 'RLS FAIL: admin_purge_person_history is not SECURITY DEFINER with search_path = ''''';
+  end if;
+
+  if not has_function_privilege('authenticated', 'public.admin_purge_person_history(text)', 'EXECUTE') then
+    raise exception 'RLS FAIL: authenticated cannot execute admin_purge_person_history (missing GRANT)';
+  end if;
+  for c in select * from (values ('anon'), ('service_role'), ('public')) as t(grantee) loop
+    if has_function_privilege(c.grantee, 'public.admin_purge_person_history(text)', 'EXECUTE') then
+      raise exception 'RLS FAIL: % can execute admin_purge_person_history', c.grantee;
     end if;
   end loop;
 

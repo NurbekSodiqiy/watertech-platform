@@ -1,7 +1,7 @@
 -- People analytics checks — run against the STAGING project only (see docs/TESTING.md).
 --
 -- Paste the whole file into the Supabase SQL editor and run it once, after
--- 0021_people_analytics.sql. It adds six allow-list rows (emails
+-- 0021_people_analytics.sql and 0022_person_removal.sql. It adds six allow-list rows (emails
 -- `people-*@test`: two operators, a sales manager, an admin, an inactive
 -- operator with no events and one whose only event is after the window) and
 -- ~70 telemetry_events, all in March 2001, so no real event can fall inside
@@ -10,7 +10,11 @@
 -- checks the totals against the 0016 dashboard functions for the same
 -- window; and checks that an operator, a sales manager and a claim-less
 -- token get WT403, that bad arguments get WT400, and that only
--- `authenticated` holds EXECUTE. Everything runs in one transaction that ends
+-- `authenticated` holds EXECUTE. After 0022 it also purges one person's
+-- history with admin_purge_person_history() — counted against the fixture,
+-- everybody else's rows untouched, the refusals (a stale admin token, self,
+-- admin rows, an empty email) — see "The history purge" near the end.
+-- Everything runs in one transaction that ends
 -- in ROLLBACK, and a failed assertion aborts it — either way no fixture row is
 -- ever committed. The allow-list rows are inserted before any role switch: an
 -- admin row may only be written without a JWT (WT462, 0020).
@@ -578,7 +582,9 @@ begin
         ('admin_person_recent_events', 'select * from public.admin_person_recent_events(''people-op1@test'')'),
         ('admin_top_content',          'select * from public.admin_top_content(now() - interval ''1 day'', now())'),
         -- Re-created by 0021 around the shared checklist helper.
-        ('dashboard_operator_activity', 'select * from public.dashboard_operator_activity(now() - interval ''1 day'', now())')
+        ('dashboard_operator_activity', 'select * from public.dashboard_operator_activity(now() - interval ''1 day'', now())'),
+        -- 0022: refused before it reads or deletes anything.
+        ('admin_purge_person_history', 'select public.admin_purge_person_history(''people-op1@test'')')
       ) as t(fn, sql)
     loop
       begin
@@ -594,6 +600,141 @@ begin
   end loop;
 end $$;
 
+-- === The history purge (0022) ==================================================
+-- admin_purge_person_history() deletes one person's telemetry_events,
+-- user_state and copilot_logs rows. It reads the caller's allow-list row like
+-- the guard does, so it is called as people-admin@test (an active admin row);
+-- people-checker@test, whom every check above ran as, has an admin claim but
+-- no row — a stale admin token to this function. people-op2@test keeps their
+-- allow-list row throughout: the purge must not need it gone.
+--
+-- The extra fixtures go in as the editor's own role: two more admin rows (only
+-- a JWT-less session may write those, WT462) and user_state / copilot_logs
+-- rows, which no session role may insert for somebody else.
+
+reset role;
+set local request.jwt.claims = '';
+
+insert into public.allowed_users (email, role, is_active) values
+  ('people-admin-2@test', 'admin', true),
+  ('people-admin-off@test', 'admin', false);
+insert into public.user_state (user_email, key, value) values
+  ('people-op2@test', 'onboarding.v2', '{"summary-d1":true}'),
+  ('people-op2@test', 'pins', '[]'),
+  ('people-op1@test', 'pins', '[]');
+insert into public.copilot_logs (email, question, status) values
+  ('people-op2@test', 'people-checks question', 'ok'),
+  ('people-op2@test', null, 'no_hits'),
+  ('people-op1@test', 'people-checks question', 'ok');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e1","role":"authenticated","email":"people-checker@test","app_metadata":{"role":"admin"}}';
+
+do $$
+begin
+  perform public.admin_purge_person_history('people-op2@test');
+  raise exception 'PEOPLE FAIL: an admin claim without an active admin row can purge a history';
+exception when sqlstate 'WT403' then null;
+end $$;
+
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000e5","role":"authenticated","email":"people-admin@test","app_metadata":{"role":"admin"}}';
+
+do $$
+declare
+  doc constant jsonb := current_setting('people_checks.doc')::jsonb;
+  op2_events bigint;
+  op1_events bigint;
+  gone_events bigint;
+  audit_rows bigint;
+  purged jsonb;
+  expected jsonb;
+begin
+  select count(*) into op2_events
+  from jsonb_array_elements(doc -> 'events') e where e ->> 'user_email' = 'people-op2@test';
+  select count(*) into op1_events
+  from jsonb_array_elements(doc -> 'events') e where e ->> 'user_email' = 'people-op1@test';
+  select count(*) into gone_events
+  from jsonb_array_elements(doc -> 'events') e where e ->> 'user_email' = 'people-gone@test';
+  if op2_events = 0 or gone_events = 0
+     or (select count(*) from public.telemetry_events where user_email = 'people-op2@test') <> op2_events then
+    raise exception 'PEOPLE FAIL: setup — the purge fixture is not what the document says';
+  end if;
+  select count(*) into audit_rows from public.access_audit;
+
+  -- Normalised argument; counts per table; the purged rows are gone.
+  purged := public.admin_purge_person_history('  People-Op2@TEST ');
+  expected := jsonb_build_object('telemetry', op2_events, 'user_state', 2, 'copilot', 2);
+  if purged is distinct from expected then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history(people-op2): expected %, got %', expected, purged;
+  end if;
+  if exists (select 1 from public.telemetry_events where user_email = 'people-op2@test')
+     or exists (select 1 from public.user_state where user_email = 'people-op2@test')
+     or exists (select 1 from public.copilot_logs where email = 'people-op2@test') then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history left people-op2@test rows behind';
+  end if;
+
+  -- Only that person: everyone else's rows, the allow-list row and the audit
+  -- trail are as they were.
+  if (select count(*) from public.telemetry_events where user_email = 'people-op1@test') <> op1_events
+     or (select count(*) from public.user_state where user_email = 'people-op1@test') <> 1
+     or (select count(*) from public.copilot_logs where email = 'people-op1@test') <> 1 then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history deleted somebody else''s rows';
+  end if;
+  if not exists (select 1 from public.allowed_users where email = 'people-op2@test') then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history touched the allow-list row';
+  end if;
+  if (select count(*) from public.access_audit) <> audit_rows then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history wrote to or deleted from access_audit';
+  end if;
+
+  -- The person page reads nothing for them any more.
+  if (select count(*) from public.admin_person_recent_events('people-op2@test', 100)) <> 0 then
+    raise exception 'PEOPLE FAIL: the person page still has events after the purge';
+  end if;
+
+  -- Again: nothing left, zeros (a retried removal repeats its purge).
+  purged := public.admin_purge_person_history('people-op2@test');
+  if purged is distinct from '{"telemetry": 0, "user_state": 0, "copilot": 0}'::jsonb then
+    raise exception 'PEOPLE FAIL: a repeated purge returned %, expected zeros', purged;
+  end if;
+
+  -- An email no longer on the allow-list is purged too.
+  purged := public.admin_purge_person_history('people-gone@test');
+  expected := jsonb_build_object('telemetry', gone_events, 'user_state', 0, 'copilot', 0);
+  if purged is distinct from expected then
+    raise exception 'PEOPLE FAIL: admin_purge_person_history(people-gone): expected %, got %', expected, purged;
+  end if;
+
+  -- The refusals, in the guard's order: self (WT461), then admin rows —
+  -- active or inactive, and the caller's own row is "self" first (WT462);
+  -- an empty or null email (WT400).
+  begin
+    perform public.admin_purge_person_history('PEOPLE-ADMIN@test');
+    raise exception 'PEOPLE FAIL: an admin can purge their own history';
+  exception when sqlstate 'WT461' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('people-admin-2@test');
+    raise exception 'PEOPLE FAIL: an admin can purge another admin''s history';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('people-admin-off@test');
+    raise exception 'PEOPLE FAIL: an admin can purge an inactive admin''s history';
+  exception when sqlstate 'WT462' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history('');
+    raise exception 'PEOPLE FAIL: admin_purge_person_history accepted an empty email';
+  exception when sqlstate 'WT400' then null;
+  end;
+  begin
+    perform public.admin_purge_person_history(null);
+    raise exception 'PEOPLE FAIL: admin_purge_person_history accepted a null email';
+  exception when sqlstate 'WT400' then null;
+  end;
+end $$;
+
 -- The grants themselves (see dashboard-parity.sql for why this is checked on
 -- the catalog rather than by calling as anon): only `authenticated` may execute
 -- the functions and their helpers.
@@ -604,6 +745,7 @@ declare
   grantee text;
 begin
   foreach fn in array array[
+    'public.admin_purge_person_history(text)',
     'public.admin_people_overview(timestamptz, timestamptz)',
     'public.admin_person_summary(text, timestamptz, timestamptz, timestamptz)',
     'public.admin_person_daily(text, timestamptz, timestamptz)',

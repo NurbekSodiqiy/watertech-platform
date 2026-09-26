@@ -33,12 +33,13 @@ Never edit a file that has already been run anywhere. Corrections go into the ne
 | 0019 | `copilot_stats.sql` | `public.copilot_stats(p_from, p_to)` (request counts, no-hits / error rate, p50 / p95 latency) and `public.copilot_unanswered(p_from, p_to, p_limit)` (no-hits questions grouped by a normalized form; operator counts, never emails), both manager only (WT403); `private.copilot_normalize_question()` mirroring `lib/search/normalize.ts` | 0014 (`private.is_manager()`), 0006 |
 | 0020 | `roles_admin_manager.sql` | Role model v2: `private.is_admin()`; `private.is_manager()` becomes its deprecated alias, so every 0014–0019 policy and function body means "admin"; `private.is_member()` covers `operator`/`manager`/`admin`; `allowed_users_role_chk` accepts `admin` (validated); the guard gets admin semantics (last admin WT460, self WT461, admin rows SQL-editor-only WT462); every `manager` row becomes `admin`, on the first run only | 0014, 0017 (and, by apply order, 0019) |
 | 0021 | `people_analytics.sql` | People analytics for the admin panel (R3/S02): `public.admin_people_overview`, `admin_person_summary`, `admin_person_daily`, `admin_person_sections`, `admin_person_recent_events`, `admin_top_content` — admin only (WT403), WT400 for bad arguments, no admin's telemetry counted; private helpers; `dashboard_operator_activity`'s checklist logic moved into `private.dashboard_checklist_completed`, which it now calls (same numbers) | 0016, 0020 |
+| 0022 | `person_removal.sql` | Removing a person from `/admin/users`: `GRANT DELETE` on `allowed_users` to `authenticated` + policy `allowed_users_admin_delete` (`is_admin()`; the 0017/0020 guard already refuses WT403 → WT460 → WT461 → WT462 on a DELETE, and the audit trigger records it); `public.admin_purge_person_history(p_email)` — SECURITY DEFINER, deletes one person's `telemetry_events` / `user_state` / `copilot_logs` rows, WT403 (claim, then the caller's row) / WT400 / WT461 / WT462, `EXECUTE` for `authenticated` only; refuses to run unless its owner skips RLS on those tables | 0020 (and, by apply order, 0021) |
 
 ### Which files has a project had?
 
 There is no migrations table, so ask the catalog: paste
 [supabase/tests/migration-status.sql](../supabase/tests/migration-status.sql) into the SQL editor and run
-it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0021`, `true` when
+it. It is **read-only** — safe on production — and answers one row per file (`0001` … `0022`, `true` when
 the object only that file creates exists) plus three facts that should all be `true` (RLS on every public
 table, no policy naming `anon`, the access-token hook executable by `supabase_auth_admin` only). The first
 `false` row is the next file to apply. Whether the hook is *enabled* is a dashboard setting no query can
@@ -56,14 +57,19 @@ verified the same way (R3/S01, 2026-09-24) on both paths, with its re-run, every
 first-run-only conversion and the rollback below exercised, and 25 injected faults in it each caught by the
 check files or those scenarios. `0021` likewise (R3/S02, 2026-09-24): both paths, its re-run, a re-run of
 `0016` after it, both rollback levels below, and 46 injected faults each caught by `people-checks.sql`,
-`dashboard-parity.sql` or `rls-checks.sql`. PostgREST,
+`dashboard-parity.sql` or `rls-checks.sql`. `0022` likewise (person removal, 2026-09-26): both paths, its re-run
+(also after a re-run of `0017`), every preflight abort (no 0020, a guard body from 0017, a guard not bound to
+DELETE, a JWT on the session), the owner check, the rollback below (after which the pre-0022 `rls-checks.sql` and
+`people-checks.sql` pass again) and its order against 0020's rollback; 31 of 33 injected faults were caught by
+`rls-checks.sql` or `people-checks.sql` — the two left are not observable in one session (dropping the advisory lock)
+or under Supabase's default privileges (dropping the explicit `EXECUTE` grant). PostgREST,
 GoTrue, pg_cron and Storage itself were not exercised — the staging runs are still the gate. The condensed
 production sequence, with the dashboard steps in place, is [AUDIT.md §F](AUDIT.md#f-production-apply-order).
 
 ### An existing project (staging, production)
 
 Run the pending files in numeric order, one at a time, checking the result of each before the next.
-`0014`, `0015`, `0016`, `0017`, `0018`, `0019`, `0020` and then `0021` go last. `0013` through `0021` all abort with a clear
+`0014`, `0015`, `0016`, `0017`, `0018`, `0019`, `0020`, `0021` and then `0022` go last. `0013` through `0022` all abort with a clear
 message when an earlier file is missing, so the order is enforced rather than assumed.
 
 `0014` is a security fix, and applying the SQL is only half of it: the access-token hook it rewrites has
@@ -101,7 +107,8 @@ statements into their own file and run them concurrently, outside a transaction.
     `insert into public.allowed_users (email, role) values ('owner@gmail.com', 'admin');`
     Everyone after that (operators, sales managers) is added at `/admin/users`.
 11. **`0021`.** After `0020` (it checks for `private.is_admin()` and the 0016 functions).
-12. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
+12. **`0022`.** After `0021` (it checks for `private.is_admin()` and 0020's guard).
+13. `npm run seed:content` to load the content tables from `lib/content/*.ts`.
 
 ## Pending checklist
 
@@ -147,6 +154,10 @@ that is staging or the belief is stale. Tick these off as they are applied:
       `/admin/users` and `/admin/users/<email>`: until it is applied those widgets show their error state (each fails
       alone, CLAUDE.md §15) and `/dashboard`'s activity tab keeps 0016's own copy. Apply it with the R3 release, then run
       `supabase/tests/people-checks.sql` on staging. Owner steps: [After applying 0021](#after-applying-0021--owner-steps).
+- [ ] **0022** person removal — requires 0020 (and 0021 by order). **Apply it before (or with) the release that has
+      the remove action**: without it a removal deletes the person's Supabase Auth account and then fails (`unknown` /
+      `unauthorized`), leaving them listed and active with no Auth account until it is applied and the removal
+      retried. Owner steps: [After applying 0022](#after-applying-0022--owner-steps).
 - [ ] Enable the Custom Access Token hook and walk the rest of
       [SECURITY.md §3](SECURITY.md#3-dashboard-checklist--the-owners-manual-steps) — 0014's SQL does
       nothing on its own.
@@ -302,6 +313,50 @@ its whole value on every keystroke, so a sum of the events would count "2" and "
 telemetry never counts** (an admin row reads zero, and the UI says "no telemetry"), including what the owner's email
 recorded before 0020 while the owner was still `manager`.
 
+### After applying 0022 — Owner steps
+
+0022 lets `/admin/users` remove an operator or a sales manager (CLAUDE.md §7, SECURITY.md §5): the admin's session
+may now DELETE an allow-list row — the guard trigger decides which (never an admin row, never their own, never the
+last admin) and the audit trigger records it — and `admin_purge_person_history` deletes one person's activity
+history. It changes no data.
+
+1. **Check the prerequisites.** `supabase/tests/migration-status.sql`: `0020` must read `true` (and `0021`, by
+   order). 0022 aborts with a message naming what is missing otherwise — also when 0017 was re-run after 0020
+   (the guard body is 0017's again: re-run 0020 first) and when the SQL editor's role impersonation is on.
+2. **Apply 0022** in the SQL editor as `postgres`, role impersonation off. One notice is normal on the first run
+   (`policy "allowed_users_admin_delete" … does not exist, skipping`). An error saying the function "runs as …,
+   which RLS would narrow on" means the file was run as a role that does not own `telemetry_events`,
+   `user_state`, `copilot_logs` or `allowed_users` and has no BYPASSRLS: run it as `postgres`.
+3. **Verify** (read-only, safe anywhere):
+
+   ```sql
+   -- the grant, the one delete policy, the function's shape and grants
+   select has_table_privilege('authenticated', 'public.allowed_users', 'DELETE') as delete_granted;
+   select policyname, cmd, roles, qual from pg_policies
+    where schemaname = 'public' and tablename = 'allowed_users' and cmd in ('DELETE', 'ALL');
+   -- expect one row: allowed_users_admin_delete | DELETE | {authenticated} | (SELECT private.is_admin() …)
+   select p.prosecdef, p.proconfig,
+          has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated,
+          has_function_privilege('anon', p.oid, 'EXECUTE') as anon,
+          has_function_privilege('service_role', p.oid, 'EXECUTE') as service_role
+     from pg_proc p where p.oid = 'public.admin_purge_person_history(text)'::regprocedure;
+   -- expect: true | {search_path=""} | true | false | false
+   ```
+
+4. **Run the checks on staging**: `supabase/tests/rls-checks.sql` (operators and sales managers delete nothing and
+   cannot call the purge; the admin removes an operator row and a sales-manager row, audited; admin rows `WT462`,
+   the own row `WT461`, the last admin `WT460`; stale tokens `WT403`; the purge's counts and refusals) and
+   `supabase/tests/people-checks.sql` (the purge against its fixture). Never on production.
+5. **Deploy the release** with the remove action, then remove somebody who left — card ⋯ menu, table row or the
+   danger zone on their page. `select * from public.access_audit where action = 'delete' order by created_at desc
+   limit 5;` shows the removal; Authentication → Users no longer lists their account.
+6. **No type regeneration strictly needed**; `admin_purge_person_history` is hand-written in
+   `lib/supabase/database.types.ts` — compare with `npm run gen:types` when convenient.
+
+Re-running 0022 is safe. **Re-running 0017 after it revokes the DELETE grant again** (0017 starts with `revoke all
+… from authenticated`): re-run 0022 straight after — removals answer `unauthorized` until then, and
+`rls-checks.sql` says "was 0017 re-run after it?".
+
 ### Retention policy (0016)
 
 `public.run_retention()` is the only place the numbers live (its `constant` declarations); this table
@@ -381,9 +436,25 @@ What it asserts about `0020` specifically:
 - no policy compares the role claim to a literal, and the four `private` helpers are executable by
   `authenticated` only.
 
+What it asserts about `0022` specifically:
+
+- an operator's and a sales manager's DELETE on `allowed_users` — an admin's row, another member's, their own, and
+  unfiltered — removes nothing and never reaches the guard (the admin-only policy hides every row), and both get
+  `WT403` from `admin_purge_person_history()`;
+- the admin removes an operator row and a sales-manager row, each audited (`action = 'delete'`, the row as
+  `before`, the admin as `actor`); another admin's row (active or not) is `WT462`, the admin's own `WT461`, the
+  last active admin's own `WT460`; a stale admin token (demoted, deactivated) gets `WT403` for a delete and a
+  purge, and an admin row whose token still says operator deletes nothing and cannot purge;
+- the purge deletes exactly the one person's telemetry / user_state / copilot_logs rows (argument normalised),
+  leaves `access_audit` alone, answers zeros on a repeat, and refuses self / admin rows / an empty email; the
+  admin's own session cannot delete those rows directly;
+- exactly one DELETE policy on `allowed_users`, the purge is SECURITY DEFINER with `search_path = ''`, and only
+  `authenticated` may execute it.
+
 A failure of the `0013` block on a project where `0013` has not been applied means "apply 0013", not
 "the policies are wrong"; the `0014` blocks fail the same way with "is 0014 applied?", and a missing
-`0017` stops the file early with "apply 0017_user_admin_and_access_audit.sql".
+`0017`, `0020` or `0022` stops the file early with "apply 0017_user_admin_and_access_audit.sql" (or the file
+named).
 `permission denied … missing GRANT` anywhere means a table is missing its `GRANT … to authenticated`
 (the lesson of `0003`).
 
@@ -501,6 +572,9 @@ revoked privileges are not worth restoring.
 
 ### Rolling back 0020
 
+With 0022 applied, roll it back first ([below](#rolling-back-0022)): its delete policy calls
+`private.is_admin()`, which step 3 drops, and Postgres refuses to drop a function a policy depends on.
+
 Roll the app release back with it — the pre-0020 release does not know the `admin` claim. The pre-0020
 model has no sales-manager role, so every `manager` row must stop being one **before** `manager` means the
 owner again; otherwise each sales manager would come back with full CMS access. Three runs, in this order
@@ -577,3 +651,22 @@ what 0016's did.
 `drop function if exists private.dashboard_checklist_completed(timestamptz, timestamptz, text);` — in that order: a
 plpgsql body is not checked at drop time, so dropping the helper first would leave the dashboard's Faollik tab
 failing at run time.
+
+### Rolling back 0022
+
+Nothing is stored by 0022 itself — but what it made possible is not undoable: removed allow-list rows, deleted
+Supabase Auth accounts and purged history stay gone (`access_audit` still records each removal). Roll the release
+with the remove action back with it; without the grant, a removal answers `unauthorized` after deleting the Auth
+account. One transaction (verified on PGlite — after it the pre-0022 `rls-checks.sql` and `people-checks.sql`
+pass):
+
+```sql
+begin;
+drop function if exists public.admin_purge_person_history(text);
+drop policy if exists "allowed_users_admin_delete" on public.allowed_users;
+revoke delete on table public.allowed_users from authenticated;
+notify pgrst, 'reload schema';
+commit;
+```
+
+The guard and audit triggers stay as they are: they already covered deletes, from the SQL editor too.

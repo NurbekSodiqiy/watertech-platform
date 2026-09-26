@@ -254,6 +254,11 @@ person's active time, copies, checklist and zero-result count equal what `dashbo
 `dashboard_kpis` report for the same window; that an operator, a sales manager and a claim-less token get `WT403`
 from all six and from the re-created `dashboard_operator_activity`; that 15 bad arguments get `WT400` (and the
 93-day, `p_limit => 100` edges pass); and that only `authenticated` may execute the functions and their helpers.
+Since 0022 (which it then needs as well) it also purges one fixture person's history with
+`admin_purge_person_history`: the counts per table against the document, nobody else's rows, the allow-list row and
+`access_audit` untouched, zeros on a repeat, an email no longer on the list purged too, and the refusals — a stale
+admin token (`WT403`), the caller's own email (`WT461`), an admin row active or not (`WT462`), an empty or null email
+(`WT400`).
 
 The fixture is built around the edges the definitions in 0021's header care about: events on `p_from` (in) and
 `p_to` (out, but still the person's last seen), both sides of a Tashkent midnight, idle longer than page time
