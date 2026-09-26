@@ -29,13 +29,18 @@ function focusableWithin(container: HTMLElement): HTMLElement[] {
 
 /**
  * Keeps keyboard focus inside `containerRef` while `active` is true: focuses
- * the first focusable element on activation, cycles Tab/Shift+Tab within the
- * container, and restores focus to whatever was focused before on deactivation.
+ * the first focusable element on activation — or `initialFocusRef`'s element,
+ * when given and focusable — cycles Tab/Shift+Tab within the container, and
+ * restores focus to whatever was focused before on deactivation.
  *
  * The container itself is focused as a fallback when it holds nothing
  * focusable, so focus never escapes to the page behind an open dialog.
  */
-export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boolean): void {
+export function useFocusTrap(
+  containerRef: RefObject<HTMLElement>,
+  active: boolean,
+  initialFocusRef?: RefObject<HTMLElement>
+): void {
   useEffect(() => {
     if (!active) return;
     const container = containerRef.current;
@@ -47,7 +52,9 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boole
     // animation in flight, and children rendered in the same commit aren't
     // measurable (so not "focusable") until the browser has laid them out.
     const focusFirst = requestAnimationFrame(() => {
-      const [first] = focusableWithin(container);
+      const focusable = focusableWithin(container);
+      const preferred = initialFocusRef?.current;
+      const first = preferred && focusable.includes(preferred) ? preferred : focusable[0];
       if (first) {
         first.focus();
       } else if (!container.contains(document.activeElement)) {
@@ -90,11 +97,15 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boole
     return () => {
       cancelAnimationFrame(focusFirst);
       document.removeEventListener("keydown", onKeyDown);
-      // Only take focus back if it's still inside the trap — if something
-      // else has deliberately moved it since, leave it alone.
-      if (previouslyFocused && (!container || container.contains(document.activeElement))) {
+      // Only take focus back if it's still inside the trap, or nowhere at all
+      // (on <body>: the focused control was disabled while an action ran, as
+      // a confirm button is) — if something else has deliberately moved it
+      // since, leave it alone.
+      const active = document.activeElement;
+      const lost = active === null || active === document.body;
+      if (previouslyFocused && (!container || lost || container.contains(active))) {
         previouslyFocused.focus();
       }
     };
-  }, [containerRef, active]);
+  }, [containerRef, active, initialFocusRef]);
 }

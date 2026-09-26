@@ -1,5 +1,6 @@
 import "server-only";
-import type { GoTrueAdminApi, User } from "@supabase/supabase-js";
+import type { GoTrueAdminApi } from "@supabase/supabase-js";
+import { findAuthUsersByEmail, logAuthAdminFailure } from "./find-auth-users";
 
 // Ending an operator's access in Supabase Auth itself, on top of the
 // allow-list. Deactivating a row already makes the access-token hook refuse
@@ -14,7 +15,8 @@ import type { GoTrueAdminApi, User } from "@supabase/supabase-js";
 // The method is the documented one (supabase-js 2.116 / auth-js
 // GoTrueAdminApi): updateUserById(uid, { ban_duration }) where "none" lifts
 // the ban. There is no lookup by email in the admin API, so the account is
-// found by paging listUsers.
+// found by paging listUsers (./find-auth-users.ts, shared with
+// ./delete-account.ts).
 //
 // Takes the admin API as an argument rather than importing the service-role
 // client: the caller (lib/admin/actions/users.ts) owns that decision and its
@@ -27,12 +29,6 @@ import type { GoTrueAdminApi, User } from "@supabase/supabase-js";
 export const SIGN_IN_BAN_DURATION = "876000h";
 const LIFT_BAN = "none";
 
-/** 1000 per page is the size the Supabase docs page with; MAX_PAGES caps the
- * walk so a runaway pagination can never hang a Server Action. ~30 users
- * here, so one page in practice. */
-const PER_PAGE = 1000;
-const MAX_PAGES = 50;
-
 export type SignInBlockAdmin = Pick<GoTrueAdminApi, "listUsers" | "updateUserById">;
 
 /** `applied`: every auth account with this email is now in the requested
@@ -40,36 +36,6 @@ export type SignInBlockAdmin = Pick<GoTrueAdminApi, "listUsers" | "updateUserByI
  * the allow-list alone governs their first sign-in. `failed`: GoTrue did not
  * confirm; the caller reports it and a retry repeats the whole thing. */
 export type SignInBlockResult = "applied" | "no_account" | "failed";
-
-function logFailure(step: string, error: { status?: number; code?: string } | null): void {
-  console.error(`[auth] sign-in block ${step}:`, error?.status ?? "", error?.code ?? "");
-}
-
-/** Every auth user whose email matches, compared lowercased; null when the
- * listing failed or did not finish. More than one is possible (an SSO and a
- * non-SSO identity may share an address), and each is handled. */
-async function findAuthUsers(admin: SignInBlockAdmin, email: string): Promise<User[] | null> {
-  const matches: User[] = [];
-
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const { data, error } = await admin.listUsers({ page, perPage: PER_PAGE });
-    if (error) {
-      logFailure("list", error);
-      return null;
-    }
-
-    matches.push(...data.users.filter((user) => user.email?.toLowerCase() === email));
-
-    // Done on an empty page, or on a short one GoTrue says is the last. A full
-    // page always asks for the next, in case the server capped per_page below
-    // what was requested.
-    if (data.users.length === 0) return matches;
-    if (data.users.length < PER_PAGE && data.nextPage === null) return matches;
-  }
-
-  logFailure("list (page limit reached)", null);
-  return null;
-}
 
 /**
  * Bans (`blocked = true`) or unbans every Supabase Auth account with this
@@ -82,7 +48,7 @@ export async function setSignInBlocked(
   email: string,
   blocked: boolean
 ): Promise<SignInBlockResult> {
-  const users = await findAuthUsers(admin, email.trim().toLowerCase());
+  const users = await findAuthUsersByEmail(admin, email, "sign-in block");
   if (users === null) return "failed";
   if (users.length === 0) return "no_account";
 
@@ -93,7 +59,7 @@ export async function setSignInBlocked(
       ban_duration: blocked ? SIGN_IN_BAN_DURATION : LIFT_BAN,
     });
     if (error) {
-      logFailure(blocked ? "ban" : "unban", error);
+      logAuthAdminFailure(blocked ? "sign-in block ban" : "sign-in block unban", error);
       failed = true;
     }
   }

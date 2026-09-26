@@ -20,6 +20,8 @@
 // _recent_events and admin_top_content added by hand from 0021 on 2026-09-24,
 // same conventions (a `date` column arrives as "YYYY-MM-DD", jsonb as `Json`).
 // lib/admin/people.ts parses every row with zod before anything reads it.
+// admin_purge_person_history added by hand from 0022 on 2026-09-26 (a jsonb
+// scalar return: {"telemetry", "user_state", "copilot"} counts).
 //
 // allowed_users and telemetry_events were created by hand before
 // supabase/migrations existed; 0013_baseline_and_audit_integrity.sql is their
@@ -981,6 +983,10 @@ export type Database = {
           zero_result_searches: number
           zero_result_searches_prev: number
         }[]
+      }
+      admin_purge_person_history: {
+        Args: { p_email: string }
+        Returns: Json
       }
       admin_top_content: {
         Args: { p_from: string; p_to: string; p_limit?: number }

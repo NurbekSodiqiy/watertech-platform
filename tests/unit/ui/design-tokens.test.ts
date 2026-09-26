@@ -56,6 +56,36 @@ describe("chart tokens (WCAG 1.4.11, ≥ 3:1)", () => {
   }
 });
 
+/** `fg` at `alpha` over `bg`, as the browser composites bg-x/15 onto a surface. */
+function over(fg: Rgb, alpha: number, bg: Rgb): Rgb {
+  const mix = (i: 0 | 1 | 2): number => Math.round(fg[i] * alpha + bg[i] * (1 - alpha));
+  return [mix(0), mix(1), mix(2)];
+}
+
+// The danger button of ConfirmDialog and the danger zone (person removal, 0022):
+// text-primary-dark on bg-status-outdated/15 (hover /25) over the surface, with
+// a solid status-outdated border. White on the solid fill was 3.71:1 in the
+// light theme — below AA for 13px text (docs/AUDIT.md §3).
+describe("danger action (WCAG 1.4.3 text ≥ 4.5:1, 1.4.11 edge ≥ 3:1)", () => {
+  for (const [theme, palette] of Object.entries(themes)) {
+    const danger = palette["status-outdated"];
+    const surface = palette.surface;
+    const text = palette["text-primary"];
+
+    for (const alpha of [0.15, 0.25]) {
+      it(`${theme}: text-primary on status-outdated/${alpha * 100} over surface`, () => {
+        expect(danger && surface && text, "--status-outdated / --surface / --text-primary").toBeTruthy();
+        if (!danger || !surface || !text) return;
+        expect(contrast(text, over(danger, alpha, surface))).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+    it(`${theme}: the status-outdated border against surface`, () => {
+      if (!danger || !surface) throw new Error("--status-outdated / --surface missing");
+      expect(contrast(danger, surface)).toBeGreaterThanOrEqual(3);
+    });
+  }
+});
+
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = path.join(dir, name);

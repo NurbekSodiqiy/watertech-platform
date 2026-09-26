@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useId,
   useMemo,
   useRef,
   useState,
+  useTransition,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import dynamic from "next/dynamic";
@@ -14,8 +16,11 @@ import { LayoutGrid, Search, Table2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { PersonCard } from "@/components/admin/people/PersonCard";
+import type { RemovePersonTarget } from "@/components/admin/people/RemovePersonDialog";
+import { setActive } from "@/lib/admin/actions/users";
 import {
   DIRECTORY_QUERY_MAX_LENGTH,
   DIRECTORY_ROLE_TABS,
@@ -36,13 +41,36 @@ import {
   type DirectoryState,
   type DirectoryView,
 } from "@/lib/admin/directory";
+import type { UserRole } from "@/lib/admin/users";
+import { useActionError } from "@/hooks/useActionError";
 import { useNow } from "@/hooks/useNow";
+import { useOnline } from "@/hooks/useOnline";
+import { useToast } from "@/hooks/useToast";
 
 // Only mounted once "add" is pressed, and not the page's main content — the
 // same lazy dialog UsersTable has always used.
 const AddUserDialog = dynamic(() => import("@/components/admin/AddUserDialog").then((m) => m.AddUserDialog), {
   ssr: false,
 });
+
+// Only mounted once a card's "Remove" is chosen, like the add dialog.
+const RemovePersonDialog = dynamic(
+  () => import("@/components/admin/people/RemovePersonDialog").then((m) => m.RemovePersonDialog),
+  { ssr: false }
+);
+
+/** A card's activate / deactivate, waiting for the admin's confirmation. */
+interface PendingToggle {
+  email: string;
+  name: string;
+  role: UserRole;
+  next: boolean;
+}
+
+/** How a dialog names a person: their full name, else their email. */
+function dialogName(person: DirectoryPerson): string {
+  return person.fullName?.trim() || person.email;
+}
 
 /** How long the URL waits after the last change before it is rewritten, so a
  * burst of keystrokes is one history write, not one per letter. */
@@ -81,7 +109,13 @@ export interface PeopleDirectoryProps {
  * The list grows by itself: a new person is a row of `allowed_users`, the page
  * reads that table on every request, and AddUserDialog calls router.refresh()
  * after a successful add — the fresh `people` prop makes the card appear, in
- * whatever filter and sort the admin had.
+ * whatever filter and sort the admin had. It shrinks the same way: a card's ⋯
+ * menu (operators and sales managers only — never an admin's card, never the
+ * signed-in admin's) offers deactivate / activate and remove. The directory
+ * owns the one ConfirmDialog and the one RemovePersonDialog those open, and
+ * hands every card the same stable callbacks, so the memoized cards stay
+ * memoized; a successful change re-reads the page (router.refresh()), which
+ * drops a removed card and updates the summary strip.
  */
 export function PeopleDirectory({
   people,
@@ -95,6 +129,10 @@ export function PeopleDirectory({
   const tUsers = useTranslations("pages.admin.users");
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
   const router = useRouter();
+  const online = useOnline();
+  const { toast } = useToast();
+  const describeError = useActionError();
+  const tToast = useTranslations("toast");
   const now = useNow(60_000);
   const idBase = useId();
 
@@ -103,6 +141,17 @@ export function PeopleDirectory({
   // Kept mounted after the first open so the dialog's exit animation can run.
   const [addMounted, setAddMounted] = useState(false);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // The card menus' two dialogs. The target outlives `open`, so the text does
+  // not blank while a dialog animates out.
+  const [toggle, setToggle] = useState<PendingToggle | null>(null);
+  const [toggleOpen, setToggleOpen] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<RemovePersonTarget | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removeMounted, setRemoveMounted] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [togglePending, startToggle] = useTransition();
 
   // Floored to the minute: the memoized cards re-render once a minute.
   const nowMs = now === null ? null : Math.floor(now.getTime() / 60_000) * 60_000;
@@ -132,6 +181,53 @@ export function PeopleDirectory({
 
   function patch(change: Partial<DirectoryState>) {
     setState((previous) => ({ ...previous, ...change }));
+  }
+
+  // Stable (state setters only), so passing them keeps every PersonCard memoized.
+  const requestToggle = useCallback((person: DirectoryPerson) => {
+    setActionError(null);
+    setToggle({ email: person.email, name: dialogName(person), role: person.role, next: !person.isActive });
+    setToggleOpen(true);
+  }, []);
+
+  const requestRemove = useCallback((person: DirectoryPerson) => {
+    setActionError(null);
+    setRemoveTarget({ email: person.email, name: dialogName(person) });
+    setRemoveMounted(true);
+    setRemoveOpen(true);
+  }, []);
+
+  function confirmToggle() {
+    if (!toggle) return;
+    if (!online) {
+      toast({ kind: "error", title: tToast("offline") });
+      return;
+    }
+    const { email, next } = toggle;
+    startToggle(async () => {
+      const result = await setActive(email, next);
+      setToggleOpen(false);
+      if (!result.ok) {
+        const { title } = describeError(result);
+        setActionError(title);
+        toast({ kind: "error", title });
+        // The allow-list row did change; only the Supabase Auth half needs a
+        // retry, and the card should show the row as it now is.
+        if (result.code === "auth_sync_failed") router.refresh();
+        return;
+      }
+      toast({ kind: "success", title: next ? tUsers("toastActivated") : tUsers("toastDeactivated") });
+      router.refresh();
+    });
+  }
+
+  function onRemoved() {
+    // The card — and the menu button focus would go back to — is about to
+    // disappear; the search box is where a keyboard user carries on. Moved
+    // before the dialog closes, so its focus trap leaves focus where it is.
+    searchRef.current?.focus();
+    setRemoveOpen(false);
+    router.refresh();
   }
 
   function openAdd() {
@@ -206,6 +302,14 @@ export function PeopleDirectory({
           </button>
         </div>
       )}
+      {actionError && (
+        <div
+          role="alert"
+          className="rounded-xl border border-status-outdated/40 bg-status-outdated/10 px-4 py-2.5 text-[13px] text-primary-dark"
+        >
+          {actionError}
+        </div>
+      )}
       {!activityAvailable && (
         <p className="rounded-xl border border-status-warning/40 bg-status-warning/10 px-4 py-2.5 text-[13px] text-primary-dark">
           {tUsers("activityUnavailable")}
@@ -272,6 +376,7 @@ export function PeopleDirectory({
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
             />
             <input
+              ref={searchRef}
               type="search"
               value={state.query}
               onChange={(event) => patch({ query: event.target.value })}
@@ -348,7 +453,14 @@ export function PeopleDirectory({
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {visible.map((person) => (
               <li key={person.email} className="min-w-0">
-                <PersonCard person={person} windowStart={windowStart} nowMs={nowMs} />
+                <PersonCard
+                  person={person}
+                  windowStart={windowStart}
+                  nowMs={nowMs}
+                  manageable={person.role !== "admin" && person.email.toLowerCase() !== currentEmail}
+                  onToggleActive={requestToggle}
+                  onRemove={requestRemove}
+                />
               </li>
             ))}
           </ul>
@@ -360,6 +472,34 @@ export function PeopleDirectory({
       <p className="text-[12px] text-text-secondary">{t("windowNote", { days: DIRECTORY_WINDOW_DAYS })}</p>
 
       {addMounted && <AddUserDialog open={addOpen} onClose={() => setAddOpen(false)} />}
+
+      <ConfirmDialog
+        open={toggleOpen}
+        title={toggle?.next ? tUsers("activateTitle") : tUsers("deactivateTitle")}
+        description={
+          toggle
+            ? toggle.next
+              ? tUsers("activateDescription", { name: toggle.name, role: tUsers(`roles.${toggle.role}`) })
+              : tUsers("deactivateDescription", { name: toggle.name })
+            : ""
+        }
+        confirmLabel={toggle?.next ? tUsers("activate") : tUsers("deactivate")}
+        tone={toggle?.next ? "primary" : "danger"}
+        pending={togglePending}
+        onConfirm={confirmToggle}
+        onCancel={() => {
+          if (!togglePending) setToggleOpen(false);
+        }}
+      />
+
+      {removeMounted && (
+        <RemovePersonDialog
+          open={removeOpen}
+          person={removeTarget}
+          onClose={() => setRemoveOpen(false)}
+          onRemoved={onRemoved}
+        />
+      )}
     </div>
   );
 }

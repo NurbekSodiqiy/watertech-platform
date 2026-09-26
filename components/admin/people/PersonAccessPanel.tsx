@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { KeyRound, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
@@ -12,6 +13,12 @@ import { ASSIGNABLE_ROLES, type AssignableRole } from "@/lib/admin/users";
 import { useActionError } from "@/hooks/useActionError";
 import { useOnline } from "@/hooks/useOnline";
 import { useToast } from "@/hooks/useToast";
+
+// Only mounted once "Remove employee" is pressed.
+const RemovePersonDialog = dynamic(
+  () => import("@/components/admin/people/RemovePersonDialog").then((m) => m.RemovePersonDialog),
+  { ssr: false }
+);
 
 /** What the admin asked for, waiting for their confirmation. */
 type PendingChange = { kind: "role"; next: AssignableRole } | { kind: "active"; next: boolean };
@@ -32,10 +39,13 @@ export interface PersonAccessPanelProps {
  * (setRole / setActive, which re-validate with zod, check the admin session
  * and the allow-list guard, and answer an error *code*), each behind a
  * ConfirmDialog that says what happens right away; a failure is shown with
- * useActionError's copy. An admin row never gets this panel (the page shows
- * the locked note instead: admin rows are SQL-editor-only, WT462), and the
- * caller's own row is read-only (WT461). Nothing this component disables is a
- * protection — only a courtesy in front of the database's own refusals.
+ * useActionError's copy. Below them, a danger zone removes the person
+ * altogether (RemovePersonDialog, 0022); after that this page no longer
+ * exists, so it goes back to the directory. An admin row never gets this panel
+ * (the page shows the locked note instead: admin rows are SQL-editor-only,
+ * WT462), and the caller's own row is read-only (WT461) and has no danger
+ * zone. Nothing this component disables or hides is a protection — only a
+ * courtesy in front of the database's own refusals.
  */
 export function PersonAccessPanel({ email, name, role, isActive, isSelf }: PersonAccessPanelProps) {
   const router = useRouter();
@@ -44,9 +54,11 @@ export function PersonAccessPanel({ email, name, role, isActive, isSelf }: Perso
   const describeError = useActionError();
   const t = useTranslations("pages.admin.people.access");
   const tUsers = useTranslations("pages.admin.users");
+  const tRemove = useTranslations("pages.admin.people.remove");
   const tToast = useTranslations("toast");
   const selfNoteId = useId();
   const statusLabelId = useId();
+  const dangerTitleId = useId();
 
   const [confirm, setConfirm] = useState<PendingChange | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +67,9 @@ export function PersonAccessPanel({ email, name, role, isActive, isSelf }: Perso
   // back — otherwise the controls snap to the old state mid-refresh.
   const [roleOverride, setRoleOverride] = useState<AssignableRole | null>(null);
   const [activeOverride, setActiveOverride] = useState<boolean | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  // Kept mounted after the first open so the dialog's exit animation can run.
+  const [removeMounted, setRemoveMounted] = useState(false);
 
   useEffect(() => setRoleOverride(null), [role]);
   useEffect(() => setActiveOverride(null), [isActive]);
@@ -70,6 +85,20 @@ export function PersonAccessPanel({ email, name, role, isActive, isSelf }: Perso
     }
     setError(null);
     setConfirm(change);
+  }
+
+  function openRemove() {
+    setError(null);
+    setRemoveMounted(true);
+    setRemoveOpen(true);
+  }
+
+  function onRemoved() {
+    // This person's page is gone with them (a 404 now): back to the list,
+    // re-read rather than taken from the router cache.
+    setRemoveOpen(false);
+    router.replace("/admin/users");
+    router.refresh();
   }
 
   function run(action: () => Promise<ActionResult>, success: string, onSaved: () => void) {
@@ -207,6 +236,26 @@ export function PersonAccessPanel({ email, name, role, isActive, isSelf }: Perso
               {tUsers("selfLocked")}
             </p>
           )}
+
+          {!isSelf && (
+            <section
+              aria-labelledby={dangerTitleId}
+              className="space-y-2 rounded-xl border border-status-outdated/40 px-4 py-3"
+            >
+              <h3 id={dangerTitleId} className="text-[13px] font-semibold text-primary-dark">
+                {tRemove("dangerZone.title")}
+              </h3>
+              <p className="text-[12px] text-text-secondary">{tRemove("dangerZone.description")}</p>
+              <button
+                type="button"
+                onClick={openRemove}
+                disabled={pending}
+                className="rounded-lg border border-status-outdated bg-status-outdated/15 px-3.5 py-2 text-[13px] font-medium text-primary-dark transition-colors hover:bg-status-outdated/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {tRemove("dangerZone.button")}
+              </button>
+            </section>
+          )}
         </div>
       </ChartCard>
 
@@ -220,6 +269,15 @@ export function PersonAccessPanel({ email, name, role, isActive, isSelf }: Perso
         onConfirm={confirmChange}
         onCancel={() => setConfirm(null)}
       />
+
+      {removeMounted && (
+        <RemovePersonDialog
+          open={removeOpen}
+          person={{ email, name }}
+          onClose={() => setRemoveOpen(false)}
+          onRemoved={onRemoved}
+        />
+      )}
     </>
   );
 }

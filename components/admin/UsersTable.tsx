@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import type { RemovePersonTarget } from "@/components/admin/people/RemovePersonDialog";
 import { setActive, setRole } from "@/lib/admin/actions/users";
 import { formatRelative } from "@/lib/admin/format";
 import { personPath } from "@/lib/admin/people";
@@ -29,6 +30,12 @@ import { useToast } from "@/hooks/useToast";
 const AddUserDialog = dynamic(() => import("@/components/admin/AddUserDialog").then((m) => m.AddUserDialog), {
   ssr: false,
 });
+
+// Only mounted once a row's "Remove" is pressed.
+const RemovePersonDialog = dynamic(
+  () => import("@/components/admin/people/RemovePersonDialog").then((m) => m.RemovePersonDialog),
+  { ssr: false }
+);
 
 type RoleFilter = "all" | UserRole;
 type StatusFilter = "all" | "active" | "inactive";
@@ -64,11 +71,13 @@ function compareUsers(a: AdminUser, b: AdminUser, key: SortKey): number {
 
 /**
  * The allow-list as a table: search, role and status filters, an inline role
- * select (operator ↔ manager), and activate/deactivate behind a ConfirmDialog
- * that says what happens right away. Admin rows — the caller's own included —
- * are read-only here: they carry an Admin badge, their controls are disabled,
- * and a note under the table says why. The database refuses any API change to
- * an admin row anyway (0020, WT462), and a self-demotion too (0017, WT461), so
+ * select (operator ↔ manager), activate/deactivate behind a ConfirmDialog
+ * that says what happens right away, and "remove" behind RemovePersonDialog
+ * (0022: the typed email, the optional history purge). Admin rows — the
+ * caller's own included — are read-only here: they carry an Admin badge, their
+ * controls are disabled, they get no remove action at all, and a note under
+ * the table says why. The database refuses any API change to an admin row
+ * anyway (0020, WT462), and a self-demotion or self-removal too (WT461), so
  * offering either would only produce an error.
  *
  * Every write re-validates on the server and again in SQL; nothing this
@@ -96,6 +105,7 @@ export function UsersTable({
   const { toast } = useToast();
   const describeError = useActionError();
   const t = useTranslations("pages.admin.users");
+  const tRemove = useTranslations("pages.admin.people.remove");
   const tToast = useTranslations("toast");
   const tFilter = useTranslations("common.table");
   const tFilterEmpty = useTranslations("emptyState.filterNoMatch");
@@ -111,6 +121,11 @@ export function UsersTable({
   // Kept mounted after the first open so the dialog's exit animation can run.
   const [addMounted, setAddMounted] = useState(false);
   const [confirm, setConfirm] = useState<PendingToggle | null>(null);
+  // The row being removed; it outlives `removeOpen` so the dialog's text does
+  // not blank while it animates out.
+  const [removeTarget, setRemoveTarget] = useState<RemovePersonTarget | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removeMounted, setRemoveMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
@@ -207,6 +222,13 @@ export function UsersTable({
     setAddOpen(true);
   }
 
+  function openRemove(user: AdminUser) {
+    setError(null);
+    setRemoveTarget({ email: user.email, name: user.fullName?.trim() || user.email });
+    setRemoveMounted(true);
+    setRemoveOpen(true);
+  }
+
   function sortHeader(key: SortKey, label: string) {
     return (
       <button type="button" onClick={() => toggleSort(key)} className="flex items-center gap-1 hover:text-primary">
@@ -301,7 +323,7 @@ export function UsersTable({
                   {sortHeader("lastActivityAt", t("columns.lastActivity"))}
                 </th>
                 <th className="px-4 py-2.5 font-semibold text-primary-dark">{t("columns.onboarding")}</th>
-                <th className="w-40 px-4 py-2.5 font-semibold text-primary-dark">{t("columns.actions")}</th>
+                <th className="w-48 px-4 py-2.5 font-semibold text-primary-dark">{t("columns.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -390,22 +412,37 @@ export function UsersTable({
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setConfirm({ email: user.email, name: displayName, role: user.role, next: !user.isActive })
-                        }
-                        disabled={locked || busy}
-                        aria-describedby={lockNoteId}
-                        title={lockTitle}
-                        className={`rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-text-secondary transition-colors disabled:opacity-50 ${
-                          user.isActive
-                            ? "hover:bg-status-outdated/10 hover:text-status-outdated"
-                            : "hover:bg-surface-alt hover:text-accent"
-                        }`}
-                      >
-                        {user.isActive ? t("deactivate") : t("activate")}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirm({ email: user.email, name: displayName, role: user.role, next: !user.isActive })
+                          }
+                          disabled={locked || busy}
+                          aria-describedby={lockNoteId}
+                          title={lockTitle}
+                          className={`rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-text-secondary transition-colors disabled:opacity-50 ${
+                            user.isActive
+                              ? "hover:bg-status-outdated/10 hover:text-status-outdated"
+                              : "hover:bg-surface-alt hover:text-accent"
+                          }`}
+                        >
+                          {user.isActive ? t("deactivate") : t("activate")}
+                        </button>
+                        {/* Never on a locked row: an admin row is SQL-editor-only
+                            (WT462) and the caller's own row is theirs (WT461). */}
+                        {!locked && (
+                          <button
+                            type="button"
+                            onClick={() => openRemove(user)}
+                            disabled={busy}
+                            aria-label={tRemove("actionLabel", { email: user.email })}
+                            className="rounded-lg border border-status-outdated/40 bg-surface px-2 py-1 text-[11px] font-medium text-primary-dark transition-colors hover:bg-status-outdated/10 disabled:opacity-50"
+                          >
+                            {tRemove("action")}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -445,6 +482,18 @@ export function UsersTable({
       />
 
       {addMounted && <AddUserDialog open={addOpen} onClose={() => setAddOpen(false)} />}
+
+      {removeMounted && (
+        <RemovePersonDialog
+          open={removeOpen}
+          person={removeTarget}
+          onClose={() => setRemoveOpen(false)}
+          onRemoved={() => {
+            setRemoveOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

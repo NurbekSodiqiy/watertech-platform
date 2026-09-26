@@ -448,7 +448,9 @@
     "conflict": "Bu yozuvni boshqa birov o'zgartirgan. Sahifani yangilang.",
     "unknownError": "Kutilmagan xatolik",
     "backOnline": "Internet qaytdi",
-    "refresh": "Yangilash"
+    "refresh": "Yangilash",
+    "personRemoved": "Xodim o'chirildi",
+    "personRemovedWithHistory": "Xodim va uning faollik tarixi o'chirildi"
   },
   "copilot": {
     "title": "Copilot",
@@ -906,7 +908,11 @@
           "noTelemetry": "Telemetriya yozilmaydi",
           "statsUnavailable": "Statistika yuklanmadi",
           "dayTitle": "{day}: {minutes} daq",
-          "seriesLabel": "{name} — oxirgi {days} kunda kunlik faol daqiqalar"
+          "seriesLabel": "{name} — oxirgi {days} kunda kunlik faol daqiqalar",
+          "menu": {
+            "label": "{name} — amallar",
+            "openProfile": "Profilni ochish"
+          }
         },
         "person": {
           "header": {
@@ -1002,6 +1008,33 @@
           "roleTitle": "Rolni o'zgartirish",
           "roleDescription": "{name} endi «{role}» sifatida ishlaydi. O'zgarish keyingi token yangilanishida (odatda 1 soat ichida) kuchga kiradi.",
           "roleConfirm": "O'zgartirish"
+        },
+        "remove": {
+          "action": "O'chirish",
+          "actionLabel": "O'chirish: {email}",
+          "title": "Xodimni o'chirish",
+          "description": "{name} ({email}) xodimlar ro'yxatidan butunlay olib tashlanadi.",
+          "consequences": {
+            "accessEnds": "Kirish darhol tugaydi: sessiya endi yangilanmaydi. Hozir ochiq sahifalar kirish tokeni muddati tugaguncha (odatda 1 soatgacha) ishlashi mumkin.",
+            "googleUnlinked": "Google orqali kirish uziladi — xodimning tizimdagi hisobi o'chiriladi.",
+            "canReAdd": "Bu emailni keyinroq yana qo'shish mumkin.",
+            "auditKept": "Kirish jurnalida kim va qachon o'chirgani haqida yozuv qoladi."
+          },
+          "purge": {
+            "label": "Faollik tarixini ham o'chirish (ko'rishlar, qidiruvlar, Copilot savollari, onboarding jarayoni)",
+            "hint": "Belgilanmasa, tarix saqlanadi va statistikada qoladi. Belgilansa, uni qaytarib bo'lmaydi."
+          },
+          "confirmEmail": {
+            "label": "Tasdiqlash uchun emailni yozing",
+            "hint": "Aynan shu emailni yozing: <strong>{email}</strong>"
+          },
+          "confirm": "Xodimni o'chirish",
+          "authFailed": "Google hisobini uzib bo'lmadi — hech narsa o'zgarmadi. Qaytadan urinib ko'ring.",
+          "dangerZone": {
+            "title": "Xavfli hudud",
+            "description": "Ishdan ketgan xodimni ro'yxatdan butunlay olib tashlash. Kirishni vaqtincha to'xtatish uchun yuqoridagi «Kirish ruxsati»dan foydalaning.",
+            "button": "Xodimni o'chirish"
+          }
         },
         "activityList": {
           "title": "Xodimlar faolligi",
@@ -1921,7 +1954,8 @@
       "stageIdDuplicate": "Bosqich ID takrorlanmoqda",
       "minSteps": "Kamida bitta qadam kerak",
       "imageType": "Faqat JPG, PNG, WebP yoki AVIF rasm — fayl turi uning mazmuniga mos bo'lishi kerak",
-      "imageTooLarge": "Rasm hajmi 2 MB dan oshmasligi kerak"
+      "imageTooLarge": "Rasm hajmi 2 MB dan oshmasligi kerak",
+      "confirmMismatch": "Email mos kelmadi — xodimning emailini aynan yozing"
     },
     "shell": {
       "title": "Admin panel",

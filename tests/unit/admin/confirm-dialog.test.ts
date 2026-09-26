@@ -14,12 +14,25 @@ const source = readFileSync(path.resolve(__dirname, "../../../components/admin/C
 describe("ConfirmDialog", () => {
   it("traps focus in its panel while open", () => {
     expect(source).toContain('from "@/hooks/useFocusTrap"');
-    expect(source).toMatch(/useFocusTrap\(panelRef, open\)/);
+    // Optionally starting on a field of the body (RemovePersonDialog's typed
+    // confirmation) instead of Cancel.
+    expect(source).toMatch(/useFocusTrap\(panelRef, open(, initialFocusRef)?\)/);
     expect(source).toMatch(/ref=\{panelRef\}\s+role="alertdialog"/);
   });
 
   it("cancels on Escape, but not while the action is pending", () => {
     expect(source).toMatch(/if \(!open \|\| pending\) return;/);
     expect(source).toMatch(/event\.key === "Escape"\) onCancel\(\)/);
+  });
+
+  it("keeps the confirm button disabled while pending or while the body says so", () => {
+    expect(source).toMatch(/onClick=\{onConfirm\}\s+disabled=\{pending \|\| confirmDisabled\}/);
+  });
+
+  it("draws danger as a tinted fill with dark text, never white on the solid status colour", () => {
+    // White on bg-status-outdated is 3.71:1 in the light theme (docs/AUDIT.md
+    // §3); the pair used instead is measured in tests/unit/ui/design-tokens.test.ts.
+    expect(source).toContain("border-status-outdated bg-status-outdated/15 text-primary-dark hover:bg-status-outdated/25");
+    expect(source).not.toMatch(/bg-status-outdated text-surface/);
   });
 });

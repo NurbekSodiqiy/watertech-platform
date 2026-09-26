@@ -6,10 +6,13 @@ import {
   addUserSchema,
   isAssignableRole,
   isUserRole,
+  normalizeConfirmEmail,
+  removeUserSchema,
   setRoleSchema,
   userEmailSchema,
   type AccessState,
 } from "@/lib/admin/users";
+import { adminErrorMap } from "@/lib/admin/validation";
 
 // accessViolation is the TS copy of private.allowed_users_guard's three rules
 // (0017, admin semantics since 0020). supabase/tests/rls-checks.sql asserts
@@ -66,6 +69,74 @@ describe("accessViolation", () => {
 
   it.each(cases)("$label → $expected", ({ actor, target, before, after, activeAdmins, expected }) => {
     expect(accessViolation({ actor, target, before, after, activeAdmins })).toBe(expected);
+  });
+});
+
+// A removal (0022) is `after: null`, like access_audit's `after` for a delete.
+// The guard meets a DELETE with the same three checks in the same order, and a
+// removal is never a no-op: every admin row is refused, active or not.
+describe("accessViolation — removing a row", () => {
+  const cases: {
+    label: string;
+    actor: string;
+    target: string;
+    before: AccessState;
+    activeAdmins: string[];
+    expected: ReturnType<typeof accessViolation>;
+  }[] = [
+    { label: "remove an operator", actor: "a", target: "c", before: OPERATOR, activeAdmins: ["a"], expected: null },
+    { label: "remove a sales manager", actor: "a", target: "c", before: MANAGER, activeAdmins: ["a"], expected: null },
+    { label: "remove an inactive operator", actor: "a", target: "c", before: INACTIVE_OPERATOR, activeAdmins: ["a"], expected: null },
+    { label: "remove an inactive manager", actor: "a", target: "c", before: INACTIVE_MANAGER, activeAdmins: ["a"], expected: null },
+
+    { label: "remove self as the last admin", actor: "a", target: "a", before: ACTIVE_ADMIN, activeAdmins: ["a"], expected: "last_admin" },
+    { label: "remove the last admin (not self)", actor: "a", target: "b", before: ACTIVE_ADMIN, activeAdmins: ["b"], expected: "last_admin" },
+    { label: "remove self with another admin", actor: "a", target: "a", before: ACTIVE_ADMIN, activeAdmins: ["a", "b"], expected: "self_change" },
+    { label: "remove another active admin", actor: "a", target: "b", before: ACTIVE_ADMIN, activeAdmins: ["a", "b"], expected: "admin_locked" },
+    { label: "remove an inactive admin", actor: "a", target: "b", before: INACTIVE_ADMIN, activeAdmins: ["a"], expected: "admin_locked" },
+    // Self with a non-admin row (a stale admin token): still "self" — the
+    // guard says WT461 for any caller's own row.
+    { label: "remove one's own operator row", actor: "a", target: "a", before: OPERATOR, activeAdmins: ["a"], expected: "self_change" },
+  ];
+
+  it.each(cases)("$label → $expected", ({ actor, target, before, activeAdmins, expected }) => {
+    expect(accessViolation({ actor, target, before, after: null, activeAdmins })).toBe(expected);
+  });
+});
+
+describe("removeUserSchema", () => {
+  it("accepts the email typed again, whatever its case or surrounding spaces", () => {
+    const parsed = removeUserSchema.parse(
+      { email: " Aziza@WaterTech.uz ", purgeHistory: true, confirmEmail: "  AZIZA@watertech.UZ " },
+      { errorMap: adminErrorMap }
+    );
+    expect(parsed).toMatchObject({ email: "aziza@watertech.uz", purgeHistory: true });
+    expect(normalizeConfirmEmail("  AZIZA@watertech.UZ ")).toBe("aziza@watertech.uz");
+  });
+
+  it("refuses anything else as confirmMismatch on confirmEmail", () => {
+    for (const confirmEmail of ["", "aziza", "aziza@watertech.u", "aziza@watertech.uz.", "a ziza@watertech.uz"]) {
+      const result = removeUserSchema.safeParse(
+        { email: "aziza@watertech.uz", purgeHistory: false, confirmEmail },
+        { errorMap: adminErrorMap }
+      );
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({ path: ["confirmEmail"], message: "confirmMismatch" }),
+      ]);
+    }
+  });
+
+  it("requires a real boolean for purgeHistory and caps the confirmation's length", () => {
+    const flag = removeUserSchema.safeParse({ email: "a@b.uz", purgeHistory: "true", confirmEmail: "a@b.uz" });
+    expect(flag.error?.issues[0]?.path).toEqual(["purgeHistory"]);
+
+    const long = removeUserSchema.safeParse(
+      { email: "a@b.uz", purgeHistory: false, confirmEmail: `${" ".repeat(600)}a@b.uz` },
+      { errorMap: adminErrorMap }
+    );
+    expect(long.success).toBe(false);
+    expect(long.error?.issues[0]).toMatchObject({ path: ["confirmEmail"], message: "tooLong" });
   });
 });
 

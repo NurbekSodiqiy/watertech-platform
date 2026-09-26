@@ -16,11 +16,15 @@ import { VALIDATION_DETAIL_LIMIT } from "@/lib/admin/validation";
  * - `reference_in_use`  — another row still points at this one (delete guard, S07).
  * - `email_taken`       — adding an allow-list email that already has a row (/admin/users).
  * - `last_admin`        — the change would leave no active admin (SQL WT460, 0017/0020).
- * - `self_change`       — an admin demoting or deactivating their own row (SQL WT461, 0017).
+ * - `self_change`       — an admin demoting, deactivating or removing their own row, or
+ *                         purging their own history (SQL WT461, 0017/0022).
  * - `admin_locked`      — the change creates, promotes, demotes, deactivates or removes an
- *                         admin row; admin rows are SQL-editor-only (SQL WT462, 0020).
+ *                         admin row, or purges its history; admin rows are SQL-editor-only
+ *                         (SQL WT462, 0020/0022).
  * - `auth_sync_failed`  — the allow-list row was written, but Supabase Auth did not confirm
- *                         the matching ban / unban; repeating the action retries it.
+ *                         the matching ban / unban; repeating the action retries it. On a
+ *                         removal Auth comes first: it did not confirm deleting the account,
+ *                         and nothing else was changed.
  * - `unknown`           — anything else; the real cause is in the server log.
  */
 export type AdminErrorCode =
@@ -138,8 +142,9 @@ export const PG_UNIQUE_VIOLATION = "23505";
 export const PG_FOREIGN_KEY_VIOLATION = "23503";
 
 /** The refusals of private.allowed_users_guard (0017, admin semantics since
- * 0020), mapped by SQLSTATE — never by message, which stays in the server log.
- * Null for any other state: the caller decides what that means. */
+ * 0020) and of admin_purge_person_history (0022), mapped by SQLSTATE — never
+ * by message, which stays in the server log. Null for any other state: the
+ * caller decides what that means. */
 export function allowListGuardCode(sqlstate: string | undefined): AdminErrorCode | null {
   switch (sqlstate) {
     case "WT403": // the JWT's email is no longer an active admin row (a stale token)

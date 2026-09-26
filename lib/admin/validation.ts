@@ -23,6 +23,8 @@ export const VALIDATION_KEYS = [
   // Product photo upload (lib/admin/product-image.ts).
   "imageType",
   "imageTooLarge",
+  // Removing a person: the typed confirmation is not their email (lib/admin/users.ts).
+  "confirmMismatch",
 ] as const;
 
 export type ValidationKey = (typeof VALIDATION_KEYS)[number];

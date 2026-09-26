@@ -30,7 +30,7 @@ the Server Action guard (`requireAdminSession()`), and the database (RLS through
 `private.is_admin()`, and a `WT403` from every admin function). **Admin rows are SQL-editor-only**: the
 allow-list guard refuses any write that carries a JWT and creates, promotes, demotes, deactivates,
 reactivates, deletes or re-addresses an admin row (`WT462`), so `/admin/users` assigns `operator` and
-`manager` only. An admin's session records no telemetry — the client tracker sends nothing until the role is
+`manager` only, and removes only those rows (0022, §5). An admin's session records no telemetry — the client tracker sends nothing until the role is
 known and nothing for an admin after (`lib/telemetry/client.ts`), and `/api/events` answers `204` without
 inserting.
 
@@ -86,7 +86,7 @@ policies still call `private.is_manager()` by name, which is `private.is_admin()
 | the 10 `content_*` tables | published rows | every row, plus insert/update/delete | nothing |
 | `user_state` | own rows, read + write | own rows read + write; every row, read only | nothing, and no insert |
 | `content_versions`, `copilot_logs`, `admin_notifications`, `content_gate_reports`, `telemetry_events` | nothing | read (plus the `read_at` flip on `admin_notifications`) | nothing |
-| `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never an admin row's role or status (SQL editor only, 0020), never its own role/status, never the last active admin, and only while its own row is still an active admin; no delete | nothing |
+| `allowed_users` (since 0017) | nothing | read; insert; update of `role`, `is_active`, `full_name` only — never an admin row's role or status (SQL editor only, 0020), never its own role/status, never the last active admin, and only while its own row is still an active admin; delete (since 0022) of an operator's or sales manager's row only — never an admin row, never its own, never the last active admin | nothing |
 | `access_audit` (0017) | nothing | read — nobody writes it but the trigger, `service_role` included | nothing |
 | `rate_limits` | nothing | nothing | nothing — `service_role` only, through `rate_limit_hit()` |
 | `storage.objects`, bucket `product-images` (0018) | nothing through RLS | read, insert, update, delete — writes only under `products/` | nothing through RLS |
@@ -96,6 +96,13 @@ The `dashboard_*` (0016), `copilot_*` (0019) and `admin_user_last_activity()` (0
 `admin_person_summary` / `_daily` / `_sections` / `_recent_events` and `admin_top_content` (0021) start with
 the same check and raise `WT403` for an operator and a sales manager — an explicit refusal, not a
 zero-filled answer.
+
+`admin_purge_person_history(p_email)` (0022) is the one way a session deletes somebody's
+`telemetry_events`, `user_state` or `copilot_logs` rows: no session role holds a DELETE policy on those
+tables (and `telemetry_events` no DELETE grant), so the function is `SECURITY DEFINER`. It starts with the
+same `WT403` check, then — like the allow-list guard, under the guard's advisory lock — reads the caller's
+own row (`WT403` unless it is an active admin), and refuses the caller's own email (`WT461`) and an admin
+row's (`WT462`). `EXECUTE` is `authenticated`'s alone.
 
 **The `product-images` bucket is public on purpose.** Catalog photos are marketing material, so anyone
 holding a photo's URL can fetch it from `/storage/v1/object/public/product-images/…` — Storage serves
@@ -114,7 +121,8 @@ table and no policy names `anon`, so an anon-key request sees and changes nothin
 does not cover (TRUNCATE, TRIGGER, REFERENCES) are not reachable through PostgREST, GraphQL or Realtime.
 Revoking them anyway is open item O1 in [AUDIT.md](AUDIT.md#b-findings-of-this-audit). Writes that need to bypass
 RLS (telemetry ingestion, the copilot log, the publish gate, the content loaders — and, since 0017, the
-Supabase Auth ban/unban behind `/admin/users`, which has no session-scoped equivalent) go through
+Supabase Auth ban/unban behind `/admin/users`, and since 0022 deleting a removed person's Auth account —
+neither has a session-scoped equivalent) go through
 [lib/supabase/admin.ts](../lib/supabase/admin.ts) in server code only, and take the email from the
 verified session, never from the payload.
 
@@ -180,6 +188,7 @@ takes effect like this:
 | Action | Takes effect |
 | --- | --- |
 | **Deactivate at `/admin/users`** (0017 + `lib/admin/actions/user-access.ts`) | Two steps, in this order. (1) `is_active = false`: the access-token hook refuses every new token. (2) A Supabase Auth **ban** (`auth.admin.updateUserById(id, { ban_duration: "876000h" })`): GoTrue refuses the refresh-token grant ("Invalid Refresh Token: User Banned") and any new Google sign-in (403 "User is banned") at once, **whether or not the hook is enabled**. The access token already in their browser keeps working until it expires; after that, middleware's refresh fails and they land on `/login`. |
+| **Remove at `/admin/users`** (0022 + `removeUser`) | The Supabase Auth account(s) are deleted first — with them every session and refresh token, so no new access token can be minted, hook or no hook — then (optionally) the history, then the allow-list row, after which the hook refuses the email too. The access token already in their browser keeps working until it expires, exactly as after a deactivation. |
 | `is_active = false` by hand in the SQL editor, or deleting the row | Step (1) only: refused at their next token issuance (every refresh included), but **no ban**. If the hook is disabled, nothing stops the refresh. Prefer the page, or ban the user under Authentication → Users as well. |
 | Changing `role` (operator ↔ manager at `/admin/users`; anything involving `admin` in the SQL editor) | Their next refresh carries the new role. Until then the old role stays in force, in middleware *and* in RLS — with one exception since 0017: a demoted or deactivated admin can no longer **write the allow-list** with their old token (the guard trigger reads their current row, WT403), so they cannot restore themselves. |
 | Revoking sessions (Authentication → Users → the user → sign out / revoke) | Kills the refresh token, so no new access token can be minted. Does **not** invalidate the access token already in their browser. |
@@ -197,8 +206,15 @@ the row is already inactive and the page reports `auth_sync_failed` instead of s
 "deactivate" again retries only the ban. Until it succeeds the person is in the "by hand" row of the table
 above: the hook still refuses their next token.
 
+After a **removal with "also delete activity history"**, the same window has one more consequence: the
+purge runs before the row is deleted, so events the removed person's still-valid token sends in that last
+hour (`/api/events`, `/api/copilot`, their own `user_state`) are recorded after it, under the removed email.
+They are few, age out with retention (0016), and a later purge of the same email removes them:
+`select public.admin_purge_person_history('<email>');` as an admin session, or the same deletes in the SQL
+editor.
+
 For this project's threat model — ~30 internal users, an internal sales knowledge base, no financial
-transactions — an hour of stale access after a deactivation is acceptable. It is **not** acceptable for
+transactions — an hour of stale access after a deactivation or a removal is acceptable. It is **not** acceptable for
 a compromised account: there, revoke the session *and* rotate the signing key.
 
 Two smaller residual notes:
@@ -213,10 +229,10 @@ Two smaller residual notes:
 
 **`/admin/users`** (the admin only, since 0017; admin semantics since 0020): add a person (email,
 optional name, role `operator` or `manager`), switch a role between the two inline, deactivate or
-reactivate behind a confirmation. Admin rows are listed with an Admin badge and disabled controls: they
-are managed in the SQL editor only. There is no delete — deactivating keeps the row, because
-`telemetry_events` and `copilot_logs` still reference the email and the dashboard's operator filter reads
-this table.
+reactivate behind a confirmation, and — since 0022 — remove an operator or a sales manager who left
+(below). Admin rows are listed with an Admin badge and disabled controls, and have no remove action: they
+are managed in the SQL editor only. Deactivating stays the way to pause someone: it keeps the row, their
+history and their Auth account, and is undone by reactivating.
 
 The rules, and where each is enforced (the UI enforces none of them; it only avoids offering what would
 be refused). The TS and SQL checks run in the same order, so both give the same answer:
@@ -231,7 +247,9 @@ be refused). The TS and SQL checks run in the same order, so both give the same 
 | Never zero active admins | `accessViolation()` → `last_admin` | guard, `WT460` — also for `service_role` and the SQL editor |
 | No admin demotes or deactivates their own row | `accessViolation()` → `self_change` | guard, `WT461` |
 | Admin rows are SQL-editor-only: nothing with a JWT creates, promotes to, demotes, deactivates, reactivates, deletes or re-addresses one | `accessViolation()` → `admin_locked` | guard, `WT462` — the service-role key included; `full_name` stays editable |
-| No delete from a session | no action exists | no `DELETE` grant, and the guard checks deletes too |
+| Remove only an operator's or a sales manager's row — never an admin's, never one's own, never the last admin | `accessViolation()` with `after: null` → `admin_locked` / `self_change` / `last_admin` | `GRANT DELETE` + the one `allowed_users_admin_delete` policy (`is_admin()`), then the guard: `WT403`, `WT460`, `WT461`, `WT462` |
+| A removal is confirmed by typing the email again | `removeUserSchema` → `validation` (`confirmEmail`) | — (a UI safeguard against a misclick, re-checked on the server) |
+| Purge only a non-admin's history, never one's own | the same pre-check, before anything is deleted | `admin_purge_person_history`: `WT403` (claim, then the caller's row), `WT461`, `WT462` |
 
 The guard serialises every write to the table on a transaction-scoped advisory lock, so two concurrent
 writes that would each leave one admin cannot both succeed: the second one re-counts after the first
@@ -258,6 +276,40 @@ treats the write as an API write.
 
 A deactivation done there does not ban the account in Supabase Auth (§4); use the page, or also ban the
 user under Authentication → Users.
+
+### Removing a person (0022)
+
+For someone who left. The dialog (card menu, table row, or the danger zone on their page) lists the
+consequences, offers "also delete activity history" — **off by default**, because it cannot be undone — and
+enables its button only once the email is typed again. `removeUser` then runs, in this order:
+
+1. **Checks, nothing written:** the admin session; zod, including the typed confirmation; the row exists
+   (`not_found` otherwise); `accessViolation` (last admin → self → admin row).
+2. **The Supabase Auth account(s)** with that email are deleted (service role, `lib/auth/delete-account.ts`):
+   the Google sign-in is unlinked and every session and refresh token goes with it. If GoTrue does not
+   confirm, the action answers `auth_sync_failed` and nothing else has been touched.
+3. **With the history option**, `admin_purge_person_history` deletes their `telemetry_events`, `user_state`
+   (pins, onboarding, read receipts, the daily plan) and `copilot_logs` (their Copilot questions) rows.
+4. **The allow-list row** is deleted through the admin's own session, so the policy and the guard decide
+   again; the audit trigger appends an `access_audit` row (`action = 'delete'`, the whole row as `before`,
+   the admin as `actor`).
+
+Every step is idempotent and the row goes last because it is what a retry finds the person by: after a
+failure at any step, pressing the button again finishes the job (an Auth account deleted by the first
+attempt is simply no longer found). Until step 4 succeeds the row is still active, so a person whose
+removal failed after step 2 could sign in with Google again — creating a fresh Auth account, which the retry
+deletes too.
+
+**What is kept:** `access_audit` always — the record of who removed whom, and when; it is append-only and
+the purge never touches it. Without the history option, their telemetry, `user_state` and Copilot rows stay
+too: they keep counting in the dashboards, retention (0016) ages them out, and if the email is ever added
+again the person finds their old pins and onboarding progress. The email can be added again at any time;
+its next sign-in creates a new Auth account.
+
+**Deploy order:** apply 0022 before (or with) the release that has the remove action. Against a database
+without it, a removal deletes the Auth account (step 2) and then fails — `unknown` at the missing purge
+function, or `unauthorized` at the row (no DELETE grant yet); the person stays listed, active, with no Auth
+account, and the retry after applying 0022 finishes the job.
 
 ## 6. When you change any of this
 

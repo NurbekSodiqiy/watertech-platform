@@ -1,11 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { expectSignedInAt, useAdminSession, useOperatorSession, useSalesManagerSession } from "./session";
 
 /**
  * R3/S04: the people directory (/admin/users, "Xodimlar") and one person's page
- * (/admin/users/[email]). Read-only — nothing here adds, re-roles or deactivates
- * anybody; the access panel and the add dialog are only looked at, never
- * submitted (the shared project has no disposable database, docs/TESTING.md).
+ * (/admin/users/[email]). Read-only — nothing here adds, re-roles, deactivates
+ * or removes anybody; the access panel, the add dialog and the remove dialog
+ * (0022) are only opened and cancelled, never submitted (the shared project
+ * has no disposable database, docs/TESTING.md).
  *
  * The admin block needs TEST_SESSION_COOKIE and skips itself without it, like
  * every signed-in spec (tests/e2e/session.ts). The person page reads the 0021
@@ -18,6 +19,40 @@ import { expectSignedInAt, useAdminSession, useOperatorSession, useSalesManagerS
 /** A path of somebody who does not have to exist: the redirect happens before
  * the page looks the person up. */
 const SOMEONE = "/admin/users/someone%40example.com";
+
+const REMOVE_TITLE = "Xodimni o'chirish";
+
+/** The remove dialog, opened on `email`: nothing on it is pre-filled, the
+ * history purge is off, focus is in the confirmation field, and the danger
+ * button stays disabled until the typed text is that email (case and spaces
+ * aside). Then cancelled — never submitted. */
+async function checkRemoveDialog(page: Page, email: string): Promise<void> {
+  const dialog = page.getByRole("alertdialog", { name: REMOVE_TITLE });
+  await expect(dialog).toBeVisible();
+
+  const confirm = dialog.getByRole("button", { name: REMOVE_TITLE, exact: true });
+  const field = dialog.getByRole("textbox", { name: "Tasdiqlash uchun emailni yozing" });
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("");
+  await expect(dialog.getByRole("checkbox")).not.toBeChecked();
+  await expect(confirm).toBeDisabled();
+
+  await field.fill("somebody-else@example.com");
+  await expect(confirm).toBeDisabled();
+  await field.fill(email.slice(0, -1));
+  await expect(confirm).toBeDisabled();
+  await field.fill(`  ${email.toUpperCase()} `);
+  await expect(confirm).toBeEnabled();
+
+  await dialog.getByRole("button", { name: "Bekor qilish" }).click();
+  await expect(dialog).toBeHidden();
+}
+
+/** The email a card or a row links to (/admin/users/<encoded email>). */
+async function linkedEmail(link: Locator): Promise<string> {
+  const href = (await link.getAttribute("href")) ?? "";
+  return decodeURIComponent(href.slice(href.lastIndexOf("/") + 1));
+}
 
 test.describe("people directory and person page (admin session)", () => {
   useAdminSession();
@@ -151,6 +186,87 @@ test.describe("people directory and person page (admin session)", () => {
     await expect(page.getByRole("switch")).toBeVisible();
   });
 
+  test("a card's ⋯ menu offers profile, access and Remove — by keyboard — and the admin's card has none", async ({
+    page,
+  }) => {
+    await page.goto("/admin/users");
+    await expectSignedInAt(page, /\/admin\/users$/);
+
+    const panel = page.getByRole("tabpanel");
+    // The admin's own card (and any admin's) carries no menu at all.
+    const adminCard = panel.getByRole("listitem").filter({ hasText: "Telemetriya yozilmaydi" }).first();
+    await expect(adminCard.getByRole("button", { name: / — amallar$/ })).toHaveCount(0);
+
+    const menuButton = panel.getByRole("button", { name: / — amallar$/ }).first();
+    test.skip((await menuButton.count()) === 0, "no operator or sales manager on the allow-list yet");
+    const card = panel.getByRole("listitem").filter({ has: menuButton });
+    const email = await linkedEmail(card.getByRole("link").first());
+
+    // Enter opens on the first item; End / Escape; focus comes back.
+    await menuButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveCount(3);
+    await expect(menu.getByRole("menuitem", { name: "Profilni ochish" })).toBeFocused();
+    await expect(menu.getByRole("menuitem", { name: /^(To'xtatish|Tiklash)$/ })).toBeVisible();
+    await page.keyboard.press("End");
+    await expect(menu.getByRole("menuitem", { name: "O'chirish" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(menuButton).toBeFocused();
+
+    // ArrowUp opens on the last item — Remove — and Enter chooses it.
+    await page.keyboard.press("ArrowUp");
+    await expect(page.getByRole("menu").getByRole("menuitem", { name: "O'chirish" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await checkRemoveDialog(page, email);
+    // The dialog gives focus back to the menu button.
+    await expect(menuButton).toBeFocused();
+
+    // A click elsewhere closes an open menu.
+    await menuButton.click();
+    await expect(page.getByRole("menu")).toBeVisible();
+    await page.getByRole("heading", { level: 1 }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+  });
+
+  test("the table view offers Remove on operator and manager rows, never on an admin's", async ({ page }) => {
+    await page.goto("/admin/users?view=table");
+    await expectSignedInAt(page, /\/admin\/users\?view=table$/);
+
+    const ownRow = page.getByRole("row").filter({ hasText: "Siz" });
+    await expect(ownRow.getByRole("button", { name: /^O'chirish: / })).toHaveCount(0);
+
+    const removeButtons = page.getByRole("button", { name: /^O'chirish: / });
+    const count = await removeButtons.count();
+    test.skip(count === 0, "no operator or sales manager on the allow-list yet");
+    // Only rows whose role can change here get one: never a locked (admin) row.
+    for (let i = 0; i < count; i += 1) {
+      const row = page.getByRole("row").filter({ has: removeButtons.nth(i) });
+      await expect(row.getByRole("combobox")).toBeEnabled();
+    }
+
+    const first = removeButtons.first();
+    const email = ((await first.getAttribute("aria-label")) ?? "").replace(/^O'chirish: /, "");
+    await first.click();
+    await checkRemoveDialog(page, email);
+  });
+
+  test("a person's page has a danger zone with Remove; the dialog is not submitted", async ({ page }) => {
+    await page.goto("/admin/users");
+    await expectSignedInAt(page, /\/admin\/users$/);
+
+    const card = page.getByRole("tabpanel").getByRole("link").filter({ hasText: /Operator|Menejer/ }).first();
+    test.skip((await card.count()) === 0, "no operator or sales manager on the allow-list yet");
+    const email = await linkedEmail(card);
+    await card.click();
+
+    await expect(page.getByRole("heading", { name: "Xavfli hudud", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: REMOVE_TITLE, exact: true }).click();
+    await checkRemoveDialog(page, email);
+  });
+
   // Not asserted on the HTTP status: loading.tsx has started streaming by the
   // time the page decides, so Next answers 200 with the not-found UI in it.
   test("an email that is not on the allow-list gets the not-found page", async ({ page }) => {
@@ -175,6 +291,9 @@ test.describe("people directory and person page (admin session)", () => {
     await expect(page.getByText("Admin faqat SQL Editor orqali boshqariladi")).toBeVisible();
     await expect(page.getByRole("switch")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Kunlik faollik", exact: true })).toHaveCount(0);
+    // No danger zone either: admin rows are removed in the SQL editor only.
+    await expect(page.getByRole("heading", { name: "Xavfli hudud", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: REMOVE_TITLE, exact: true })).toHaveCount(0);
   });
 });
 

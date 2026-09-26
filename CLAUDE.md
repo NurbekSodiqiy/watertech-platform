@@ -81,8 +81,9 @@ components/
   providers/                       SessionProvider, ClientNameContext, CertificateLightboxContext, ThemeScript, TelemetryProvider
   admin/                           CMS forms/editors, AdminShell, UsersTable, AddUserDialog
     charts/                        StatCard, BarList, ColumnBars, CompareTable, DeltaBadge, ChartCard, ProgressBar (R3/S03–S04) — §15
-    people/                        PeopleDirectory, PersonCard, PersonAvatar, RoleBadge, PersonHeader, PersonDetail,
-                                   PersonTimeline, PersonAccessPanel, PeopleActivityList (R3/S04) — §15
+    people/                        PeopleDirectory, PersonCard, PersonCardMenu, PersonAvatar, RoleBadge, PersonHeader,
+                                   PersonDetail, PersonTimeline, PersonAccessPanel, RemovePersonDialog,
+                                   PeopleActivityList (R3/S04, removal 0022) — §15
   changelog/                       ChangelogEntryCard
   copilot/                        operator copilot UI
   dashboard/                       monitoring widgets/KPIs (RangePicker, OperatorFilter, QualityPanel…)
@@ -93,7 +94,8 @@ components/
 lib/
   content/                        types.ts + seed data files + loader.ts (typed getters, incl. getContacts/getSops). Pages call getters, never arrays directly. No mock-data folder: every content kind lives in Supabase. safe.ts decides what a failed read does (§8).
   supabase/                        client.ts (browser) · client-lazy.ts (loads client.ts on demand, PERF.md S14) · server.ts (RSC/route) · admin.ts (service role, SERVER ONLY)
-  auth/                            claims.ts (role from JWT), server-session.ts, sign-out.ts + purge.ts (shared-device purge, §7), ban.ts (Supabase Auth ban)
+  auth/                            claims.ts (role from JWT), server-session.ts, sign-out.ts + purge.ts (shared-device purge, §7), ban.ts (Supabase Auth ban),
+                                   delete-account.ts (Supabase Auth account delete, 0022), find-auth-users.ts (the listUsers walk both share)
   user-state/                      per-user state store (pins, onboarding, read receipts); owner.ts namespaces every storage key per account
   auth/session-user.ts             the one place a Supabase user becomes { email, name, role } for client code
   telemetry/                       client.ts (queue), types.ts, aggregate.ts (server)
@@ -173,8 +175,10 @@ components/admin/           AdminShell  AdminOverview  OverviewRefresh  Relative
 components/admin/charts/    ChartCard  StatCard  DeltaBadge  BarList  ColumnBars  CompareTable  BarGrow  BarGrowGroup
                             ProgressBar (R3/S03–S04; pure geometry in lib/admin/charts.ts, overview arithmetic in
                             lib/admin/overview.ts)
-components/admin/people/    PeopleDirectory  PersonCard  PersonAvatar  RoleBadge  PersonHeader  PersonDetail
-                            PersonTimeline  PersonAccessPanel  PeopleActivityList (R3/S04)
+components/admin/people/    PeopleDirectory  PersonCard  PersonCardMenu  PersonAvatar  RoleBadge  PersonHeader
+                            PersonDetail  PersonTimeline  PersonAccessPanel  RemovePersonDialog  PeopleActivityList
+                            (R3/S04; PersonCardMenu + RemovePersonDialog: person removal, 0022)
+lib/auth/                   claims  server-session  session-user  sign-out  purge  ban  delete-account  find-auth-users
 app/[locale]/(admin)/admin/users/   page.tsx (directory) + loading.tsx, [email]/page.tsx (person) + loading.tsx (R3/S04)
 app/[locale]/(admin)/admin/(overview)/   page.tsx + loading.tsx of /admin — a route group, so the overview has its
                             own skeleton while ../loading.tsx stays the CMS pages' generic one (R3/S03)
@@ -349,6 +353,17 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   demotes, deactivates, reactivates, deletes or re-addresses (changes the `email` of) an `admin` row;
   `full_name` stays editable). The UI assigns `operator` / `manager` only (`ASSIGNABLE_ROLES` in
   `lib/admin/users.ts`).
+- **Removing a person (0022).** An `operator` or `manager` row can be removed at `/admin/users` (someone who
+  left); an `admin` row still only in the SQL editor (a DELETE carrying a JWT is `WT462`), and never the
+  caller's own (`WT461`) or the last active admin (`WT460`). `removeUser` (`lib/admin/actions/user-access.ts`)
+  runs, in this order, each step idempotent so repeating the action after any failure finishes the job:
+  checks (session, zod incl. the typed confirmation `removeUserSchema`, the row, `accessViolation` with
+  `after: null`) → the Supabase Auth account(s) deleted (`lib/auth/delete-account.ts`, service role; `failed` →
+  `auth_sync_failed`, nothing else touched) → with `purgeHistory`, `admin_purge_person_history` (telemetry,
+  user_state, copilot_logs; SECURITY DEFINER, refuses a non-admin claim or row `WT403`, self `WT461`, an admin
+  row `WT462`) → the allow-list row deleted through the admin's own session (`allowed_users_admin_delete` +
+  the guard; `access_audit` records it and is never purged). The row goes last because it is what a retry
+  finds the person by.
 - SQL helpers: `private.is_member()` = any of the three roles; `private.is_admin()` = `admin` — the one
   to use in every new policy and function. `private.is_manager()` survives only as a **deprecated alias of
   `is_admin()`** because the 0014–0019 policies and function bodies call it by name. Never use it in new SQL
@@ -577,7 +592,16 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   apostrophes, Cyrillic), sort (activity · active time · name · added) and the cards ⇄ table view — is client-side
   over the full list. The state lives in `?role=&q=&sort=&view=`: read on the server for the first paint
   (`parseDirectoryState`), written back with `history.replaceState` (§4). Cards are memoized, fetch nothing and
-  do not prefetch; the table view is `UsersTable` with `hideToolbar` (the directory's controls drive it). The
+  do not prefetch; an operator's or sales manager's card (never an admin's, never the caller's) has a ⋯ menu
+  (`PersonCardMenu`, beside the card link, not inside it — WAI-ARIA menu button: arrows, Home/End, Escape and
+  outside click close it, focus returns to the button) with "Open profile", "Deactivate"/"Activate" and "Remove".
+  The directory owns the one `ConfirmDialog` and the one `RemovePersonDialog` those open and passes every card
+  the same `useCallback` handlers, so memo holds. The table view is `UsersTable` with `hideToolbar` (the
+  directory's controls drive it); its rows get a "Remove" action beside activate/deactivate (not on a locked
+  row). `RemovePersonDialog` (on `ConfirmDialog`'s body slot) spells out the consequences, has "also delete
+  activity history" off by default, and enables its danger button only once the email is typed again
+  (`normalizeConfirmEmail`); a success toasts (`toast.personRemoved*`) and `router.refresh()`es, which drops
+  the card and updates the summary strip. The
   summary strip counts operators + managers only (the admin is listed, never counted); "Faol (7 kun)" is any event
   in the last 7 days of the 14-day window, "Nofaol" the rest. Each card links to `/admin/users/[email]` built by
   `personPath(email)` (encodeURIComponent) and parsed back by `parsePersonParam()` (zod `userEmailSchema`) →
@@ -587,7 +611,9 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - **Person page.** `/admin/users/[email]` reads the allow-list row and every widget's RPC in one `Promise.all`
   (`fetchPerson*` in `lib/admin/people-queries.ts`: 0021 functions plus `dashboard_hourly` / `_most_viewed` /
   `_zero_result_searches` with `p_operator`); no row → `notFound()`, an admin row → no numbers (telemetry is never
-  recorded for that role) and the locked note instead of `PersonAccessPanel`. Timeline lines are
+  recorded for that role) and the locked note instead of `PersonAccessPanel`. Below its controls
+  `PersonAccessPanel` has a danger zone ("Remove employee", not on the caller's own row); after a removal it
+  `router.replace("/admin/users")`s and `router.refresh()`es — the page itself is a 404 now. Timeline lines are
   `pages.admin.people.events.<type>` sentences built by `buildTimeline`: entity titles from the content bundle, meta
   only through the zod-validated known keys. Wherever a gmail is shown and that person is on the allow-list it links
   here (overview compare table, `PeopleActivityList` on `/dashboard`, the table view, the activity feed's actors).

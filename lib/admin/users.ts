@@ -62,6 +62,32 @@ export const setRoleSchema = z.object({ email: userEmailSchema, role: assignable
 
 export const setActiveSchema = z.object({ email: userEmailSchema, active: z.boolean() });
 
+/** The email as typed into the remove dialog's confirmation field, compared
+ * the way `userEmailSchema` stores it — so " Aziza@WaterTech.uz " confirms
+ * "aziza@watertech.uz". */
+export function normalizeConfirmEmail(typed: string): string {
+  return typed.trim().toLowerCase();
+}
+
+/** Removing a person: the email, whether their activity history goes too, and
+ * the email typed again as a confirmation — the one thing standing between a
+ * misclick and an irreversible purge, so the Server Action re-checks it rather
+ * than trusting the dialog. A mismatch is a `confirmMismatch` issue on
+ * `confirmEmail`. */
+export const removeUserSchema = z
+  .object({
+    email: userEmailSchema,
+    purgeHistory: z.boolean(),
+    // Capped like every input (CLAUDE.md §7), with room for stray whitespace
+    // around a pasted address — it is trimmed before the comparison.
+    confirmEmail: z.string().max(EMAIL_MAX_LENGTH * 2, "tooLong"),
+  })
+  .superRefine((input, ctx) => {
+    if (normalizeConfirmEmail(input.confirmEmail) !== input.email) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["confirmEmail"], message: "confirmMismatch" });
+    }
+  });
+
 export type AddUserInput = z.input<typeof addUserSchema>;
 
 /** One allow-list row as /admin/users renders it. */
@@ -88,8 +114,10 @@ export function isActiveAdmin(state: AccessState): boolean {
 }
 
 /** True when a change creates an admin, or changes the role or active flag of
- * a row that is one — what the guard refuses through the API (WT462). */
-function touchesAdminRow(before: AccessState, after: AccessState): boolean {
+ * — or removes — a row that is one: what the guard refuses through the API
+ * (WT462). `after` is null for a removal. */
+function touchesAdminRow(before: AccessState, after: AccessState | null): boolean {
+  if (after === null) return before.role === "admin";
   if (before.role !== "admin") return after.role === "admin";
   return after.role !== before.role || after.isActive !== before.isActive;
 }
@@ -100,10 +128,13 @@ export type AccessViolation = "last_admin" | "self_change" | "admin_locked";
  * The TS half of private.allowed_users_guard (0017, admin semantics since
  * 0020), in the same order: losing the last active admin first — a sole admin
  * demoting themselves is told what holds even in the SQL editor — then an
- * admin demoting or deactivating their own row, then any other change that
- * promotes a row to admin or demotes, deactivates or reactivates one: admin
- * rows are SQL-editor-only. Renaming, or a change that leaves the role and the
- * active flag as they were, is never a violation.
+ * admin demoting, deactivating or removing their own row, then any other change
+ * that promotes a row to admin or demotes, deactivates, reactivates or removes
+ * one: admin rows are SQL-editor-only. Renaming, or a change that leaves the
+ * role and the active flag as they were, is never a violation.
+ *
+ * `after` is the row as the change leaves it, or null when the change removes
+ * the row (0022) — the same convention as `access_audit.after`.
  *
  * `activeAdmins` is every active admin's email, lowercased, as read just
  * before the write. The database repeats all three checks under a lock, so
@@ -113,10 +144,10 @@ export function accessViolation(args: {
   actor: string;
   target: string;
   before: AccessState;
-  after: AccessState;
+  after: AccessState | null;
   activeAdmins: readonly string[];
 }): AccessViolation | null {
-  const staysActiveAdmin = isActiveAdmin(args.after);
+  const staysActiveAdmin = args.after !== null && isActiveAdmin(args.after);
 
   if (isActiveAdmin(args.before) && !staysActiveAdmin) {
     const others = args.activeAdmins.filter((email) => email !== args.target);
