@@ -183,12 +183,12 @@ components/ui/              Dialog  ErrorBoundary  PinButton  RecentRecorder  Sk
 components/providers/       SessionProvider  OfflineBanner  WebVitalsReporter
 components/products/        ProductsCatalog          components/tools/     BatchCalculator
 components/scripts/         ScriptsWorkspace  ScriptsContentContext
-components/story/           LayersStory  LayersChapter  LayersCrossSection  layers-geometry.ts (R3/S05, /company/about)
+components/story/           StickyRevealStory  about-illustrations.tsx  sticky-reveal-geometry.ts (/company/about)
                             ManifestStory  MissionWords  VisionSegment  ValueStack  manifest-geometry.ts  value-icons.tsx
                             (R3/S06, /company/mission-values)
 components/onboarding/      RouteMap  RouteDayCard  RouteCheckpoint  ProgressRing  RouteTrail (lazy)  route-geometry.ts
                             (R3/S07, /company/onboarding; OnboardingChecklist, still flat, owns the progress)
-hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useScrollBeat  useRevealPhase  useNow
+hooks/                      useTrack  useSessionUser  useUserState  useSceneProgress  useRevealPhase  useNow
                             useMounted …
 ```
 
@@ -534,9 +534,17 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
   owner file. Everything else is motion that answers a user action (open, expand, copy, select) — no generic
   fade-up on every section.
 - Every `/company/*` page has its **own** scene; never reuse one page's scene on another (R3/S05–S07):
-  `about` → `LayersStory` (PP-R pipe cross-section, one ring per chapter, water fills the bore at the end);
+  `about` → `StickyRevealStory` (sticky scroll reveal: the chapters scroll past a sticky card that shows one bespoke
+  line-art illustration per beat — four chapters, then the finale);
   `mission-values` → `ManifestStory` (word-by-word mission, vision 2030 bars, stacked value cards);
   `onboarding` → `RouteMap` (journey route, checkpoints show the reader's real checklist progress).
+- `StickyRevealStory` sets React state for the active beat (`activeBeatIndex` in `sticky-reveal-geometry.ts`, the
+  breakpoint closest to the list's `useScroll` progress) only when the index changes — at most one render per beat
+  boundary, never per frame. Emphasis is a rail (`scaleY`), an accent marker and an instant class swap of the title
+  colour — never opacity-dimmed text (axe runs on the page). The card crossfades (opacity + `y`); a beat's main
+  strokes draw once, the first time it is active. Its illustrations (`about-illustrations.tsx`) are palette-only line
+  art — `stroke-accent`, `stroke-primary-light`, `fill-primary-light/10…/20`, no `<text>`, gradients, filters or
+  images (`tests/unit/story/about-illustrations-palette.test.ts`) — and render plain `<path>`s unless drawing.
 - `RouteMap` is presentation only (`OnboardingChecklist` owns state, storage and telemetry) and comes in two layers.
   The server HTML draws the whole route — one small svg per segment, dashed, solid up to the reader — which is the
   final state reduced motion, no-JS and the first paint show. `RouteTrail` (`next/dynamic`, mounted on idle, never
@@ -547,9 +555,8 @@ found, fixed and left open in [docs/AUDIT.md](docs/AUDIT.md).
 - Animated elements are `m.*` under the `LazyMotion strict` provider (`components/motion/MotionProvider.tsx`),
   never `motion.*`. Scroll progress comes from `components/motion/ScrollScene.tsx` (`useScroll({ target })`
   against the document — AppShell has no inner scroll container) read through `useSceneProgress()`; a segment
-  that needs its own progress calls `useScroll({ target })` the same way, and a sticky figure driven by elements
-  elsewhere in the text reads their progress through `hooks/useScrollBeat.ts` (`LayersStory`: each chapter heading
-  draws its ring). Pinning uses CSS `position: sticky` only (sticky offsets must clear the sticky TopBar).
+  that needs its own progress calls `useScroll({ target })` the same way (`StickyRevealStory`: one over its beat
+  list). Pinning uses CSS `position: sticky` only (sticky offsets must clear the sticky TopBar).
 - Operator work pages (scripts, objections, FAQ, products, calculator, call mode) never get scroll
   scenes — only ≤200 ms response motion. Scroll storytelling is reserved for `/company/*` and
   empty/onboarding states. `/company/onboarding` reads 160 kB since R3/S07 (it was at the 180 kB limit): keep

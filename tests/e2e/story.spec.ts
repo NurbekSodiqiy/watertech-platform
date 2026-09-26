@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { applySession, collectConsoleErrors, expectSignedInAt, operatorCookie } from "./session";
 
 /**
@@ -13,8 +13,11 @@ import { applySession, collectConsoleErrors, expectSignedInAt, operatorCookie } 
  * Headings come from `pages.company.*.chapters.*.title` in messages/uz.json;
  * they are asserted verbatim so a copy change that forgets a chapter fails here.
  *
- * /company/about runs LayersStory (R3/S05): a sticky pipe cross-section at ≥ lg
- * (Desktop Chrome here), one ring per chapter. /company/mission-values runs
+ * /company/about runs StickyRevealStory: a sticky scroll reveal — at ≥ lg
+ * (Desktop Chrome here) the chapters scroll past a sticky card that shows the
+ * active beat's line-art illustration (four chapters, then the finale), with
+ * `data-active-beat` on the card; below lg every chapter carries its own
+ * illustration, drawn once as it scrolls in. /company/mission-values runs
  * ManifestStory (R3/S06): the mission lit word by word, the 2030 figure, the
  * values as sticky stacking cards — where a heading can be covered by the next
  * card, so "readable" there means uncovered and at full strength at some point
@@ -28,7 +31,12 @@ const ABOUT = {
   path: "/company/about",
   url: /\/company\/about$/,
   headings: ["Biz haqimizda", "Ishlab chiqarish", "Maqsadimiz", "Nega WATERTECH"],
+  /** The four chapters and the finale. */
+  beats: 5,
 } as const;
+
+/** Below lg (the sticky card is gone, the illustrations are inline). */
+const PHONE = { width: 375, height: 812 } as const;
 
 const MISSION = {
   path: "/company/mission-values",
@@ -119,11 +127,42 @@ function drawnFraction(el: Element): number {
   return Number.isFinite(drawn) ? drawn : 1;
 }
 
-/** The drawn fraction of each ring band of the sticky cross-section, outer → inner. */
-async function ringFractions(page: Page): Promise<number[]> {
-  const rings = page.locator("svg[data-layers-scene] [data-layers-ring]");
-  await expect(rings, "the cross-section draws one band per chapter").toHaveCount(ABOUT.headings.length);
-  return Promise.all(ABOUT.headings.map((_, index) => rings.nth(index).evaluate(drawnFraction)));
+/** The drawn fraction of every main stroke (`stroke-accent`) inside `scope`. */
+async function strokeFractions(scope: Locator): Promise<number[]> {
+  const strokes = scope.locator("path.stroke-accent");
+  const count = await strokes.count();
+  expect(count, "an illustration without main strokes").toBeGreaterThan(0);
+  return Promise.all(Array.from({ length: count }, (_, index) => strokes.nth(index).evaluate(drawnFraction)));
+}
+
+/** The sticky card's active beat (≥ lg). */
+async function activeBeat(page: Page): Promise<number> {
+  return Number(await page.locator("[data-active-beat]").getAttribute("data-active-beat"));
+}
+
+/** The card's layer for beat `index` (it exists once that beat has been active). */
+function cardLayer(page: Page, index: number): Locator {
+  return page.locator(`[data-beat-illustration="card"][data-beat="${index}"]`);
+}
+
+/** Wheels in `deltaY` steps until the page stops moving, recording every
+ * active beat on the way (each once, in the order they became active). */
+async function beatsWhileWheeling(page: Page, deltaY: number): Promise<number[]> {
+  const seen = [await activeBeat(page)];
+  let lastY = -1;
+  for (let step = 0; step < 160; step += 1) {
+    await page.mouse.wheel(0, deltaY);
+    await page.waitForTimeout(90);
+    const beat = await activeBeat(page);
+    if (beat !== seen[seen.length - 1]) seen.push(beat);
+    const y = await page.evaluate(() => window.scrollY);
+    if (y === lastY) break;
+    lastY = y;
+  }
+  await page.waitForTimeout(500);
+  const last = await activeBeat(page);
+  if (last !== seen[seen.length - 1]) seen.push(last);
+  return seen;
 }
 
 /** The drawn fraction of ManifestStory's two lines: the mission underline and the closing water line. */
@@ -203,7 +242,7 @@ async function scrollToBottom(page: Page): Promise<void> {
 test.describe("scroll stories", () => {
   test.skip(!operatorCookie, "TEST_OPERATOR_COOKIE is not set");
 
-  test(`${ABOUT.path}: every chapter heading is visible and every ring closed after scrolling to the bottom`, async ({
+  test(`${ABOUT.path}: the card follows the reader through every beat and back, every heading visible`, async ({
     context,
     page,
     baseURL,
@@ -213,19 +252,42 @@ test.describe("scroll stories", () => {
 
     await page.goto(ABOUT.path);
     await expectSignedInAt(page, ABOUT.url);
-    await scrollToBottom(page);
+    await expect(page.locator("[data-active-beat]"), "the sticky card at ≥ lg").toBeVisible();
+    expect(await activeBeat(page), "the first beat is active at the top").toBe(0);
+    await expect(cardLayer(page, 0)).toBeVisible();
 
+    // Down: every beat in order, none skipped — the finale's run-out lets the last one arrive.
+    expect(await beatsWhileWheeling(page, 120), "beats while scrolling down").toEqual([0, 1, 2, 3, 4]);
     for (const heading of ABOUT.headings) {
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     }
-    // The finale's run-out must let the last chapter and the water finish.
+    // The finale's illustration arrived and drew itself completely.
+    await expect(cardLayer(page, ABOUT.beats - 1)).toHaveCSS("opacity", "1");
     await expect
-      .poll(async () => Math.min(...(await ringFractions(page))), { message: "a ring is still open at the bottom" })
+      .poll(async () => Math.min(...(await strokeFractions(cardLayer(page, ABOUT.beats - 1)))), {
+        message: "the finale's illustration is not fully drawn",
+      })
       .toBeGreaterThan(0.99);
+    const beats = page.locator("[data-active]");
+    await expect(beats).toHaveCount(ABOUT.beats);
+    expect(await beats.evaluateAll((els) => els.map((el) => el.getAttribute("data-active")))).toEqual([
+      "false",
+      "false",
+      "false",
+      "false",
+      "true",
+    ]);
+
+    // And back up to the first beat.
+    expect(await beatsWhileWheeling(page, -120), "beats while scrolling up").toEqual([4, 3, 2, 1, 0]);
+    await expect(cardLayer(page, 0)).toHaveCSS("opacity", "1");
     expect(errors, `console errors on ${ABOUT.path}`).toEqual([]);
   });
 
-  test(`${ABOUT.path}: reduced motion shows every ring drawn without scrolling`, async ({ browser, baseURL }) => {
+  test(`${ABOUT.path}: reduced motion — readable without scrolling, drawn at once, beats swap instantly`, async ({
+    browser,
+    baseURL,
+  }) => {
     const context = await browser.newContext({ reducedMotion: "reduce" });
     await applySession(context, operatorCookie ?? "", baseURL);
     const page = await context.newPage();
@@ -234,11 +296,77 @@ test.describe("scroll stories", () => {
     try {
       await page.goto(ABOUT.path);
       await expectSignedInAt(page, ABOUT.url);
-      // No wheel, no scrollTo: the scene has to be finished already.
-      const fractions = await ringFractions(page);
-      expect(Math.min(...fractions), `rings not fully drawn: ${fractions.join(", ")}`).toBeGreaterThan(0.99);
+      // No wheel, no scrollTo: every heading is there at full strength.
+      for (const heading of ABOUT.headings) {
+        await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      }
+      const headings = await effectiveOpacities(page, "main h2");
+      expect(Math.min(...headings), "a heading is dimmed").toBeGreaterThan(0.99);
       expect(await page.evaluate(() => window.scrollY), "the page scrolled by itself").toBe(0);
 
+      // The card shows the first beat, fully drawn.
+      expect(await activeBeat(page)).toBe(0);
+      const first = await strokeFractions(cardLayer(page, 0));
+      expect(Math.min(...first), `strokes not fully drawn: ${first.join(", ")}`).toBeGreaterThan(0.99);
+
+      // Jump to the third beat: two frames after it becomes active, the card
+      // shows it at full strength and nothing else (a crossfade would still be
+      // on its way).
+      const swap = await page.evaluate(async () => {
+        const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const third = document.querySelectorAll("section[data-active]")[2];
+        const card = document.querySelector("[data-active-beat]");
+        if (!third || !card) return null;
+        // Its top well above the reading line (35%), the next one well below.
+        window.scrollTo(0, third.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2);
+        for (let i = 0; i < 120 && card.getAttribute("data-active-beat") !== "2"; i += 1) await frame();
+        await frame();
+        await frame();
+        return Array.from(document.querySelectorAll('[data-beat-illustration="card"]')).map((layer) => ({
+          beat: layer.getAttribute("data-beat"),
+          opacity: Number(getComputedStyle(layer).opacity),
+        }));
+      });
+      expect(swap, "the third beat never became active").not.toBeNull();
+      expect(swap?.find((layer) => layer.beat === "2")?.opacity, "the new beat is not at full strength").toBe(1);
+      expect(
+        swap?.filter((layer) => layer.beat !== "2").every((layer) => layer.opacity === 0),
+        `the old beat is still visible: ${JSON.stringify(swap)}`
+      ).toBe(true);
+      const third = await strokeFractions(cardLayer(page, 2));
+      expect(Math.min(...third), `strokes not fully drawn: ${third.join(", ")}`).toBeGreaterThan(0.99);
+      expect(errors, `console errors on ${ABOUT.path}`).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test(`${ABOUT.path}: below lg every chapter carries its own illustration, drawn once in view`, async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({ viewport: PHONE });
+    await applySession(context, operatorCookie ?? "", baseURL);
+    const page = await context.newPage();
+    const errors = collectConsoleErrors(page);
+
+    try {
+      await page.goto(ABOUT.path);
+      await expectSignedInAt(page, ABOUT.url);
+      await expect(page.locator("[data-active-beat]"), "the sticky card below lg").toBeHidden();
+
+      const figures = page.locator('[data-beat-illustration="inline"]');
+      await expect(figures, "one inline illustration per chapter and the finale").toHaveCount(ABOUT.beats);
+      for (let index = 0; index < ABOUT.beats; index += 1) {
+        const figure = figures.nth(index);
+        await figure.scrollIntoViewIfNeeded();
+        await expect(figure).toBeVisible();
+        await expect
+          .poll(async () => Math.min(...(await strokeFractions(figure))), {
+            message: `inline illustration ${index} is not fully drawn in view`,
+          })
+          .toBeGreaterThan(0.99);
+      }
       for (const heading of ABOUT.headings) {
         await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
       }

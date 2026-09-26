@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, unstable_setRequestLocale } from "next-intl/server";
 import { CalendarDays, Settings, ShieldCheck, Globe, type LucideIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { LayersStory } from "@/components/story/LayersStory";
+import { StickyRevealStory, type StickyRevealBeat } from "@/components/story/StickyRevealStory";
 import type { Locale } from "@/i18n/routing";
 
 const BADGES: { key: string; Icon: LucideIcon }[] = [
@@ -12,8 +12,8 @@ const BADGES: { key: string; Icon: LucideIcon }[] = [
   { key: "export", Icon: Globe },
 ];
 
-// Reading order = ring order, outer → inner: the company's start is the
-// pipe's outside wall, "why us" the layer next to the water.
+// Reading order; each chapter is one beat of the scene, and the finale
+// (finale.caption) is the last one.
 const CHAPTERS = ["about", "production", "goal", "whyUs"] as const;
 
 export async function generateMetadata({ params: { locale } }: { params: { locale: Locale } }): Promise<Metadata> {
@@ -25,15 +25,14 @@ export default async function AboutPage({ params: { locale } }: { params: { loca
   unstable_setRequestLocale(locale);
   const t = await getTranslations("pages.company.about");
 
-  const chapters = CHAPTERS.map((key) => ({
+  const beats: StickyRevealBeat[] = CHAPTERS.map((key) => ({
     id: key,
     title: t(`chapters.${key}.title`),
     body: t(`chapters.${key}.body`),
-    ringLabel: t(`rings.${key}`),
   }));
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
       {/* Header */}
       <div className="space-y-4">
         <Breadcrumbs path="/company/about" />
@@ -52,7 +51,7 @@ export default async function AboutPage({ params: { locale } }: { params: { loca
         </ul>
       </div>
 
-      <LayersStory chapters={chapters} finaleCaption={t("finale.caption")} />
+      <StickyRevealStory beats={beats} finaleCaption={t("finale.caption")} />
     </div>
   );
 }

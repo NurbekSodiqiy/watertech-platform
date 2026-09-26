@@ -634,6 +634,34 @@ Against the same build before the audit's fixes, one row moved: `/admin/users/[e
 the change stays inside the table's rounding). The telemetry send gate (`lib/telemetry/client.ts`) and the `RouteDayCard` ring class change
 no row. No dependency added.
 
+## `/company/about` → StickyRevealStory (2026-09-26)
+
+`/company/about` no longer imports `LayersStory` (`LayersChapter`, `LayersCrossSection`, `layers-geometry`) or
+`hooks/useScrollBeat` (deleted with it, no other user); it renders `StickyRevealStory` with `about-illustrations.tsx`
+(five line-art SVGs) and the pure `sticky-reveal-geometry.ts`. No dependency, no layout or shared module changed, no
+client message namespace added (the strings arrive as props). Both trees were built in scratch copies with CI's
+placeholder env (baseline `f92b726`); "Exact" is gzip level 9 (Node) over the route's `app-build-manifest.json` entry:
+
+| Route | Before (`f92b726`) | Exact | After | Exact |
+|---|---:|---:|---:|---:|
+| `/company/about` | 151 kB (page 3.42 kB) | 150.513 kB | **146 kB** (page 8.16 kB) | 145.715 kB |
+| `/company/mission-values` | 162 kB | 161.551 kB | 162 kB | 161.546 kB |
+| `/company/onboarding` | 160 kB | 160.092 kB | 160 kB | 160.054 kB |
+| `/` | 160 kB | 160.445 kB | 160 kB | 160.428 kB |
+
+**−4.8 kB.** The old scene smoothed every beat with `useSpring`, which kept framer's animation core (chunk `188`,
+6.1 kB gzip — springs and keyframes) on the route; the new one reads `useScroll` straight into state changes and
+`m.*` variants, so that chunk is gone, and two small shared chunks (3.5 + 2.7 kB) were repacked into one of 2.8 kB.
+The page chunk grows by 4.7 kB: the scene plus the five illustrations (their path data is built by a few shape
+helpers, so it is smaller than the SVG markup it renders). Every other row of the route table is identical (70
+compared); "shared by all" stays 89.5 kB.
+
+**Runtime.** Two `useScroll`s on the beat list (beat progress, rail), no spring. The active beat is React state set
+only when `activeBeatIndex` changes — 8 commits for a full scroll down and back (measured with a MutationObserver on
+`data-active-beat`), none per frame. A card layer mounts the first time its beat is active (the server HTML carries
+only beat 0), so the static page ships one drawing in the card; below lg each chapter's inline drawing is plain
+`<path>`s until it is armed off-screen, then draws once (`useRevealPhase`).
+
 ## Open items
 
 1. ~~Supabase browser client imported statically~~ - done in S14, see above. `/login` still imports it, by design.
